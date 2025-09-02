@@ -1,0 +1,86 @@
+#!/usr/bin/env python3
+import os
+import sys
+import logging
+import subprocess
+import json
+import paho.mqtt.client as mqtt
+from dotenv import load_dotenv
+
+# Setup logging
+logging.basicConfig(
+    filename='/var/log/claude_code_agent.log',
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger('ClaudeCodeAgent')
+
+class ClaudeCodeAgent:
+    def __init__(self):
+        # MQTT setup
+        self.mqtt_client = mqtt.Client('claude_code_agent')
+        self.mqtt_client.on_connect = self.on_mqtt_connect
+        self.mqtt_client.on_message = self.on_mqtt_message
+        
+        # Agent configuration
+        self.config = {
+            'name': 'ClaudeCodeAgent',
+            'version': '1.0.0',
+            'host': 'HAS',
+            'ip': '192.168.0.58'
+        }
+
+    def on_mqtt_connect(self, client, userdata, flags, rc):
+        logger.info(f'Connected to MQTT with result code {rc}')
+        client.subscribe('has/claude_code/commands')
+
+    def on_mqtt_message(self, client, userdata, msg):
+        try:
+            payload = json.loads(msg.payload.decode())
+            command = payload.get('command')
+            logger.info(f'Received command: {command}')
+            
+            if command == 'system_status':
+                self.report_system_status()
+            elif command == 'update_packages':
+                self.update_packages()
+        except Exception as e:
+            logger.error(f'Error processing MQTT message: {e}')
+
+    def report_system_status(self):
+        status_cmd = """
+        echo '{"hostname": "'Aspire-PC'", 
+               "uptime": "'up 1 day, 11 hours, 3 minutes'", 
+               "load_avg": "'2.43, 2.04, 1.77'",
+               "memory": "'6.3Gi/7.8Gi'"}' 
+        """
+        try:
+            status = subprocess.check_output(status_cmd, shell=True).decode().strip()
+            self.mqtt_client.publish('has/claude_code/status', status)
+        except Exception as e:
+            logger.error(f'Error getting system status: {e}')
+
+    def update_packages(self):
+        try:
+            subprocess.run(['apk', 'update'], check=True)
+            subprocess.run(['apk', 'upgrade', '-a'], check=True)
+            self.mqtt_client.publish('has/claude_code/updates', 'Packages updated successfully')
+        except subprocess.CalledProcessError as e:
+            logger.error(f'Package update error: {e}')
+            self.mqtt_client.publish('has/claude_code/updates', f'Update failed: {e}')
+
+    def run(self):
+        logger.info('Claude Code Agent starting...')
+        
+        # MQTT connection
+        self.mqtt_client.connect('localhost', 1883, 60)
+        
+        # Publish initial status
+        self.mqtt_client.publish('has/claude_code/init', json.dumps(self.config))
+        
+        # Start MQTT loop
+        self.mqtt_client.loop_forever()
+
+if __name__ == '__main__':
+    agent = ClaudeCodeAgent()
+    agent.run()

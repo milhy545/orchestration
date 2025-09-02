@@ -32,7 +32,7 @@ MCP_SERVICES = {
     },
     "terminal": {
         "description": "Terminal Operations MCP Server",
-        "tools": ["terminal_exec", "shell_command", "system_info"],
+        "tools": ["execute_command", "terminal_exec", "shell_command", "system_info"],
         "internal_port": 8003,
         "status": "unknown",
         "container": "mcp-terminal"
@@ -151,7 +151,7 @@ def check_mcp_service_health(port, container_name=None):
         return False
 
 def call_mcp_service(port, method, params=None, container_name=None):
-    """Call MCP service using proper JSON-RPC 2.0 protocol with caching"""
+    """Call MCP service using native API adaptation as primary method"""
     import time
     start_time = time.time()
     
@@ -169,7 +169,11 @@ def call_mcp_service(port, method, params=None, container_name=None):
                     "method": "cached"
                 }
         
-        # MCP JSON-RPC 2.0 request
+        # Use native API adaptation as PRIMARY method (not fallback)
+        if method == "tools/call" and params:
+            return adapt_to_native_api(port, method, params, container_name)
+        
+        # MCP JSON-RPC 2.0 request (fallback for other methods)
         request_id = str(uuid.uuid4())
         
         mcp_request = {
@@ -179,7 +183,7 @@ def call_mcp_service(port, method, params=None, container_name=None):
             "params": params or {}
         }
         
-        # Try direct HTTP first
+        # Try direct HTTP for non-tools/call methods
         try:
             data = json.dumps(mcp_request).encode("utf-8")
             headers = {
@@ -211,8 +215,13 @@ def call_mcp_service(port, method, params=None, container_name=None):
                     "response_time": response_time
                 }
         except Exception as e:
-            # Try alternative endpoints as fallback
-            return adapt_to_native_api(port, method, params, container_name)
+            # Return error for failed non-tools/call methods
+            response_time = time.time() - start_time
+            return {
+                "success": False,
+                "error": f"MCP service call failed: {str(e)}",
+                "response_time": response_time
+            }
         
     except Exception as e:
         response_time = time.time() - start_time
@@ -256,12 +265,10 @@ def adapt_to_native_api(port, method, params=None, container_name=None):
         if tool_name == "search_memories":
             hostname = container_name if container_name else "localhost"
             service_port = 8000 if container_name else port
-            url = f"http://{hostname}:{service_port}/memory/search"
-            payload = {
-                "query": tool_args.get("query", ""),
-                "limit": tool_args.get("limit", 10)
-            }
-            return _execute_http_request(url, method="POST", data=payload)
+            query = urllib.parse.quote(tool_args.get("query", ""))
+            limit = tool_args.get("limit", 10)
+            url = f"http://{hostname}:{service_port}/memory/search?query={query}&limit={limit}"
+            return _execute_http_request(url, method="GET")
 
         elif tool_name == "memory_stats":
             hostname = container_name if container_name else "localhost"
@@ -271,9 +278,10 @@ def adapt_to_native_api(port, method, params=None, container_name=None):
 
         elif tool_name == "list_memories":
             limit = tool_args.get("limit", 20)
+            offset = tool_args.get("offset", 0)
             hostname = container_name if container_name else "localhost"
             service_port = 8000 if container_name else port
-            url = f"http://{hostname}:{service_port}/memory/list?limit={limit}"
+            url = f"http://{hostname}:{service_port}/memory/list?limit={limit}&offset={offset}"
             return _execute_http_request(url, method="GET")
             
         elif tool_name == "store_memory":
@@ -282,10 +290,101 @@ def adapt_to_native_api(port, method, params=None, container_name=None):
             url = f"http://{hostname}:{service_port}/memory/store"
             return _execute_http_request(url, method="POST", data=tool_args)
 
+    # --- Terminal MCP (port 8003) Adaptation ---
+    if port == 8003:
+        if tool_name in ["execute_command", "terminal_exec", "shell_command"]:
+            hostname = container_name if container_name else "localhost"
+            service_port = 8000 if container_name else port
+            url = f"http://{hostname}:{service_port}/command"
+            payload = {
+                "command": tool_args.get("command", ""),
+                "cwd": tool_args.get("cwd"),
+                "timeout": tool_args.get("timeout", 30)
+            }
+            return _execute_http_request(url, method="POST", data=payload)
+        elif tool_name == "system_info":
+            hostname = container_name if container_name else "localhost"
+            service_port = 8000 if container_name else port
+            url = f"http://{hostname}:{service_port}/system/info"
+            return _execute_http_request(url, method="GET")
+
+    # --- Filesystem MCP (port 8001) Adaptation ---
+    if port == 8001:
+        if tool_name == "file_list":
+            hostname = container_name if container_name else "localhost"
+            service_port = 8000 if container_name else port
+            path = tool_args.get("path", "/")
+            url = f"http://{hostname}:{service_port}/files/{path.lstrip('/')}"
+            return _execute_http_request(url, method="GET")
+        elif tool_name == "file_read":
+            hostname = container_name if container_name else "localhost"
+            service_port = 8000 if container_name else port
+            path = tool_args.get("path", "")
+            url = f"http://{hostname}:{service_port}/files/{path.lstrip('/')}"
+            return _execute_http_request(url, method="GET")
+        elif tool_name == "file_write":
+            hostname = container_name if container_name else "localhost"
+            service_port = 8000 if container_name else port
+            path = tool_args.get("path", "")
+            url = f"http://{hostname}:{service_port}/files/{path.lstrip('/')}"
+            payload = {"content": tool_args.get("content", "")}
+            return _execute_http_request(url, method="PUT", data=payload)
+
+    # --- Git MCP (port 8002) Adaptation ---
+    if port == 8002:
+        if tool_name == "git_status":
+            hostname = container_name if container_name else "localhost"
+            service_port = 8000 if container_name else port
+            url = f"http://{hostname}:{service_port}/git/status"
+            payload = {"repo_path": tool_args.get("repo_path", "/app")}
+            return _execute_http_request(url, method="POST", data=payload)
+        elif tool_name == "git_diff":
+            hostname = container_name if container_name else "localhost"
+            service_port = 8000 if container_name else port
+            url = f"http://{hostname}:{service_port}/git/diff"
+            payload = {"repo_path": tool_args.get("repo_path", "/app")}
+            return _execute_http_request(url, method="POST", data=payload)
+
+    # --- Database MCP (port 8004) Adaptation ---
+    if port == 8004:
+        if tool_name == "db_query":
+            hostname = container_name if container_name else "localhost"
+            service_port = 8000 if container_name else port
+            url = f"http://{hostname}:{service_port}/database/query"
+            payload = {
+                "query": tool_args.get("query", ""),
+                "database": tool_args.get("database", "default")
+            }
+            return _execute_http_request(url, method="POST", data=payload)
+
+    # --- Transcriber MCP (port 8008) Adaptation ---
+    if port == 8008:
+        if tool_name == "transcribe_webm":
+            hostname = container_name if container_name else "localhost"
+            service_port = 8000 if container_name else port
+            url = f"http://{hostname}:{service_port}/transcribe/webm"
+            payload = {"file_path": tool_args.get("file_path", "")}
+            return _execute_http_request(url, method="POST", data=payload)
+
+    # --- Research MCP (port 8011) Adaptation ---
+    if port == 8011:
+        if tool_name == "web_search":
+            hostname = container_name if container_name else "localhost"
+            service_port = 8000 if container_name else port
+            url = f"http://{hostname}:{service_port}/research/search"
+            payload = {"query": tool_args.get("query", "")}
+            return _execute_http_request(url, method="POST", data=payload)
+        elif tool_name == "research_query":
+            hostname = container_name if container_name else "localhost"
+            service_port = 8000 if container_name else port
+            url = f"http://{hostname}:{service_port}/research/query"
+            payload = {"query": tool_args.get("query", "")}
+            return _execute_http_request(url, method="POST", data=payload)
+
     # Fallback for other services
     return {
         "success": False,
-        "error": f"Service on port {port} requires MCP protocol adaptation, but no rule was found for tool '{tool_name}'."
+        "error": f"Service on port {port} requires MCP protocol adaptation, but FIXED ADAPTATION - no rule was found for tool '{tool_name}'."
     }
 
 class ZENCoordinator(BaseHTTPRequestHandler):
@@ -496,6 +595,7 @@ class ZENCoordinator(BaseHTTPRequestHandler):
             }
             
             # Call MCP service
+            logging.info(f"Calling MCP service: {target_service} on {target_container}:{target_port}")
             result = call_mcp_service(target_port, "tools/call", mcp_params, target_container)
             
             # Log request
@@ -548,6 +648,7 @@ class ZENCoordinator(BaseHTTPRequestHandler):
                 return
             
             # Execute tool call
+            logging.info(f"Calling MCP service: {target_service} on {target_container}:{target_port}")
             result = call_mcp_service(target_port, "tools/call", {
                 "name": tool_name,
                 "arguments": tool_args
