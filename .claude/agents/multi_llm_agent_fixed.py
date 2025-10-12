@@ -67,11 +67,15 @@ class MultiLLMAgent:
         # Standard operation mode (master available)
         if self.master_available:
             if estimated_time <= self.thresholds['quick_task_minutes']:
-                return 'ollama-qwen2'  # Fast local model
+                return 'gemini-flash'  # Ollama je offline, použij Gemini jako rychlou volbu
             elif complexity == 'standard':
                 return 'claude-haiku'  # Balanced cost/performance
+            elif complexity in ['standard', 'medium']:
+                return 'gemini-flash' # Dobrý kompromis výkonu a ceny (v rámci free tier)
             else:
-                return 'ask-master'  # Let Claude-Code decide
+                # Původně eskalovalo na placené modely, nyní Gemini Pro nebo ask-master
+                # return 'gemini-pro' # Pro nejsložitější úkoly, když master není k dispozici
+                return 'ask-master'  # Necháme rozhodnout Claude-Code, pokud je dostupný
         
         # Fallback mode (master unavailable)
         else:
@@ -106,6 +110,10 @@ class MultiLLMAgent:
 
     def execute_ollama(self, task: Dict[str, Any]) -> Dict[str, Any]:
         """Execute task using OLLAMA (fast, local)"""
+        # --- OLLAMA JE OFFLINE - OKAMŽITÝ FALLBACK ---
+        logger.warning("OLLAMA je nastaveno jako nedostupné, provádím fallback na Gemini Flash.")
+        return self.execute_gemini(task, 'gemini-flash')
+
         if not self.check_ollama_health():
             logger.warning("OLLAMA unavailable, falling back to Gemini Flash")
             return self.execute_gemini(task, 'gemini-flash')

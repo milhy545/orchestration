@@ -68,7 +68,13 @@ services:
     container_name: mcp-terminal
     ports:
       - "8003:8000"
-    privileged: true
+    # privileged: true bylo odstraněno pro zvýšení bezpečnosti.
+    # Místo toho používáme sudo uvnitř kontejneru s omezenými právy.
+    # Pro specifické potřeby lze přidat jednotlivé capabilities.
+    cap_add:
+      - SYS_PTRACE # Příklad: Povolí debuggování procesů, pokud je potřeba.
+    security_opt:
+      - no-new-privileges:true # Zabrání procesu získat nová oprávnění.
     environment:
       - MCP_DATABASE_URL=${MCP_DATABASE_URL:-postgresql://mcp_admin:change_me_in_production@postgresql:5432/mcp_unified}
       - REDIS_URL=redis://redis:6379
@@ -229,6 +235,11 @@ services:
       - postgresql
       - redis
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8020/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
     networks:
       - mcp-network
 
@@ -302,6 +313,11 @@ services:
     volumes:
       - /home/orchestration/data/postgresql:/var/lib/postgresql/data
       - /home/orchestration/data/backups:/backups
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     restart: unless-stopped
     networks:
       - mcp-network
@@ -314,6 +330,11 @@ services:
       - "8022:6379"
     volumes:
       - /home/orchestration/data/redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     restart: unless-stopped
     networks:
       - mcp-network

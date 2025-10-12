@@ -1,14 +1,16 @@
-#\!/bin/bash
+#!/bin/bash
 # Backup script for orchestrace databases
 DATE=$(date +%Y%m%d_%H%M)
+BACKUP_DIR="/home/orchestration/data/backups"
+DB_DIR="/home/orchestration/data/databases"
 
-# Backup from original /tmp location to orchestrace
-cp /tmp/unified_memory_forai.db /home/orchestration/data/backups/unified_memory_forai_${DATE}.db
-cp /tmp/cldmemory.db /home/orchestration/data/backups/cldmemory_${DATE}.db
+echo "Starting database backup at $(date)"
 
-# Also backup the copy in databases folder  
-cp /home/orchestration/data/databases/unified_memory_forai.db /home/orchestration/data/backups/unified_memory_forai_persistent_${DATE}.db
-cp /home/orchestration/data/databases/cldmemory.db /home/orchestration/data/backups/cldmemory_persistent_${DATE}.db
+# Použití 'sqlite3 .backup' pro atomické a bezpečné zálohování
+# Tím se zabrání poškození zálohy, pokud do databáze probíhá zápis.
+sqlite3 ${DB_DIR}/unified_memory_forai.db ".backup '${BACKUP_DIR}/unified_memory_forai_${DATE}.db'"
+sqlite3 ${DB_DIR}/cldmemory.db ".backup '${BACKUP_DIR}/cldmemory_${DATE}.db'"
 
-echo "Databases backed up at $(date)"
-ls -la /home/orchestration/data/backups/
+echo "Databases backup finished."
+echo "Listing recent backups in ${BACKUP_DIR}:"
+ls -lath ${BACKUP_DIR} | head -n 5
