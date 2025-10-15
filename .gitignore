@@ -85,3 +85,12 @@ venv/
 env/
 .venv/
 .env/
+
+# Claude Agent specific
+claude-agent/venv/
+claude-agent/logs/
+claude-agent/__pycache__/
+
+# Backup files
+*.backup
+*.bak
