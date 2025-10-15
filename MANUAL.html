@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MCP Orchestration Platform - Kompletní Manuál</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            color: #333;
+            background-color: #f8f9fa;
+        }
+        .container {
+            background: white;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #2c3e50;
+            border-bottom: 3px solid #3498db;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #34495e;
+            margin-top: 30px;
+            border-left: 4px solid #3498db;
+            padding-left: 15px;
+        }
+        h3 {
+            color: #2c3e50;
+            margin-top: 25px;
+        }
+        h4 {
+            color: #7f8c8d;
+            margin-top: 20px;
+        }
+        code {
+            background-color: #f4f4f4;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 0.9em;
+        }
+        pre {
+            background-color: #2c3e50;
+            color: #ecf0f1;
+            padding: 20px;
+            border-radius: 5px;
+            overflow-x: auto;
+            margin: 15px 0;
+        }
+        pre code {
+            background: none;
+            color: inherit;
+            padding: 0;
+        }
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            background-color: #3498db;
+            color: white;
+            border-radius: 3px;
+            font-size: 0.8em;
+            margin-right: 5px;
+        }
+        .toc {
+            background-color: #ecf0f1;
+            padding: 20px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        .toc ul {
+            list-style-type: none;
+            padding-left: 0;
+        }
+        .toc li {
+            margin: 5px 0;
+        }
+        .toc a {
+            text-decoration: none;
+            color: #2c3e50;
+        }
+        .toc a:hover {
+            color: #3498db;
+        }
+        .highlight {
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+        }
+        .success {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .warning {
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+        }
+        .error {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+            font-weight: bold;
+        }
+        .emoji {
+            font-size: 1.2em;
+        }
+        .footer {
+            margin-top: 50px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+            text-align: center;
+            color: #7f8c8d;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1><span class="emoji">📖</span> MCP Orchestration Platform - Kompletní Manuál</h1>
+        
+        <p><em>Model Context Protocol (MCP) microservices orchestration platform s unified HTTP interface</em></p>
+        
+        <div class="badge">Docker</div>
+        <div class="badge">Python 3.11+</div>
+        <div class="badge">Node.js 18+</div>
+        <div class="badge">PostgreSQL</div>
+        <div class="badge">Redis</div>
+        
+        <div class="toc">
+            <h3>📋 Obsah</h3>
+            <ul>
+                <li><a href="#úvod-a-přehled">1. 🎯 Úvod a přehled</a></li>
+                <li><a href="#architektura-systému">2. 🏗️ Architektura systému</a></li>
+                <li><a href="#rychlý-start">3. 🚀 Rychlý start</a></li>
+                <li><a href="#konfigurace">4. 🔧 Konfigurace</a></li>
+                <li><a href="#mcp-služby">5. 🛠️ MCP služby</a></li>
+                <li><a href="#api-dokumentace">6. 📡 API dokumentace</a></li>
+                <li><a href="#testování">7. 🧪 Testování</a></li>
+                <li><a href="#bezpečnost">8. 🔒 Bezpečnost</a></li>
+                <li><a href="#monitoring-a-diagnostika">9. 📊 Monitoring a diagnostika</a></li>
+                <li><a href="#claude-ai-agent">10. 🤖 Claude AI Agent</a></li>
+                <li><a href="#deployment">11. 🚀 Deployment</a></li>
+                <li><a href="#troubleshooting">12. 🛠️ Troubleshooting</a></li>
+                <li><a href="#výkonnost-a-škálování">13. 📈 Výkonnost a škálování</a></li>
+                <li><a href="#vývoj-a-přispívání">14. 🔧 Vývoj a přispívání</a></li>
+            </ul>
+        </div>
+
+        <h2 id="úvod-a-přehled">🎯 Úvod a přehled</h2>
+        
+        <h3>Co je MCP Orchestration Platform?</h3>
+        <p>MCP Orchestration Platform je <strong>enterprise-level microservices systém</strong> implementující <strong>Model Context Protocol (MCP)</strong> specifikaci. Poskytuje unified HTTP interface pro AI agenty a aplikace s 28+ specializovanými nástroji napříč 7 core službami.</p>
+        
+        <h3>✨ Klíčové vlastnosti</h3>
+        <ul>
+            <li><span class="emoji">🎯</span> <strong>Unified HTTP Interface</strong> - Jediný endpoint pro všechny MCP služby</li>
+            <li><span class="emoji">🏗️</span> <strong>Service Mesh Architecture</strong> - Containerized microservices se shared infrastructure</li>
+            <li><span class="emoji">🔄</span> <strong>Automatic Health Monitoring</strong> - Built-in service discovery a health checks</li>
+            <li><span class="emoji">🔐</span> <strong>Security-First Design</strong> - Environment-based secrets, žádné hardcoded credentials</li>
+            <li><span class="emoji">📊</span> <strong>Vector Database Integration</strong> - Advanced AI memory s semantic search</li>
+            <li><span class="emoji">🧪</span> <strong>Comprehensive Testing</strong> - Unit, performance, security, a failure recovery testy</li>
+            <li><span class="emoji">📈</span> <strong>Production Monitoring</strong> - Redis caching, PostgreSQL persistence, logging</li>
+        </ul>
+
+        <h2 id="architektura-systému">🏗️ Architektura systému</h2>
+        
+        <h3>High-Level Architecture</h3>
+        <pre><code>┌─────────────────┐    ┌──────────────────────────────────────┐
+│   HTTP Client   │────│           ZEN Coordinator            │
+└─────────────────┘    │         (Port 8020)                 │
+                       │    HTTP ↔ MCP Protocol Bridge        │
+                       └──────────────────────────────────────┘
+                                          │
+                       ┌──────────────────┼──────────────────┐
+                       │                  │                  │
+            ┌──────────▼────┐  ┌─────────▼────┐  ┌─────────▼────┐
+            │ Filesystem MCP │  │ Memory MCP   │  │ Terminal MCP │
+            │   (8001)       │  │   (8005)     │  │   (8003)     │
+            └───────────────┘  └──────────────┘  └──────────────┘
+                       │                  │                  │
+                       └──────────────────┼──────────────────┘
+                                          │
+                       ┌──────────────────▼──────────────────┐
+                       │        Shared Infrastructure        │
+                       │  PostgreSQL │ Redis │ Qdrant Vector │
+                       │   (5432)    │ (6379)│    (6333)     │
+                       └─────────────────────────────────────┘</code></pre>
+
+        <h3>🔒 Security Architecture</h3>
+        <h4>Zero Trust Network Model</h4>
+        <p>Platforma implementuje <strong>Zero Trust</strong> security model:</p>
+        <ol>
+            <li><strong>Single Entry Point</strong>: Pouze ZEN Coordinator (port 8020) je exposed externally</li>
+            <li><strong>Internal Isolation</strong>: MCP služby (8001-8013) nejsou přímo dostupné</li>
+            <li><strong>Service Mesh</strong>: Všechna internal komunikace je kontrolována a monitorována</li>
+            <li><strong>Authentication</strong>: JWT-based authentication pro API access</li>
+            <li><strong>Authorization</strong>: Role-based access control pro MCP tools</li>
+        </ol>
+
+        <h2 id="rychlý-start">🚀 Rychlý start</h2>
+        
+        <h3>Prerequisites</h3>
+        <ul>
+            <li><strong>Docker & Docker Compose</strong> (20.10+)</li>
+            <li><strong>Python 3.11+</strong></li>
+            <li><strong>Node.js 18+</strong></li>
+            <li><strong>PostgreSQL 13+</strong></li>
+            <li><strong>Redis 6+</strong></li>
+            <li><strong>4GB+ RAM</strong> (doporučeno)</li>
+            <li><strong>Linux/macOS/WSL2</strong></li>
+        </ul>
+
+        <h3>1. Clone & Configure</h3>
+        <pre><code>git clone https://github.com/milhy545/orchestration.git
+cd orchestration
+
+# Copy environment template
+cp .env.example .env
+
+# Edit .env with your API keys
+nano .env</code></pre>
+
+        <h3>2. Launch Everything</h3>
+        <pre><code># Start all services
+docker-compose up -d
+
+# Verify health
+./scripts/health-check.sh</code></pre>
+
+        <h3>3. Test the System</h3>
+        <pre><code># Run comprehensive tests
+./tests/unit/orchestration_workflow_test.sh
+
+# Performance benchmarking
+./tests/performance/stress_load_test.sh</code></pre>
+
+        <h3>4. Access the System</h3>
+        <ul>
+            <li><strong>ZEN Coordinator</strong>: http://localhost:8020</li>
+            <li><strong>Health Check</strong>: http://localhost:8020/health</li>
+            <li><strong>Services List</strong>: http://localhost:8020/services</li>
+            <li><strong>Tools List</strong>: http://localhost:8020/tools/list</li>
+        </ul>
+
+        <h2 id="konfigurace">🔧 Konfigurace</h2>
+        
+        <h3>Environment Variables</h3>
+        <p>Vytvořte <code>.env</code> soubor s následujícími proměnnými:</p>
+        <pre><code># Database Configuration
+MCP_DATABASE_URL=postgresql://mcp_admin:change_me_in_production@postgresql:5432/mcp_unified
+POSTGRES_DB=mcp_unified
+POSTGRES_USER=mcp_admin
+POSTGRES_PASSWORD=change_me_in_production
+
+# Redis Configuration
+REDIS_URL=redis://redis:6379
+
+# Qdrant Vector Database
+QDRANT_URL=http://qdrant-vector:6333
+
+# API Keys
+PERPLEXITY_API_KEY=your_perplexity_api_key_here
+GEMINI_API_KEY=your_gemini_api_key_here
+OPENAI_API_KEY=your_openai_api_key_here
+ANTHROPIC_API_KEY=your_anthropic_api_key_here
+
+# Security
+JWT_SECRET_KEY=your_jwt_secret_key_here
+ENCRYPTION_KEY=your_encryption_key_here</code></pre>
+
+        <h2 id="mcp-služby">🛠️ MCP služby</h2>
+        
+        <h3>Core Services</h3>
+        
+        <h4>Filesystem MCP (Port 8001)</h4>
+        <p><strong>Účel</strong>: File operations a filesystem management</p>
+        <p><strong>Nástroje</strong>:</p>
+        <ul>
+            <li><code>file_read</code> - Čtení souborů</li>
+            <li><code>file_write</code> - Zápis souborů</li>
+            <li><code>file_list</code> - Listování adresářů</li>
+            <li><code>file_search</code> - Vyhledávání souborů</li>
+            <li><code>file_analyze</code> - Analýza souborů</li>
+        </ul>
+        
+        <h4>Git MCP (Port 8002)</h4>
+        <p><strong>Účel</strong>: Version control operations</p>
+        <p><strong>Nástroje</strong>:</p>
+        <ul>
+            <li><code>git_status</code> - Git status</li>
+            <li><code>git_commit</code> - Git commit</li>
+            <li><code>git_push</code> - Git push</li>
+            <li><code>git_pull</code> - Git pull</li>
+            <li><code>git_log</code> - Git log</li>
+        </ul>
+
+        <h4>Terminal MCP (Port 8003)</h4>
+        <p><strong>Účel</strong>: Command execution a system operations</p>
+        <p><strong>Nástroje</strong>:</p>
+        <ul>
+            <li><code>execute_command</code> - Spuštění příkazů</li>
+            <li><code>system_info</code> - System information</li>
+            <li><code>process_list</code> - Seznam procesů</li>
+            <li><code>disk_usage</code> - Disk usage</li>
+        </ul>
+
+        <h4>Memory MCP (Port 8005)</h4>
+        <p><strong>Účel</strong>: Simple key-value storage</p>
+        <p><strong>Nástroje</strong>:</p>
+        <ul>
+            <li><code>store_memory</code> - Uložení paměti</li>
+            <li><code>search_memories</code> - Vyhledávání paměti</li>
+            <li><code>retrieve_memory</code> - Načtení paměti</li>
+            <li><code>delete_memory</code> - Smazání paměti</li>
+        </ul>
+
+        <h2 id="api-dokumentace">📡 API dokumentace</h2>
+        
+        <h3>ZEN Coordinator API</h3>
+        
+        <h4>Health Check</h4>
+        <pre><code>GET /health</code></pre>
+        <p><strong>Response</strong>:</p>
+        <pre><code>{
+  "status": "healthy",
+  "timestamp": "2024-01-15T10:30:00Z",
+  "services": {
+    "postgresql": "healthy",
+    "redis": "healthy",
+    "qdrant": "healthy"
+  }
+}</code></pre>
+
+        <h4>Services List</h4>
+        <pre><code>GET /services</code></pre>
+        <p><strong>Response</strong>:</p>
+        <pre><code>{
+  "services": [
+    {
+      "name": "filesystem-mcp",
+      "port": 8001,
+      "status": "healthy",
+      "tools": ["file_read", "file_write", "file_list"]
+    }
+  ]
+}</code></pre>
+
+        <h4>MCP Tool Execution</h4>
+        <pre><code>POST /mcp
+Content-Type: application/json
+
+{
+  "tool": "file_read",
+  "arguments": {
+    "path": "/path/to/file.txt"
+  }
+}</code></pre>
+
+        <h2 id="testování">🧪 Testování</h2>
+        
+        <h3>Test Suite Structure</h3>
+        <pre><code>tests/
+├── unit/                    # Unit testy
+│   ├── memory_crud_test.sh
+│   └── orchestration_workflow_test.sh
+├── performance/             # Performance testy
+│   └── stress_load_test.sh
+├── security/               # Security testy
+│   └── security_assessment_test.sh
+└── failure/                # Failure recovery testy
+    └── failure_recovery_test.sh</code></pre>
+
+        <h3>Spuštění testů</h3>
+        <pre><code># Všechny testy
+./tests/run_all_tests.sh
+
+# Unit testy
+./tests/unit/orchestration_workflow_test.sh
+
+# Performance testy
+./tests/performance/stress_load_test.sh
+
+# Security testy
+./tests/security/security_assessment_test.sh
+
+# Failure recovery testy
+./tests/failure/failure_recovery_test.sh</code></pre>
+
+        <h2 id="bezpečnost">🔒 Bezpečnost</h2>
+        
+        <h3>Security Features</h3>
+        <ul>
+            <li><strong>Environment-based Configuration</strong> - Žádné hardcoded secrets</li>
+            <li><strong>Container Isolation</strong> - Služby běží v izolovaných kontejnerech</li>
+            <li><strong>Network Segmentation</strong> - Internal Docker network</li>
+            <li><strong>Credential Management</strong> - PostgreSQL authentication</li>
+            <li><strong>API Key Protection</strong> - External service keys via environment</li>
+            <li><strong>Data Persistence Security</strong> - Separate data volumes</li>
+        </ul>
+
+        <h2 id="monitoring-a-diagnostika">📊 Monitoring a diagnostika</h2>
+        
+        <h3>Health Monitoring</h3>
+        <pre><code># System health check
+./scripts/health-check.sh
+
+# Service status monitoring
+docker ps --format 'table {{.Names}}\t{{.Status}}'
+
+# Resource monitoring
+docker stats</code></pre>
+
+        <h3>Logging</h3>
+        <pre><code># ZEN Coordinator logs
+docker logs zen-coordinator
+
+# Specific service logs
+docker logs mcp-filesystem
+
+# All services logs
+docker-compose logs</code></pre>
+
+        <h2 id="claude-ai-agent">🤖 Claude AI Agent</h2>
+        
+        <h3>Claude Agent System</h3>
+        <p>Claude Agent je pokročilý AI systém pro koordinaci MCP služeb:</p>
+        
+        <h4>Komponenty</h4>
+        <ul>
+            <li><strong><code>haiku_agent.py</code></strong> - Hlavní Claude agent</li>
+            <li><strong><code>claude_session_bridge.py</code></strong> - Session management</li>
+            <li><strong><code>anthropic_oauth_setup.py</code></strong> - OAuth setup</li>
+            <li><strong><code>claude_agent_start.sh</code></strong> - Spouštěcí skript</li>
+        </ul>
+
+        <h4>Spuštění</h4>
+        <pre><code># Start Claude Agent
+cd claude-agent
+./claude_agent_start.sh
+
+# Test agent
+python test_agent.py</code></pre>
+
+        <h2 id="deployment">🚀 Deployment</h2>
+        
+        <h3>Production Deployment</h3>
+        
+        <h4>1. Environment Setup</h4>
+        <pre><code># Production environment
+export NODE_ENV=production
+export LOG_LEVEL=info
+export ENABLE_METRICS=true</code></pre>
+
+        <h4>2. Database Migration</h4>
+        <pre><code># Run migrations
+./scripts/migrate-to-postgresql.py
+
+# Backup before migration
+./scripts/backup-databases.sh</code></pre>
+
+        <h2 id="troubleshooting">🛠️ Troubleshooting</h2>
+        
+        <h3>Common Issues</h3>
+        
+        <h4>1. Service Not Starting</h4>
+        <pre><code># Check logs
+docker logs [service-name]
+
+# Check health
+curl http://localhost:8020/health
+
+# Restart service
+docker-compose restart [service-name]</code></pre>
+
+        <h4>2. Database Connection Issues</h4>
+        <pre><code># Check PostgreSQL
+docker exec -it mcp-postgresql psql -U mcp_admin -d mcp_unified
+
+# Check Redis
+docker exec -it mcp-redis redis-cli ping</code></pre>
+
+        <h2 id="výkonnost-a-škálování">📈 Výkonnost a škálování</h2>
+        
+        <h3>Performance Optimization</h3>
+        
+        <h4>1. Caching Strategy</h4>
+        <pre><code># Redis caching
+@cache.memoize(timeout=300)
+def expensive_operation():
+    # Expensive computation
+    pass</code></pre>
+
+        <h4>2. Database Optimization</h4>
+        <pre><code>-- Index optimization
+CREATE INDEX idx_memory_type ON memories(memory_type);
+CREATE INDEX idx_importance ON memories(importance);</code></pre>
+
+        <h2 id="vývoj-a-přispívání">🔧 Vývoj a přispívání</h2>
+        
+        <h3>Development Setup</h3>
+        <pre><code># Development environment
+git clone https://github.com/milhy545/orchestration.git
+cd orchestration
+
+# Install dependencies
+pip install -r requirements.txt
+npm install
+
+# Start development services
+docker-compose -f docker-compose.dev.yml up -d</code></pre>
+
+        <h3>Adding New MCP Service</h3>
+        <ol>
+            <li><strong>Create Service Directory</strong></li>
+            <li><strong>Create Dockerfile</strong></li>
+            <li><strong>Add to docker-compose.yml</strong></li>
+            <li><strong>Register in ZEN Coordinator</strong></li>
+        </ol>
+
+        <div class="highlight success">
+            <h3>✅ Závěr</h3>
+            <p>MCP Orchestration Platform je <strong>kompletní enterprise architecture</strong> která demonstruje:</p>
+            <ul>
+                <li>✅ <strong>Scalable Design Patterns</strong></li>
+                <li>✅ <strong>Security Best Practices</strong></li>
+                <li>✅ <strong>Comprehensive Testing</strong></li>
+                <li>✅ <strong>Production Monitoring</strong></li>
+                <li>✅ <strong>Service Mesh Architecture</strong></li>
+                <li>✅ <strong>AI Integration Patterns</strong></li>
+            </ul>
+            <p>Perfektní pro learning, extending, nebo použití jako foundation pro production systems.</p>
+        </div>
+
+        <div class="footer">
+            <p><strong>🚀 Ready to orchestrate your MCP services? Star this repo and let's build something amazing! 🚀</strong></p>
+            <p><em>Tento manuál byl vytvořen automaticky z kompletní dokumentace projektu. Pro nejnovější informace navštivte <a href="https://github.com/milhy545/orchestration">GitHub repository</a>.</em></p>
+        </div>
+    </div>
+</body>
+</html>
