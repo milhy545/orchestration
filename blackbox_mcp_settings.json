@@ -1,0 +1,21 @@
+{
+  "mcpServers": {
+    "github.com/elevenlabs/elevenlabs-mcp": {
+      "command": "python",
+      "args": ["-m", "elevenlabs_mcp"],
+      "env": {
+        "ELEVENLABS_API_KEY": "sk_3acc58a81525e79c89124add46a3df6d8eb0f6cd6b4845ff",
+        "ELEVENLABS_MCP_OUTPUT_MODE": "files",
+        "ELEVENLABS_MCP_BASE_PATH": "/home/orchestration/mcp-servers/elevenlabs-mcp/outputs"
+      },
+      "description": "ElevenLabs MCP server pro text-to-speech, klonování hlasů a zpracování audia",
+      "capabilities": [
+        "text-to-speech",
+        "voice-cloning",
+        "audio-transcription",
+        "voice-design",
+        "sound-effects"
+      ]
+    }
+  }
+}
