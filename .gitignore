@@ -71,3 +71,17 @@ ehthumbs.db
 Thumbs.db
 .gemini/
 gha-creds-*.json
+
+# Large directories and files that shouldn't be in git
+claude-agent-env/
+Skladka/
+*.tar.gz
+*.zip
+*.rar
+*.7z
+
+# Python virtual environments
+venv/
+env/
+.venv/
+.env/
