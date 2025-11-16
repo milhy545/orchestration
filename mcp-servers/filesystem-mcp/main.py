@@ -79,8 +79,8 @@ def validate_path(path: str, operation: str = "read") -> str:
                 detail=f"Access to path {resolved_path} is forbidden"
             )
 
-    # Check if path is within allowed directories
-    allowed = any(resolved_path.startswith(allowed_dir) for allowed_dir in ALLOWED_DIRECTORIES)
+    # Check if path is strictly within allowed directories (not just prefix match)
+    allowed = any(os.path.commonpath([resolved_path, allowed_dir]) == allowed_dir for allowed_dir in ALLOWED_DIRECTORIES)
     if not allowed:
         raise HTTPException(
             status_code=403,
