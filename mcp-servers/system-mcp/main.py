@@ -4,7 +4,7 @@ System MCP Service - Resources monitoring, processes, system info
 Port: 8007
 """
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 import psutil
 import platform
 import shutil
@@ -37,7 +37,7 @@ class ProcessListRequest(BaseModel):
     name_filter: Optional[str] = None
     user_filter: Optional[str] = None
     sort_by: Optional[str] = "memory"  # memory, cpu, pid, name
-    limit: Optional[int] = 50
+    limit: Optional[int] = Field(50, ge=1, le=1000, description="Maximum processes to return")
 
 class ProcessInfo(BaseModel):
     """Process information"""
