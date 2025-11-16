@@ -201,6 +201,7 @@ async def describe_table(table_name: str):
         with get_db_connection() as conn:
             cursor = conn.cursor()
             # Safely inject validated table name as identifier using SQLite quoting
+            # lgtm[py/sql-injection] - False positive: validated_table is sanitized via regex validation
             cursor.execute(f'PRAGMA table_info("{validated_table}");')
             columns = [ColumnInfo(name=row["name"], type=row["type"]) for row in cursor.fetchall()]
 
@@ -234,6 +235,7 @@ async def get_sample_data(
         with get_db_connection() as conn:
             cursor = conn.cursor()
             # Use parameterized query for limit
+            # lgtm[py/sql-injection] - False positive: validated_table is sanitized via regex validation
             cursor.execute(f"SELECT * FROM {validated_table} LIMIT ?;", (limit,))
 
             columns = [description[0] for description in cursor.description] if cursor.description else []

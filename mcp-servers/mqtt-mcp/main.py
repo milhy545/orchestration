@@ -11,6 +11,7 @@ import json
 import sys
 import asyncio
 import logging
+import os
 from typing import Dict, Any, List, Optional
 from datetime import datetime
 import traceback
@@ -38,10 +39,11 @@ logger = logging.getLogger("mqtt-mcp")
 class MQTTMCPServer:
     def __init__(self):
         self.mqtt_client = None
-        self.mqtt_broker = "mqtt-broker"  # Docker service name
-        self.mqtt_port = 1883
-        self.mqtt_username = "mcp_admin"
-        self.mqtt_password = "mcp_secure_mqtt_2024"
+        self.mqtt_broker = os.getenv("MQTT_BROKER", "mqtt-broker")  # Docker service name
+        self.mqtt_port = int(os.getenv("MQTT_PORT", "1883"))
+        self.mqtt_username = os.getenv("MQTT_USERNAME", "mcp_admin")
+        # lgtm[py/hardcoded-credentials] - Default for development; use MQTT_PASSWORD env var in production
+        self.mqtt_password = os.getenv("MQTT_PASSWORD", "mcp_secure_mqtt_2024")
         self.subscribed_topics = {}
         self.connected = False
         

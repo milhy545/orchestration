@@ -92,10 +92,12 @@ def migrate_sqlite_to_postgres():
                 print(f"  📋 Migrating table: {table_name}")
                 
                 # Get all data from table
+                # lgtm[py/sql-injection] - Safe: table_name comes from sqlite_master, not user input
                 sqlite_cursor.execute(f"SELECT * FROM {table_name}")
                 rows = sqlite_cursor.fetchall()
-                
+
                 # Get column names
+                # lgtm[py/sql-injection] - Safe: table_name comes from sqlite_master, not user input
                 sqlite_cursor.execute(f"PRAGMA table_info({table_name})")
                 columns = [col[1] for col in sqlite_cursor.fetchall()]
                 
