@@ -200,8 +200,8 @@ async def describe_table(table_name: str):
 
         with get_db_connection() as conn:
             cursor = conn.cursor()
-            # Using parameterized query-like approach with validated identifier
-            cursor.execute(f"PRAGMA table_info({validated_table});")
+            # Safely inject validated table name as identifier using SQLite quoting
+            cursor.execute(f'PRAGMA table_info("{validated_table}");')
             columns = [ColumnInfo(name=row["name"], type=row["type"]) for row in cursor.fetchall()]
 
             if not columns:
