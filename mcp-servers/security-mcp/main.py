@@ -4,6 +4,7 @@ Security MCP Service - Authentication, encryption, security validation
 Port: 8008
 """
 from fastapi import FastAPI, HTTPException, Depends
+from prometheus_fastapi_instrumentator import Instrumentator
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel, Field
 import hashlib
@@ -27,6 +28,8 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = FastAPI(
+# Prometheus metrics instrumentation
+Instrumentator().instrument(app).expose(app)
     title="Security MCP Service",
     description="Authentication, encryption, and security validation tools",
     version="1.0.0"

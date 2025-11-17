@@ -1,4 +1,5 @@
 from fastapi import FastAPI, HTTPException
+from prometheus_fastapi_instrumentator import Instrumentator
 from pydantic import BaseModel
 import time
 import logging
@@ -10,6 +11,8 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = FastAPI(
+# Prometheus metrics instrumentation
+Instrumentator().instrument(app).expose(app)
     title="WebM Transcriber MCP Server",
     description="Mock transcription service for WebM files",
     version="1.0.0"

@@ -4,6 +4,7 @@ Log MCP Service - Log aggregation, analysis, and monitoring
 Port: 8010
 """
 from fastapi import FastAPI, HTTPException
+from prometheus_fastapi_instrumentator import Instrumentator
 from pydantic import BaseModel, Field
 import json
 import re
@@ -25,6 +26,9 @@ app = FastAPI(
     description="Log aggregation, analysis, and monitoring tools",
     version="1.0.0"
 )
+# Prometheus metrics instrumentation
+Instrumentator().instrument(app).expose(app)
+
 
 # Common log patterns
 LOG_PATTERNS = {

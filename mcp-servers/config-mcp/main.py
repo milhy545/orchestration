@@ -4,6 +4,7 @@ Config MCP Service - Environment variables, configuration management
 Port: 8009
 """
 from fastapi import FastAPI, HTTPException
+from prometheus_fastapi_instrumentator import Instrumentator
 from pydantic import BaseModel, Field
 import os
 import json
@@ -25,6 +26,9 @@ app = FastAPI(
     description="Environment variables and configuration file management",
     version="1.0.0"
 )
+# Prometheus metrics instrumentation
+Instrumentator().instrument(app).expose(app)
+
 
 # Configuration storage paths
 CONFIG_BASE_PATH = Path("/app/configs")

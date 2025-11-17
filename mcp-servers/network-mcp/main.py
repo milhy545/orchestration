@@ -4,6 +4,7 @@ Network MCP Service - HTTP requests, API calls, webhooks
 Port: 8006
 """
 from fastapi import FastAPI, HTTPException, BackgroundTasks
+from prometheus_fastapi_instrumentator import Instrumentator
 from pydantic import BaseModel, HttpUrl
 import httpx
 import json
@@ -26,6 +27,9 @@ app = FastAPI(
     description="HTTP requests, API calls, webhooks, and network diagnostics",
     version="1.0.0"
 )
+# Prometheus metrics instrumentation
+Instrumentator().instrument(app).expose(app)
+
 
 # Request/Response Models
 class HttpRequest(BaseModel):

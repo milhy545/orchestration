@@ -1,4 +1,5 @@
 from fastapi import FastAPI, HTTPException, Query
+from prometheus_fastapi_instrumentator import Instrumentator
 from pydantic import BaseModel
 import sqlite3
 import re
@@ -13,6 +14,9 @@ app = FastAPI(
     docs_url="/docs",
     redoc_url="/redoc"
 )
+
+# Prometheus metrics instrumentation
+Instrumentator().instrument(app).expose(app)
 
 DATABASE_FILE = "/data/database.db"  # Mounted volume
 

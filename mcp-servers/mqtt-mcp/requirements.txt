@@ -5,3 +5,4 @@ pydantic>=2.5.0
 python-multipart>=0.0.18
 
 starlette>=0.47.2
+prometheus-fastapi-instrumentator>=6.1.0

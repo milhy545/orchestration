@@ -4,6 +4,7 @@ Qdrant MCP Service - Vector database operations, embeddings, similarity search
 Port: 8023
 """
 from fastapi import FastAPI, HTTPException
+from prometheus_fastapi_instrumentator import Instrumentator
 from pydantic import BaseModel, Field
 from qdrant_client import AsyncQdrantClient
 from qdrant_client.models import Distance, VectorParams, PointStruct, Filter, FieldCondition, MatchValue
@@ -51,6 +52,9 @@ app = FastAPI(
     version=\"1.0.0\",
     lifespan=lifespan
 )
+# Prometheus metrics instrumentation
+Instrumentator().instrument(app).expose(app)
+
 
 # Request/Response Models
 class CollectionRequest(BaseModel):

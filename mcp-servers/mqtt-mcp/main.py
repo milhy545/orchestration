@@ -171,6 +171,8 @@ class MQTTMCPServer:
 
 # Create FastAPI app
 app = FastAPI(title="MQTT MCP Server", version="1.0.0")
+# Prometheus metrics instrumentation
+Instrumentator().instrument(app).expose(app)
 mqtt_server = MQTTMCPServer()
 
 @app.on_event("startup")

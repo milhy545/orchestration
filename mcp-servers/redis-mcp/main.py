@@ -4,6 +4,7 @@ Redis MCP Service - Cache, session management, pub/sub
 Port: 8022
 \"\"\"
 from fastapi import FastAPI, HTTPException
+from prometheus_fastapi_instrumentator import Instrumentator
 from pydantic import BaseModel, Field
 import redis.asyncio as redis
 import json
@@ -59,6 +60,9 @@ app = FastAPI(
     version=\"1.0.0\",
     lifespan=lifespan
 )
+# Prometheus metrics instrumentation
+Instrumentator().instrument(app).expose(app)
+
 
 # Request/Response Models
 class CacheRequest(BaseModel):

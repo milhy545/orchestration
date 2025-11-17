@@ -1,5 +1,6 @@
 #\!/usr/bin/env python3
 from fastapi import FastAPI, HTTPException
+from prometheus_fastapi_instrumentator import Instrumentator
 from pydantic import BaseModel
 import subprocess
 import os
@@ -10,6 +11,8 @@ from datetime import datetime
 import asyncio
 
 app = FastAPI(title="Terminal MCP API", version="1.0.0")
+# Prometheus metrics instrumentation
+Instrumentator().instrument(app).expose(app)
 
 # Security configuration
 MAX_OUTPUT_SIZE = 10 * 1024 * 1024  # 10MB limit for stdout/stderr

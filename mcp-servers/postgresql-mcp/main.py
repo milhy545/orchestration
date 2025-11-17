@@ -4,6 +4,7 @@ PostgreSQL MCP Service - Database operations, queries, connections
 Port: 8021
 """
 from fastapi import FastAPI, HTTPException
+from prometheus_fastapi_instrumentator import Instrumentator
 from pydantic import BaseModel, Field
 import asyncpg
 import json
@@ -52,6 +53,9 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan
 )
+# Prometheus metrics instrumentation
+Instrumentator().instrument(app).expose(app)
+
 
 # Request/Response Models
 class QueryRequest(BaseModel):

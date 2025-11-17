@@ -1,4 +1,5 @@
 from fastapi import FastAPI, HTTPException, Query
+from prometheus_fastapi_instrumentator import Instrumentator
 from pydantic import BaseModel
 import httpx
 from typing import List, Optional, Dict, Any
@@ -12,6 +13,9 @@ app = FastAPI(
     docs_url="/docs",
     redoc_url="/redoc"
 )
+# Prometheus metrics instrumentation
+Instrumentator().instrument(app).expose(app)
+
 
 PERPLEXITY_API_KEY = os.getenv("PERPLEXITY_API_KEY")
 PERPLEXITY_API_URL = "https://api.perplexity.ai/chat/completions"

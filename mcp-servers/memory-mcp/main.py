@@ -1,4 +1,5 @@
 from fastapi import FastAPI, HTTPException, Query
+from prometheus_fastapi_instrumentator import Instrumentator
 from pydantic import BaseModel, Field, validator
 import psycopg2
 import psycopg2.extras
@@ -14,6 +15,9 @@ app = FastAPI(
     docs_url="/docs",
     redoc_url="/redoc"
 )
+# Prometheus metrics instrumentation
+Instrumentator().instrument(app).expose(app)
+
 
 # PostgreSQL configuration
 DATABASE_URL = os.getenv('MCP_DATABASE_URL', 'postgresql://mcp_admin:mcp_secure_2024@postgresql:5432/mcp_unified')

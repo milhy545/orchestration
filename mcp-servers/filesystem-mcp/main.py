@@ -1,5 +1,6 @@
 #\!/usr/bin/env python3
 from fastapi import FastAPI, HTTPException, Query
+from prometheus_fastapi_instrumentator import Instrumentator
 from pydantic import BaseModel
 import os
 import json
@@ -8,6 +9,8 @@ from datetime import datetime
 from pathlib import Path
 
 app = FastAPI(title="Filesystem MCP API", version="1.0.0")
+# Prometheus metrics instrumentation
+Instrumentator().instrument(app).expose(app)
 
 # Security configuration
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB limit for file reading
