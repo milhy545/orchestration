@@ -21,12 +21,13 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = FastAPI(
-# Prometheus metrics instrumentation
-Instrumentator().instrument(app).expose(app)
     title="System MCP Service",
     description="System resources monitoring, process management, and system information",
     version="1.0.0"
 )
+
+# Prometheus metrics instrumentation
+Instrumentator().instrument(app).expose(app)
 
 # Request/Response Models
 class ResourceMonitorRequest(BaseModel):

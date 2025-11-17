@@ -4,7 +4,9 @@
 # Validates Prometheus, Grafana, Loki configuration and connectivity
 #
 
-set -e
+set -e -o pipefail
+# Allow arithmetic expressions to return 0 without exiting
+set +e
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'

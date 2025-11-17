@@ -27,6 +27,7 @@ except ImportError:
 try:
     from fastapi import FastAPI, HTTPException
     from fastapi.responses import JSONResponse
+    from prometheus_fastapi_instrumentator import Instrumentator
     import uvicorn
 except ImportError:
     print("FastAPI not installed, install with: pip install fastapi uvicorn", file=sys.stderr)
