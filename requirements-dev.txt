@@ -10,14 +10,14 @@ pytest-xdist==3.5.0  # Parallel test execution
 
 # FastAPI testing
 httpx==0.25.2  # For TestClient async support
-requests==2.31.0
+requests==2.32.4
 
 # Mocking and fixtures
 faker==20.1.0
 factory-boy==3.3.0
 
 # Code quality
-black==23.12.1
+black==24.3.0
 flake8==6.1.0
 isort==5.13.2
 mypy==1.7.1
