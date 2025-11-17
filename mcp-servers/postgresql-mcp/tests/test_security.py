@@ -1,0 +1,319 @@
+#!/usr/bin/env python3
+"""
+PostgreSQL MCP Security Tests
+
+Tests for SQL injection prevention and security controls.
+"""
+import pytest
+from fastapi.testclient import TestClient
+import sys
+import os
+
+# Add parent directory to path for imports
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from main import app, validate_identifier, validate_query_safety, validate_schema_name
+
+client = TestClient(app)
+
+
+class TestIdentifierValidation:
+    """Test identifier validation (table names, schema names, column names)"""
+
+    def test_valid_identifiers(self):
+        """Test that valid identifiers pass validation"""
+        assert validate_identifier("users") == "users"
+        assert validate_identifier("table_name") == "table_name"
+        assert validate_identifier("_private") == "_private"
+        assert validate_identifier("Table123") == "Table123"
+
+    def test_invalid_identifier_empty(self):
+        """Test that empty identifiers are rejected"""
+        with pytest.raises(Exception) as exc_info:
+            validate_identifier("")
+        assert "cannot be empty" in str(exc_info.value.detail)
+
+    def test_invalid_identifier_too_long(self):
+        """Test that identifiers over 63 chars are rejected"""
+        long_name = "a" * 64
+        with pytest.raises(Exception) as exc_info:
+            validate_identifier(long_name)
+        assert "too long" in str(exc_info.value.detail)
+
+    def test_invalid_identifier_special_chars(self):
+        """Test that identifiers with special characters are rejected"""
+        with pytest.raises(Exception):
+            validate_identifier("table; DROP TABLE users--")
+        with pytest.raises(Exception):
+            validate_identifier("table' OR '1'='1")
+        with pytest.raises(Exception):
+            validate_identifier("table-name")
+        with pytest.raises(Exception):
+            validate_identifier("table.name")
+
+    def test_invalid_identifier_pg_prefix(self):
+        """Test that pg_ prefixed identifiers are rejected (system reserved)"""
+        with pytest.raises(Exception) as exc_info:
+            validate_identifier("pg_users")
+        assert "system reserved" in str(exc_info.value.detail)
+
+    def test_invalid_identifier_starts_with_number(self):
+        """Test that identifiers starting with numbers are rejected"""
+        with pytest.raises(Exception):
+            validate_identifier("123table")
+
+
+class TestQueryValidation:
+    """Test SQL query validation"""
+
+    def test_valid_select_query(self):
+        """Test that valid SELECT queries pass validation"""
+        validate_query_safety("SELECT * FROM users")
+        validate_query_safety("SELECT id, name FROM users WHERE id = 1")
+        validate_query_safety("  SELECT count(*) FROM orders  ")
+
+    def test_query_too_long(self):
+        """Test that queries over max length are rejected"""
+        long_query = "SELECT " + ("a," * 5000) + "1"
+        with pytest.raises(Exception) as exc_info:
+            validate_query_safety(long_query)
+        assert "too long" in str(exc_info.value.detail)
+
+    def test_blocked_keywords(self):
+        """Test that queries with blocked keywords are rejected"""
+        # DROP
+        with pytest.raises(Exception) as exc_info:
+            validate_query_safety("DROP TABLE users")
+        assert "forbidden keyword" in str(exc_info.value.detail).lower()
+
+        # TRUNCATE
+        with pytest.raises(Exception):
+            validate_query_safety("TRUNCATE TABLE users")
+
+        # ALTER
+        with pytest.raises(Exception):
+            validate_query_safety("ALTER TABLE users ADD COLUMN email VARCHAR(255)")
+
+        # CREATE
+        with pytest.raises(Exception):
+            validate_query_safety("CREATE TABLE new_table (id INT)")
+
+        # GRANT
+        with pytest.raises(Exception):
+            validate_query_safety("GRANT ALL ON users TO public")
+
+        # REVOKE
+        with pytest.raises(Exception):
+            validate_query_safety("REVOKE ALL ON users FROM public")
+
+    def test_non_select_operations(self):
+        """Test that non-SELECT operations are rejected"""
+        with pytest.raises(Exception):
+            validate_query_safety("INSERT INTO users VALUES (1, 'test')")
+
+        with pytest.raises(Exception):
+            validate_query_safety("UPDATE users SET name = 'hacked'")
+
+        with pytest.raises(Exception):
+            validate_query_safety("DELETE FROM users")
+
+    def test_sql_injection_attempts(self):
+        """Test that SQL injection attempts are blocked"""
+        # Classic SQL injection
+        with pytest.raises(Exception):
+            validate_query_safety("SELECT * FROM users WHERE id = 1; DROP TABLE users--")
+
+        # Comment-based injection
+        with pytest.raises(Exception):
+            validate_query_safety("SELECT * FROM users -- DROP TABLE sensitive")
+
+        # UNION-based injection (should fail on DROP keyword)
+        with pytest.raises(Exception):
+            validate_query_safety("SELECT * FROM users UNION SELECT * FROM admin; DROP TABLE users--")
+
+
+class TestSchemaNameValidation:
+    """Test schema name validation"""
+
+    def test_valid_schemas(self):
+        """Test that allowed schemas pass validation"""
+        assert validate_schema_name("public") == "public"
+        assert validate_schema_name("information_schema") == "information_schema"
+
+    def test_invalid_schema(self):
+        """Test that non-allowed schemas are rejected"""
+        with pytest.raises(Exception) as exc_info:
+            validate_schema_name("custom_schema")
+        assert "not allowed" in str(exc_info.value.detail)
+
+        with pytest.raises(Exception):
+            validate_schema_name("pg_catalog")
+
+
+class TestQueryEndpointSecurity:
+    """Test /tools/query endpoint security"""
+
+    def test_select_query_allowed(self):
+        """Test that SELECT queries are allowed"""
+        response = client.post("/tools/query", json={
+            "query": "SELECT 1 as test",
+            "parameters": [],
+            "fetch_mode": "all"
+        })
+        # Note: Will fail with 503 if no DB, but should not fail with 403 (forbidden)
+        assert response.status_code in [200, 503]
+
+    def test_drop_query_blocked(self):
+        """Test that DROP queries are blocked"""
+        response = client.post("/tools/query", json={
+            "query": "DROP TABLE users",
+            "parameters": []
+        })
+        assert response.status_code == 403
+        assert "forbidden keyword" in response.json()["detail"].lower()
+
+    def test_update_query_blocked(self):
+        """Test that UPDATE queries are blocked"""
+        response = client.post("/tools/query", json={
+            "query": "UPDATE users SET admin = true",
+            "parameters": []
+        })
+        assert response.status_code == 403
+
+    def test_delete_query_blocked(self):
+        """Test that DELETE queries are blocked"""
+        response = client.post("/tools/query", json={
+            "query": "DELETE FROM users",
+            "parameters": []
+        })
+        assert response.status_code == 403
+
+    def test_create_query_blocked(self):
+        """Test that CREATE queries are blocked"""
+        response = client.post("/tools/query", json={
+            "query": "CREATE TABLE hack (id INT)",
+            "parameters": []
+        })
+        assert response.status_code == 403
+
+    def test_result_limit_enforced(self):
+        """Test that result limits are enforced"""
+        response = client.post("/tools/query", json={
+            "query": "SELECT 1",
+            "parameters": [],
+            "limit": 999999  # Try to request too many rows
+        })
+        # Should not error, but should cap the limit
+        assert response.status_code in [200, 503]
+
+
+class TestTransactionEndpoint:
+    """Test /tools/transaction endpoint (should be disabled)"""
+
+    def test_transaction_disabled(self):
+        """Test that transaction endpoint is disabled for security"""
+        response = client.post("/tools/transaction", json={
+            "queries": [
+                {"query": "SELECT 1", "parameters": []}
+            ]
+        })
+        assert response.status_code == 403
+        assert "disabled" in response.json()["detail"].lower()
+
+
+class TestSchemaEndpointSecurity:
+    """Test /tools/schema endpoint security"""
+
+    def test_describe_allowed(self):
+        """Test that DESCRIBE operations are allowed"""
+        response = client.post("/tools/schema", json={
+            "operation": "describe",
+            "schema_name": "public"
+        })
+        # May fail with 503 if no DB, but should not be 403 (forbidden)
+        assert response.status_code in [200, 503]
+
+    def test_create_table_blocked(self):
+        """Test that CREATE TABLE is blocked"""
+        response = client.post("/tools/schema", json={
+            "operation": "create_table",
+            "table_name": "hack_table",
+            "schema_name": "public",
+            "table_definition": {"id": "INT"}
+        })
+        assert response.status_code == 403
+        assert "disabled" in response.json()["detail"].lower()
+
+    def test_drop_table_blocked(self):
+        """Test that DROP TABLE is blocked"""
+        response = client.post("/tools/schema", json={
+            "operation": "drop_table",
+            "table_name": "users",
+            "schema_name": "public"
+        })
+        assert response.status_code == 403
+        assert "disabled" in response.json()["detail"].lower()
+
+    def test_alter_table_blocked(self):
+        """Test that ALTER TABLE is blocked"""
+        response = client.post("/tools/schema", json={
+            "operation": "alter_table",
+            "table_name": "users",
+            "schema_name": "public"
+        })
+        assert response.status_code == 403
+
+    def test_invalid_schema_rejected(self):
+        """Test that invalid schema names are rejected"""
+        response = client.post("/tools/schema", json={
+            "operation": "describe",
+            "schema_name": "custom_schema"
+        })
+        assert response.status_code in [400, 403]
+
+    def test_sql_injection_in_table_name(self):
+        """Test that SQL injection in table name is blocked"""
+        response = client.post("/tools/schema", json={
+            "operation": "describe",
+            "table_name": "users; DROP TABLE users--",
+            "schema_name": "public"
+        })
+        assert response.status_code == 400
+
+
+class TestHealthEndpoint:
+    """Test health endpoint"""
+
+    def test_health_check(self):
+        """Test that health endpoint works"""
+        response = client.get("/health")
+        assert response.status_code == 200
+        data = response.json()
+        assert "status" in data
+        assert "service" in data
+        assert data["service"] == "PostgreSQL MCP"
+
+
+class TestToolsList:
+    """Test tools list endpoint"""
+
+    def test_tools_list(self):
+        """Test that tools list reflects security status"""
+        response = client.get("/tools/list")
+        assert response.status_code == 200
+        data = response.json()
+
+        # Check that security information is included
+        assert "security_note" in data
+
+        # Check that transaction is marked as disabled
+        tools = {tool["name"]: tool for tool in data["tools"]}
+        assert "transaction" in tools
+        assert tools["transaction"]["status"] == "disabled"
+
+        # Check that query tool has security info
+        assert "security" in tools["query"]
+
+
+if __name__ == "__main__":
+    pytest.main([__file__, "-v"])

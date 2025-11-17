@@ -1,4 +1,6 @@
-fastapi==0.104.1
-uvicorn==0.24.0
-psutil==5.9.6
-pydantic==2.5.0
+fastapi>=0.115.0
+uvicorn>=0.24.0
+psutil>=5.9.6
+pydantic>=2.5.0
+starlette>=0.47.2
+prometheus-fastapi-instrumentator>=6.1.0

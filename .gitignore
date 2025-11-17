@@ -19,6 +19,9 @@ tmp/
 temp/
 *.tmp
 
+# Personal archive/bin folders
+Skladka/
+
 # Docker volumes and runtime data
 docker-data/
 volumes/

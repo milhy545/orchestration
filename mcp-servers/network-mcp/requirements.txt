@@ -1,5 +1,7 @@
-fastapi==0.104.1
-uvicorn==0.24.0
-httpx==0.25.2
-pydantic==2.5.0
-dnspython==2.6.1
+fastapi>=0.115.0
+uvicorn>=0.24.0
+httpx>=0.25.2
+pydantic>=2.5.0
+dnspython>=2.6.1
+starlette>=0.47.2
+prometheus-fastapi-instrumentator>=6.1.0

@@ -356,20 +356,75 @@ services:
       - mcp-network
 
   # ============================================================================
-  # 8028-8030: Management Services (Správa a monitoring)
+  # 8028-8032: Management Services (Správa a monitoring)
   # ============================================================================
 
-  # 8028: Monitoring - Health Checks & Metrics
-  monitoring:
+  # 8028: Prometheus - Metrics Collection & Storage
+  prometheus:
     image: prom/prometheus:latest
-    container_name: mcp-monitoring
+    container_name: mcp-prometheus
     ports:
       - "8028:9090"
     volumes:
-      - /home/orchestration/config/prometheus.yml:/etc/prometheus/prometheus.yml
+      - /home/user/orchestration/monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
     command:
       - "--config.file=/etc/prometheus/prometheus.yml"
       - "--storage.tsdb.path=/prometheus"
+      - "--web.console.libraries=/usr/share/prometheus/console_libraries"
+      - "--web.console.templates=/usr/share/prometheus/consoles"
+      - "--web.enable-lifecycle"
+    restart: unless-stopped
+    networks:
+      - mcp-network
+
+  # 8031: Grafana - Dashboards & Visualization
+  grafana:
+    image: grafana/grafana:latest
+    container_name: mcp-grafana
+    ports:
+      - "8031:3000"
+    volumes:
+      - /home/user/orchestration/monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - grafana-data:/var/lib/grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_SERVER_ROOT_URL=http://localhost:8031
+      - GF_INSTALL_PLUGINS=grafana-clock-panel,grafana-simple-json-datasource
+    depends_on:
+      - prometheus
+      - loki
+    restart: unless-stopped
+    networks:
+      - mcp-network
+
+  # 8032: Loki - Log Aggregation
+  loki:
+    image: grafana/loki:latest
+    container_name: mcp-loki
+    ports:
+      - "8032:3100"
+    volumes:
+      - /home/user/orchestration/monitoring/loki/loki-config.yml:/etc/loki/local-config.yaml:ro
+      - loki-data:/loki
+    command: -config.file=/etc/loki/local-config.yaml
+    restart: unless-stopped
+    networks:
+      - mcp-network
+
+  # Promtail - Log Collection Agent (no external port needed)
+  promtail:
+    image: grafana/promtail:latest
+    container_name: mcp-promtail
+    volumes:
+      - /home/user/orchestration/monitoring/promtail/promtail-config.yml:/etc/promtail/config.yml:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    command: -config.file=/etc/promtail/config.yml
+    depends_on:
+      - loki
     restart: unless-stopped
     networks:
       - mcp-network
@@ -440,3 +495,12 @@ services:
 networks:
   mcp-network:
     driver: bridge
+
+volumes:
+  # Monitoring data persistence
+  prometheus-data:
+    driver: local
+  grafana-data:
+    driver: local
+  loki-data:
+    driver: local

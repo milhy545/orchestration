@@ -1,0 +1,93 @@
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+
+positions:
+  filename: /tmp/positions.yaml
+
+clients:
+  - url: http://loki:3100/loki/api/v1/push
+
+scrape_configs:
+  # Docker container logs
+  - job_name: docker
+    docker_sd_configs:
+      - host: unix:///var/run/docker.sock
+        refresh_interval: 5s
+        filters:
+          - name: label
+            values: ["com.docker.compose.project=orchestration"]
+    relabel_configs:
+      # Container name
+      - source_labels: ['__meta_docker_container_name']
+        regex: '/(.*)'
+        target_label: 'container'
+      # Container ID (short)
+      - source_labels: ['__meta_docker_container_id']
+        regex: '(.{12})'
+        target_label: 'container_id'
+      # Service name from compose
+      - source_labels: ['__meta_docker_container_label_com_docker_compose_service']
+        target_label: 'service'
+      # Project name
+      - source_labels: ['__meta_docker_container_label_com_docker_compose_project']
+        target_label: 'project'
+      # Add service group labels
+      - source_labels: ['service']
+        regex: '(filesystem-mcp|git-mcp|terminal-mcp|database-mcp|memory-mcp|network-mcp|system-mcp|security-mcp|config-mcp|log-mcp)'
+        target_label: 'service_group'
+        replacement: 'core'
+      - source_labels: ['service']
+        regex: '(research-mcp|advanced-memory-mcp|transcriber-mcp)'
+        target_label: 'service_group'
+        replacement: 'ai'
+      - source_labels: ['service']
+        regex: '(postgresql-mcp-wrapper|redis-mcp-wrapper|qdrant-mcp-wrapper)'
+        target_label: 'service_group'
+        replacement: 'database-wrappers'
+      - source_labels: ['service']
+        regex: '(postgresql|redis|qdrant-vector)'
+        target_label: 'service_group'
+        replacement: 'infrastructure'
+      - source_labels: ['service']
+        regex: '(mqtt-mcp|mqtt-broker)'
+        target_label: 'service_group'
+        replacement: 'messaging'
+      - source_labels: ['service']
+        regex: 'zen-coordinator'
+        target_label: 'service_group'
+        replacement: 'coordinator'
+
+  # System logs (optional)
+  - job_name: system
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: varlogs
+          __path__: /var/log/*log
+
+# Pipeline stages for parsing logs
+pipeline_stages:
+  # Parse JSON logs from FastAPI
+  - json:
+      expressions:
+        timestamp: time
+        level: level
+        message: message
+        logger: logger
+  # Extract timestamp
+  - timestamp:
+      source: timestamp
+      format: RFC3339Nano
+  # Set log level
+  - labels:
+      level:
+  # Add regex parsing for non-JSON logs
+  - regex:
+      expression: '^(?P<time>\S+) (?P<level>\S+) (?P<message>.*)$'
+  - timestamp:
+      source: time
+      format: '2006-01-02T15:04:05.999999999Z07:00'
+  - labels:
+      level:

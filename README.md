@@ -71,11 +71,16 @@ The `docker-compose.yml` file defines the following services, which are organize
 -   **`redis` (Port 8022):** Used for caching and session management.
 -   **`qdrant-vector` (Port 8023):** A vector database for AI-related tasks.
 
-### Management Services
+### Management & Monitoring Services
 
--   **`monitoring` (Port 8028):** A Prometheus instance for health checks and metrics.
+-   **`prometheus` (Port 8028):** Metrics collection and storage for all MCP services.
+-   **`grafana` (Port 8031):** Dashboards and visualization platform with pre-configured MCP overview dashboard.
+-   **`loki` (Port 8032):** Log aggregation system collecting logs from all Docker containers.
+-   **`promtail`:** Log collection agent (no external port, internal service).
 -   **`backup-service` (Port 8029):** Performs automated backups.
 -   **`message-queue` (Port 8030):** A Redis-based message queue for task queuing.
+
+**📊 Full observability stack** - See [MONITORING.md](docs/MONITORING.md) for complete monitoring documentation.
 
 ### MQTT Services
 
@@ -112,6 +117,41 @@ You can view the logs of a specific service using:
 ```bash
 docker-compose logs -f <service-name>
 ```
+
+## Monitoring & Observability
+
+The platform includes a comprehensive monitoring stack for full visibility into all services:
+
+### Quick Start
+
+```bash
+# Access Grafana dashboards
+http://localhost:8031  (admin/admin)
+
+# View Prometheus metrics
+http://localhost:8028
+
+# Query logs via Loki
+http://localhost:8032
+```
+
+### Available Dashboards
+
+- **MCP Orchestration - Overview**: Real-time service health, request rates, latency, errors, and infrastructure metrics
+- **Service Health Status**: Up/down status for all 16 MCP services
+- **Performance Metrics**: Request rate, response time (p95), error rates
+- **Infrastructure**: PostgreSQL connections, Redis clients, MQTT message rates
+- **Live Logs**: Real-time error streaming from all containers
+
+### Health Check
+
+Validate monitoring stack configuration:
+
+```bash
+./scripts/monitoring-health-check.sh
+```
+
+**📊 For detailed monitoring documentation, see [MONITORING.md](docs/MONITORING.md)**
 
 ## Contributing
 
