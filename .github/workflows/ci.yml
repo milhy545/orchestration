@@ -1,0 +1,178 @@
+name: CI - Tests & Security
+
+on:
+  push:
+    branches:
+      - master
+      - 'claude/**'
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        python-version: ["3.11"]
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Cache pip dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('requirements-dev.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements-dev.txt
+
+    - name: Install service dependencies
+      run: |
+        # Install dependencies for all MCP services
+        for service in mcp-servers/*/requirements.txt; do
+          if [ -f "$service" ]; then
+            echo "Installing dependencies for $service..."
+            pip install -r "$service"
+          fi
+        done
+
+    - name: Run pytest with coverage
+      run: |
+        pytest \
+          --verbose \
+          --cov=mcp-servers \
+          --cov-report=term-missing \
+          --cov-report=xml \
+          --cov-report=html \
+          --cov-fail-under=70 \
+          mcp-servers/*/tests/
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage.xml
+        flags: unittests
+        name: codecov-umbrella
+        fail_ci_if_error: false
+
+    - name: Upload coverage HTML report
+      uses: actions/upload-artifact@v3
+      with:
+        name: coverage-report
+        path: htmlcov/
+        retention-days: 30
+
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.11"
+
+    - name: Install pip-audit
+      run: |
+        python -m pip install --upgrade pip
+        pip install pip-audit
+
+    - name: Run pip-audit on all services
+      run: |
+        echo "## Security Audit Results" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+
+        for service in mcp-servers/*/requirements.txt; do
+          if [ -f "$service" ]; then
+            service_name=$(dirname "$service" | xargs basename)
+            echo "### $service_name" >> $GITHUB_STEP_SUMMARY
+
+            if pip-audit -r "$service" --format=markdown >> audit_temp.md 2>&1; then
+              echo "✅ No vulnerabilities found" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "⚠️ Vulnerabilities detected:" >> $GITHUB_STEP_SUMMARY
+              cat audit_temp.md >> $GITHUB_STEP_SUMMARY
+            fi
+            echo "" >> $GITHUB_STEP_SUMMARY
+            rm -f audit_temp.md
+          fi
+        done
+
+  lint:
+    name: Code Quality
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.11"
+
+    - name: Install linting tools
+      run: |
+        python -m pip install --upgrade pip
+        pip install flake8 black isort mypy
+
+    - name: Run flake8
+      run: |
+        flake8 mcp-servers/*/main.py \
+          --max-line-length=120 \
+          --exclude=venv,__pycache__ \
+          --ignore=E203,W503 \
+          --count \
+          --show-source \
+          --statistics
+
+    - name: Check code formatting with black
+      run: |
+        black --check --diff mcp-servers/*/main.py
+
+    - name: Check import sorting with isort
+      run: |
+        isort --check-only --diff mcp-servers/*/main.py
+
+  monitoring-health-check:
+    name: Monitoring Configuration Check
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.11"
+
+    - name: Install PyYAML
+      run: pip install pyyaml
+
+    - name: Run monitoring health check
+      run: |
+        chmod +x scripts/monitoring-health-check.sh
+        ./scripts/monitoring-health-check.sh
+
+    - name: Run docker-compose monitoring test
+      run: |
+        chmod +x tests/docker-compose-monitoring-test.sh
+        ./tests/docker-compose-monitoring-test.sh
