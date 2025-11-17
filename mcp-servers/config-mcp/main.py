@@ -147,7 +147,9 @@ async def env_vars_tool(request: EnvVarRequest) -> Dict[str, Any]:
             
         else:
             raise HTTPException(status_code=400, detail=f"Unknown operation: {request.operation}")
-            
+
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Environment variable operation failed: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Env var operation failed: {str(e)}")
@@ -162,11 +164,11 @@ async def config_file_tool(request: ConfigFileRequest) -> Dict[str, Any]:
     """
     try:
         file_path = CONFIG_BASE_PATH / request.file_path
-        
-        # Security check - ensure path is within CONFIG_BASE_PATH
+
+        # SECURITY: Ensure path is within CONFIG_BASE_PATH (prevent path traversal)
         try:
             file_path = file_path.resolve()
-            CONFIG_BASE_PATH.resolve().relative_to(file_path)
+            file_path.relative_to(CONFIG_BASE_PATH.resolve())
         except ValueError:
             raise HTTPException(status_code=403, detail="Path outside allowed directory")
         

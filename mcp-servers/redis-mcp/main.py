@@ -345,26 +345,51 @@ async def session_tool(request: SessionRequest) -> Dict[str, Any]:
             }
             
         elif request.operation == \"list\":
-            # List all sessions (be careful with large datasets)
+            # List sessions using SCAN (non-blocking, production-safe)
             pattern = f\"{session_prefix}*\"
-            keys = await client.keys(pattern)
-            
             sessions = []
-            for key in keys[:100]:  # Limit to first 100
-                session_data = await client.get(key)
-                if session_data:
-                    session_info = json.loads(session_data)
-                    sessions.append({
-                        \"session_id\": session_info.get(\"id\"),
-                        \"created_at\": session_info.get(\"created_at\"),
-                        \"last_accessed\": session_info.get(\"last_accessed\")
-                    })
-            
+            cursor = 0
+            count = 0
+            max_sessions = 100
+            total_scanned = 0
+
+            # Use SCAN instead of KEYS to avoid blocking Redis
+            while count < max_sessions:
+                cursor, keys = await client.scan(
+                    cursor=cursor,
+                    match=pattern,
+                    count=10  # Scan in small batches
+                )
+                total_scanned += len(keys)
+
+                for key in keys:
+                    if count >= max_sessions:
+                        break
+
+                    session_data = await client.get(key)
+                    if session_data:
+                        try:
+                            session_info = json.loads(session_data)
+                            sessions.append({
+                                \"session_id\": session_info.get(\"id\"),
+                                \"created_at\": session_info.get(\"created_at\"),
+                                \"last_accessed\": session_info.get(\"last_accessed\")
+                            })
+                            count += 1
+                        except json.JSONDecodeError:
+                            logger.warning(f\"Failed to parse session data for key: {key}\")
+                            continue
+
+                # cursor = 0 means scan complete
+                if cursor == 0:
+                    break
+
             return {
                 \"operation\": \"list\",
                 \"sessions\": sessions,
                 \"session_count\": len(sessions),
-                \"total_keys\": len(keys),
+                \"scanned_keys\": total_scanned,
+                \"scan_complete\": cursor == 0,
                 \"timestamp\": datetime.now().isoformat()
             }
         

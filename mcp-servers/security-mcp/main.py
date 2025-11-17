@@ -28,12 +28,12 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = FastAPI(
-# Prometheus metrics instrumentation
-Instrumentator().instrument(app).expose(app)
     title="Security MCP Service",
     description="Authentication, encryption, and security validation tools",
     version="1.0.0"
 )
+# Prometheus metrics instrumentation
+Instrumentator().instrument(app).expose(app)
 
 security = HTTPBearer(auto_error=False)
 

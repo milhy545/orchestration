@@ -16,10 +16,93 @@ import subprocess
 import gzip
 from collections import Counter, defaultdict
 import tempfile
+import shlex
+import os
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# Security configuration
+ALLOWED_LOG_DIRS = [
+    "/var/log",
+    "/app/logs",
+    "/tmp/logs"
+]
+
+# Whitelist of allowed commands
+ALLOWED_COMMANDS = {
+    "journalctl": ["-n", "-u", "--since", "--until", "-f", "-x", "-e"],
+    "tail": ["-n", "-f"],
+    "grep": ["-i", "-v", "-E", "-A", "-B", "-C"]
+}
+
+def validate_log_path(user_path: str) -> Path:
+    """Validate and sanitize log file path to prevent path traversal"""
+    try:
+        # Resolve to absolute path
+        path = Path(user_path).resolve()
+
+        # Check if path is within allowed directories
+        for allowed_dir in ALLOWED_LOG_DIRS:
+            allowed_path = Path(allowed_dir).resolve()
+            try:
+                path.relative_to(allowed_path)
+                # Path is valid and within allowed directory
+                if not path.exists():
+                    raise HTTPException(status_code=404, detail="Log file not found")
+                if not path.is_file():
+                    raise HTTPException(status_code=400, detail="Path is not a file")
+                return path
+            except ValueError:
+                continue
+
+        # Path not in any allowed directory
+        raise HTTPException(
+            status_code=403,
+            detail=f"Access denied: Path not in allowed directories {ALLOWED_LOG_DIRS}"
+        )
+    except Exception as e:
+        logger.error(f"Path validation failed: {str(e)}")
+        raise HTTPException(status_code=400, detail="Invalid path")
+
+def validate_command(command_str: str) -> List[str]:
+    """Validate and sanitize command to prevent command injection"""
+    try:
+        parts = shlex.split(command_str)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=f"Invalid command syntax: {str(e)}")
+
+    if not parts:
+        raise HTTPException(status_code=400, detail="Empty command")
+
+    cmd = parts[0]
+
+    # Check if command is in whitelist
+    if cmd not in ALLOWED_COMMANDS:
+        raise HTTPException(
+            status_code=403,
+            detail=f"Command not allowed. Allowed commands: {list(ALLOWED_COMMANDS.keys())}"
+        )
+
+    # Validate arguments
+    allowed_args = ALLOWED_COMMANDS[cmd]
+    for arg in parts[1:]:
+        if arg.startswith('-'):
+            # Check if flag is allowed
+            flag_valid = False
+            for allowed_arg in allowed_args:
+                if arg.startswith(allowed_arg):
+                    flag_valid = True
+                    break
+
+            if not flag_valid:
+                raise HTTPException(
+                    status_code=403,
+                    detail=f"Argument {arg} not allowed for {cmd}"
+                )
+
+    return parts
 
 app = FastAPI(
     title="Log MCP Service",
@@ -103,30 +186,34 @@ async def log_analysis_tool(request: LogAnalysisRequest) -> Dict[str, Any]:
         log_lines = []
         
         if request.log_source == "file_path":
-            log_path = Path(request.source_value)
-            if not log_path.exists():
-                raise HTTPException(status_code=404, detail="Log file not found")
-            
+            # Validate path to prevent path traversal
+            log_path = validate_log_path(request.source_value)
+
             # Handle compressed files
             if log_path.suffix == '.gz':
                 with gzip.open(log_path, 'rt') as f:
                     log_lines = f.readlines()
             else:
                 log_lines = log_path.read_text().splitlines()
-                
+
         elif request.log_source == "command":
+            # Validate command to prevent command injection
+            validated_command = validate_command(request.source_value)
+
             try:
                 result = subprocess.run(
-                    request.source_value.split(), 
-                    capture_output=True, 
-                    text=True, 
-                    timeout=30
+                    validated_command,
+                    capture_output=True,
+                    text=True,
+                    timeout=30,
+                    shell=False  # Explicitly disable shell
                 )
                 log_lines = result.stdout.splitlines()
             except subprocess.TimeoutExpired:
                 raise HTTPException(status_code=408, detail="Command timeout")
             except Exception as e:
-                raise HTTPException(status_code=500, detail=f"Command failed: {str(e)}")
+                logger.error(f"Command execution failed: {str(e)}")
+                raise HTTPException(status_code=500, detail="Command execution failed")
                 
         elif request.log_source == "direct_text":
             log_lines = request.source_value.splitlines()
@@ -368,16 +455,19 @@ async def log_search_tool(request: LogSearchRequest) -> Dict[str, Any]:
         total_matches = 0
         
         for source in request.sources:
-            source_path = Path(source)
-            if not source_path.exists():
+            try:
+                # Validate path to prevent path traversal
+                source_path = validate_log_path(source)
+
+                # Read file content
+                if source_path.suffix == '.gz':
+                    with gzip.open(source_path, 'rt') as f:
+                        lines = f.readlines()
+                else:
+                    lines = source_path.read_text().splitlines()
+            except HTTPException:
+                # Skip files that fail validation
                 continue
-                
-            # Read file content
-            if source_path.suffix == '.gz':
-                with gzip.open(source_path, 'rt') as f:
-                    lines = f.readlines()
-            else:
-                lines = source_path.read_text().splitlines()
             
             # Search based on type
             source_matches = []

@@ -11,12 +11,12 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = FastAPI(
-# Prometheus metrics instrumentation
-Instrumentator().instrument(app).expose(app)
     title="WebM Transcriber MCP Server",
     description="Mock transcription service for WebM files",
     version="1.0.0"
 )
+# Prometheus metrics instrumentation
+Instrumentator().instrument(app).expose(app)
 
 class AudioTranscribeRequest(BaseModel):
     audio_data: str  # Base64 encoded audio data
