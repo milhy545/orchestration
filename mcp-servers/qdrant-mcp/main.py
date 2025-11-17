@@ -14,8 +14,14 @@ from fastapi import FastAPI, HTTPException
 from prometheus_fastapi_instrumentator import Instrumentator
 from pydantic import BaseModel, Field
 from qdrant_client import AsyncQdrantClient
-from qdrant_client.models import (Distance, FieldCondition, Filter, MatchValue,
-                                  PointStruct, VectorParams)
+from qdrant_client.models import (
+    Distance,
+    FieldCondition,
+    Filter,
+    MatchValue,
+    PointStruct,
+    VectorParams,
+)
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
