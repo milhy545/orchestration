@@ -149,7 +149,7 @@ jobs:
 
     - name: Check import sorting with isort
       run: |
-        isort --check-only --diff mcp-servers/*/main.py
+        isort --check-only --diff --profile black mcp-servers/*/main.py
 
   monitoring-health-check:
     name: Monitoring Configuration Check
