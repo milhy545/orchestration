@@ -231,11 +231,11 @@ async def query_tool(request: QueryRequest) -> Dict[str, Any]:
     - Query length limits
     - Result row limits
     """
+    # SECURITY: Validate query safety BEFORE checking db_pool
+    validate_query_safety(request.query)
+
     if not db_pool:
         raise HTTPException(status_code=503, detail="Database connection not available")
-
-    # SECURITY: Validate query safety
-    validate_query_safety(request.query)
 
     # SECURITY: Enforce result row limits
     max_limit = min(request.limit or MAX_RESULT_ROWS, MAX_RESULT_ROWS)
@@ -398,21 +398,41 @@ async def schema_tool(request: SchemaRequest) -> Dict[str, Any]:
     SECURITY: CREATE/DROP/ALTER operations disabled for security.
     Only DESCRIBE operation is allowed.
     """
+    # SECURITY: Validate schema name BEFORE checking db_pool
+    validated_schema = validate_schema_name(request.schema_name or "public")
+
+    # SECURITY: Validate table name BEFORE checking db_pool (if provided)
+    validated_table = None
+    if request.table_name:
+        validated_table = validate_identifier(request.table_name, "table_name")
+
+    # SECURITY: Check for disabled operations BEFORE db_pool check
+    if request.operation == "create_table":
+        raise HTTPException(
+            status_code=403,
+            detail="CREATE TABLE operation is disabled for security. Use database admin tools for schema changes."
+        )
+    elif request.operation == "drop_table":
+        raise HTTPException(
+            status_code=403,
+            detail="DROP TABLE operation is disabled for security. Use database admin tools for schema changes."
+        )
+    elif request.operation == "alter_table":
+        raise HTTPException(
+            status_code=403,
+            detail="ALTER TABLE operation is disabled for security. Use database admin tools for schema changes."
+        )
+
     if not db_pool:
         raise HTTPException(status_code=503, detail="Database connection not available")
-
-    # SECURITY: Validate schema name
-    validated_schema = validate_schema_name(request.schema_name or "public")
 
     try:
         async with db_pool.acquire() as connection:
 
             if request.operation == "describe":
-                if request.table_name:
-                    # SECURITY: Validate table name
-                    validated_table = validate_identifier(request.table_name, "table_name")
-
+                if validated_table:
                     # Describe specific table (uses parameterized queries - SAFE)
+                    # Note: validated_table was already validated before db_pool check
                     query = """
                     SELECT column_name, data_type, is_nullable, column_default, character_maximum_length
                     FROM information_schema.columns
@@ -461,28 +481,8 @@ async def schema_tool(request: SchemaRequest) -> Dict[str, Any]:
                         "table_count": len(tables)
                     }
 
-            elif request.operation == "create_table":
-                # SECURITY: Disabled for security
-                raise HTTPException(
-                    status_code=403,
-                    detail="CREATE TABLE operation is disabled for security. Use database admin tools for schema changes."
-                )
-
-            elif request.operation == "drop_table":
-                # SECURITY: Disabled for security
-                raise HTTPException(
-                    status_code=403,
-                    detail="DROP TABLE operation is disabled for security. Use database admin tools for schema changes."
-                )
-
-            elif request.operation == "alter_table":
-                # SECURITY: Disabled for security
-                raise HTTPException(
-                    status_code=403,
-                    detail="ALTER TABLE operation is disabled for security. Use database admin tools for schema changes."
-                )
-
             else:
+                # Unknown operation (create/drop/alter already blocked earlier)
                 raise HTTPException(status_code=400, detail=f"Unknown operation: {request.operation}")
 
     except HTTPException:
