@@ -1,14 +1,15 @@
-#\!/usr/bin/env python3
+# \!/usr/bin/env python3
+import asyncio
+import json
+import os
+import shlex
+import subprocess
+from datetime import datetime
+from typing import Any, Dict, List, Optional
+
 from fastapi import FastAPI, HTTPException
 from prometheus_fastapi_instrumentator import Instrumentator
 from pydantic import BaseModel
-import subprocess
-import os
-import json
-import shlex
-from typing import List, Optional, Dict, Any
-from datetime import datetime
-import asyncio
 
 app = FastAPI(title="Terminal MCP API", version="1.0.0")
 # Prometheus metrics instrumentation
@@ -21,10 +22,32 @@ ALLOWED_WORKING_DIRS = ["/tmp", "/data", "/workspace", "/home"]
 
 # Whitelist of allowed commands (base commands only)
 ALLOWED_COMMANDS = {
-    "ls", "echo", "cat", "pwd", "whoami", "date", "ps", "df", "du",
-    "grep", "find", "wc", "head", "tail", "sort", "uniq", "cut",
-    "python3", "node", "npm", "git", "docker", "curl", "wget"
+    "ls",
+    "echo",
+    "cat",
+    "pwd",
+    "whoami",
+    "date",
+    "ps",
+    "df",
+    "du",
+    "grep",
+    "find",
+    "wc",
+    "head",
+    "tail",
+    "sort",
+    "uniq",
+    "cut",
+    "python3",
+    "node",
+    "npm",
+    "git",
+    "docker",
+    "curl",
+    "wget",
 }
+
 
 class CommandRequest(BaseModel):
     command: str
@@ -32,6 +55,7 @@ class CommandRequest(BaseModel):
     cwd: Optional[str] = None
     timeout: Optional[int] = 30
     user_id: Optional[str] = "default"
+
 
 class CommandResponse(BaseModel):
     success: bool
@@ -42,9 +66,11 @@ class CommandResponse(BaseModel):
     cwd: str
     truncated: bool = False
 
+
 @app.get("/health")
 async def health():
     return {"status": "ok", "timestamp": datetime.now().isoformat()}
+
 
 def validate_working_directory(cwd: str) -> str:
     """Validate and sanitize working directory"""
@@ -59,11 +85,13 @@ def validate_working_directory(cwd: str) -> str:
         raise HTTPException(status_code=400, detail=f"Directory not found: {cwd}")
 
     # Check if it's within allowed directories
-    allowed = any(abs_path.startswith(allowed_dir) for allowed_dir in ALLOWED_WORKING_DIRS)
+    allowed = any(
+        abs_path.startswith(allowed_dir) for allowed_dir in ALLOWED_WORKING_DIRS
+    )
     if not allowed:
         raise HTTPException(
             status_code=403,
-            detail=f"Access to directory {abs_path} is not allowed. Allowed directories: {ALLOWED_WORKING_DIRS}"
+            detail=f"Access to directory {abs_path} is not allowed. Allowed directories: {ALLOWED_WORKING_DIRS}",
         )
 
     return abs_path
@@ -83,7 +111,7 @@ def validate_command(command: str) -> str:
         if base_command not in ALLOWED_COMMANDS:
             raise HTTPException(
                 status_code=403,
-                detail=f"Command '{base_command}' is not allowed. Allowed commands: {sorted(ALLOWED_COMMANDS)}"
+                detail=f"Command '{base_command}' is not allowed. Allowed commands: {sorted(ALLOWED_COMMANDS)}",
             )
 
         return base_command
@@ -109,7 +137,7 @@ async def execute_command(request: CommandRequest):
         if timeout != request.timeout:
             raise HTTPException(
                 status_code=400,
-                detail=f"Timeout too large. Maximum allowed: {MAX_TIMEOUT} seconds"
+                detail=f"Timeout too large. Maximum allowed: {MAX_TIMEOUT} seconds",
             )
 
         # Validate working directory
@@ -119,7 +147,9 @@ async def execute_command(request: CommandRequest):
         try:
             cmd_parts = shlex.split(request.command)
         except ValueError as e:
-            raise HTTPException(status_code=400, detail=f"Invalid command syntax: {str(e)}")
+            raise HTTPException(
+                status_code=400, detail=f"Invalid command syntax: {str(e)}"
+            )
 
         if not cmd_parts:
             raise HTTPException(status_code=400, detail="Empty command")
@@ -130,7 +160,7 @@ async def execute_command(request: CommandRequest):
         if base_command not in ALLOWED_COMMANDS:
             raise HTTPException(
                 status_code=403,
-                detail=f"Command '{base_command}' is not allowed. Allowed commands: {sorted(ALLOWED_COMMANDS)}"
+                detail=f"Command '{base_command}' is not allowed. Allowed commands: {sorted(ALLOWED_COMMANDS)}",
             )
 
         # Add additional args if provided
@@ -145,7 +175,7 @@ async def execute_command(request: CommandRequest):
             cwd=cwd,
             capture_output=True,
             text=True,
-            timeout=timeout
+            timeout=timeout,
         )
 
         execution_time = (datetime.now() - start_time).total_seconds()
@@ -161,7 +191,7 @@ async def execute_command(request: CommandRequest):
             stderr=stderr,
             execution_time=execution_time,
             cwd=cwd,
-            truncated=stdout_truncated or stderr_truncated
+            truncated=stdout_truncated or stderr_truncated,
         )
 
     except subprocess.TimeoutExpired:
@@ -169,7 +199,10 @@ async def execute_command(request: CommandRequest):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Command execution failed: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Command execution failed: {str(e)}"
+        )
+
 
 @app.get("/directory")
 async def get_current_directory():
@@ -179,19 +212,22 @@ async def get_current_directory():
         files = []
         for item in os.listdir(cwd):
             item_path = os.path.join(cwd, item)
-            files.append({
-                "name": item,
-                "type": "directory" if os.path.isdir(item_path) else "file",
-                "size": os.path.getsize(item_path) if os.path.isfile(item_path) else None
-            })
-        
-        return {
-            "cwd": cwd,
-            "files": files,
-            "count": len(files)
-        }
+            files.append(
+                {
+                    "name": item,
+                    "type": "directory" if os.path.isdir(item_path) else "file",
+                    "size": (
+                        os.path.getsize(item_path)
+                        if os.path.isfile(item_path)
+                        else None
+                    ),
+                }
+            )
+
+        return {"cwd": cwd, "files": files, "count": len(files)}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
 
 @app.get("/processes")
 async def list_processes():
@@ -199,16 +235,15 @@ async def list_processes():
     try:
         result = subprocess.run(["ps", "aux"], capture_output=True, text=True)
         if result.returncode == 0:
-            lines = result.stdout.strip().split('\n')
-            return {
-                "processes": lines[1:],  # Skip header
-                "count": len(lines) - 1
-            }
+            lines = result.stdout.strip().split("\n")
+            return {"processes": lines[1:], "count": len(lines) - 1}  # Skip header
         else:
             raise HTTPException(status_code=500, detail="Failed to list processes")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=8000)

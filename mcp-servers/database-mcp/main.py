@@ -1,18 +1,19 @@
+import re
+import sqlite3
+from contextlib import contextmanager
+from datetime import datetime
+from typing import Any, Dict, List, Optional
+
 from fastapi import FastAPI, HTTPException, Query
 from prometheus_fastapi_instrumentator import Instrumentator
 from pydantic import BaseModel
-import sqlite3
-import re
-from contextlib import contextmanager
-from typing import List, Dict, Any, Optional
-from datetime import datetime
 
 app = FastAPI(
     title="Database MCP API",
     description="API for database operations (SQLite) with security controls.",
     version="2.0.0",
     docs_url="/docs",
-    redoc_url="/redoc"
+    redoc_url="/redoc",
 )
 
 # Prometheus metrics instrumentation
@@ -27,7 +28,15 @@ MAX_SAMPLE_LIMIT = 1000
 
 # SQL operation whitelist (allowed keywords in queries)
 ALLOWED_OPERATIONS = {"SELECT", "PRAGMA"}
-DANGEROUS_OPERATIONS = {"DROP", "DELETE", "UPDATE", "INSERT", "ALTER", "CREATE", "TRUNCATE"}
+DANGEROUS_OPERATIONS = {
+    "DROP",
+    "DELETE",
+    "UPDATE",
+    "INSERT",
+    "ALTER",
+    "CREATE",
+    "TRUNCATE",
+}
 
 
 @contextmanager
@@ -55,17 +64,16 @@ def validate_table_name(table_name: str) -> str:
         HTTPException: If table name is invalid
     """
     # Allow only alphanumeric characters and underscores
-    if not re.match(r'^[a-zA-Z_][a-zA-Z0-9_]*$', table_name):
+    if not re.match(r"^[a-zA-Z_][a-zA-Z0-9_]*$", table_name):
         raise HTTPException(
             status_code=400,
-            detail=f"Invalid table name: {table_name}. Only alphanumeric characters and underscores allowed."
+            detail=f"Invalid table name: {table_name}. Only alphanumeric characters and underscores allowed.",
         )
 
     # Additional check for SQLite system tables
-    if table_name.startswith('sqlite_'):
+    if table_name.startswith("sqlite_"):
         raise HTTPException(
-            status_code=403,
-            detail=f"Access to system table {table_name} is forbidden"
+            status_code=403, detail=f"Access to system table {table_name} is forbidden"
         )
 
     return table_name
@@ -88,7 +96,7 @@ def validate_query(query: str) -> None:
         if dangerous_op in query_upper:
             raise HTTPException(
                 status_code=403,
-                detail=f"Operation {dangerous_op} is not allowed. Only SELECT queries are permitted."
+                detail=f"Operation {dangerous_op} is not allowed. Only SELECT queries are permitted.",
             )
 
     # Ensure query starts with allowed operation
@@ -96,7 +104,7 @@ def validate_query(query: str) -> None:
     if not starts_with_allowed:
         raise HTTPException(
             status_code=403,
-            detail=f"Query must start with one of: {', '.join(ALLOWED_OPERATIONS)}"
+            detail=f"Query must start with one of: {', '.join(ALLOWED_OPERATIONS)}",
         )
 
 
@@ -106,16 +114,20 @@ class QueryResult(BaseModel):
     row_count: int
     truncated: bool = False
 
+
 class TableInfo(BaseModel):
     name: str
+
 
 class ColumnInfo(BaseModel):
     name: str
     type: str
 
+
 class TableSchema(BaseModel):
     table_name: str
     columns: List[ColumnInfo]
+
 
 @app.get("/health")
 async def health():
@@ -128,7 +140,7 @@ async def health():
                 "status": "healthy",
                 "service": "Database MCP",
                 "database": "SQLite",
-                "timestamp": datetime.now().isoformat()
+                "timestamp": datetime.now().isoformat(),
             }
     except Exception as e:
         raise HTTPException(status_code=503, detail=f"Database unavailable: {str(e)}")
@@ -138,7 +150,9 @@ async def health():
 async def execute_query(
     query: str,
     params: Optional[List[Any]] = None,
-    max_rows: int = Query(1000, ge=1, le=MAX_QUERY_RESULTS, description="Maximum rows to return")
+    max_rows: int = Query(
+        1000, ge=1, le=MAX_QUERY_RESULTS, description="Maximum rows to return"
+    ),
 ):
     """
     Execute SQL SELECT query on database with security validation.
@@ -155,7 +169,11 @@ async def execute_query(
             cursor = conn.cursor()
             cursor.execute(query, params)
 
-            columns = [description[0] for description in cursor.description] if cursor.description else []
+            columns = (
+                [description[0] for description in cursor.description]
+                if cursor.description
+                else []
+            )
 
             # Fetch with limit to prevent memory issues
             all_rows = cursor.fetchall()
@@ -164,10 +182,7 @@ async def execute_query(
             rows = [list(row) for row in all_rows[:max_rows]]
 
             return QueryResult(
-                columns=columns,
-                rows=rows,
-                row_count=total_rows,
-                truncated=truncated
+                columns=columns, rows=rows, row_count=total_rows, truncated=truncated
             )
 
     except HTTPException:
@@ -177,6 +192,7 @@ async def execute_query(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Query execution failed: {str(e)}")
 
+
 @app.get("/db/tables", response_model=List[TableInfo])
 async def list_tables():
     """
@@ -185,13 +201,16 @@ async def list_tables():
     try:
         with get_db_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%';")
+            cursor.execute(
+                "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%';"
+            )
             tables = [TableInfo(name=row["name"]) for row in cursor.fetchall()]
             return tables
     except sqlite3.Error as e:
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to list tables: {str(e)}")
+
 
 @app.get("/db/schema/{table_name}", response_model=TableSchema)
 async def describe_table(table_name: str):
@@ -207,12 +226,15 @@ async def describe_table(table_name: str):
             # Safely inject validated table name as identifier using SQLite quoting
             # lgtm[py/sql-injection] - False positive: validated_table is sanitized via regex validation
             cursor.execute(f'PRAGMA table_info("{validated_table}");')
-            columns = [ColumnInfo(name=row["name"], type=row["type"]) for row in cursor.fetchall()]
+            columns = [
+                ColumnInfo(name=row["name"], type=row["type"])
+                for row in cursor.fetchall()
+            ]
 
             if not columns:
                 raise HTTPException(
                     status_code=404,
-                    detail=f"Table {table_name} not found or has no columns."
+                    detail=f"Table {table_name} not found or has no columns.",
                 )
 
             return TableSchema(table_name=validated_table, columns=columns)
@@ -222,12 +244,20 @@ async def describe_table(table_name: str):
     except sqlite3.Error as e:
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to get table schema: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to get table schema: {str(e)}"
+        )
+
 
 @app.get("/db/sample/{table_name}", response_model=QueryResult)
 async def get_sample_data(
     table_name: str,
-    limit: int = Query(DEFAULT_SAMPLE_LIMIT, ge=1, le=MAX_SAMPLE_LIMIT, description="Number of rows to return")
+    limit: int = Query(
+        DEFAULT_SAMPLE_LIMIT,
+        ge=1,
+        le=MAX_SAMPLE_LIMIT,
+        description="Number of rows to return",
+    ),
 ):
     """
     Get sample data from table with SQL injection protection.
@@ -242,14 +272,18 @@ async def get_sample_data(
             # lgtm[py/sql-injection] - False positive: validated_table is sanitized via regex validation
             cursor.execute(f"SELECT * FROM {validated_table} LIMIT ?;", (limit,))
 
-            columns = [description[0] for description in cursor.description] if cursor.description else []
+            columns = (
+                [description[0] for description in cursor.description]
+                if cursor.description
+                else []
+            )
             rows = [list(row) for row in cursor.fetchall()]
 
             return QueryResult(
                 columns=columns,
                 rows=rows,
                 row_count=len(rows),
-                truncated=False  # We're using LIMIT, so not truncated
+                truncated=False,  # We're using LIMIT, so not truncated
             )
 
     except HTTPException:
@@ -257,4 +291,6 @@ async def get_sample_data(
     except sqlite3.Error as e:
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to get sample data: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to get sample data: {str(e)}"
+        )

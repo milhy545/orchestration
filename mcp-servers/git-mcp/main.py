@@ -1,18 +1,19 @@
+import os
+import subprocess
+from datetime import datetime
+from pathlib import Path
+from typing import List, Optional
+
 from fastapi import FastAPI, HTTPException, Query
 from prometheus_fastapi_instrumentator import Instrumentator
 from pydantic import BaseModel
-import subprocess
-import os
-from pathlib import Path
-from typing import List, Optional
-from datetime import datetime
 
 app = FastAPI(
     title="Git MCP API",
     description="API for Git operations with security controls.",
     version="2.0.0",
     docs_url="/docs",
-    redoc_url="/redoc"
+    redoc_url="/redoc",
 )
 
 # Prometheus metrics instrumentation
@@ -53,25 +54,26 @@ def validate_repository_path(path: str) -> str:
         raise HTTPException(status_code=400, detail=f"Invalid path: {str(e)}")
 
     # Check if path is within allowed repositories
-    allowed = any(resolved_path.startswith(allowed_repo) for allowed_repo in ALLOWED_REPOSITORIES)
+    allowed = any(
+        resolved_path.startswith(allowed_repo) for allowed_repo in ALLOWED_REPOSITORIES
+    )
     if not allowed:
         raise HTTPException(
             status_code=403,
-            detail=f"Access to repository {resolved_path} is not allowed. Allowed locations: {ALLOWED_REPOSITORIES}"
+            detail=f"Access to repository {resolved_path} is not allowed. Allowed locations: {ALLOWED_REPOSITORIES}",
         )
 
     # Check for path traversal
     if ".." in path:
         raise HTTPException(
             status_code=403,
-            detail="Path traversal detected (..). Please use absolute paths only."
+            detail="Path traversal detected (..). Please use absolute paths only.",
         )
 
     # Verify it's actually a git repository
     if not os.path.exists(os.path.join(resolved_path, ".git")):
         raise HTTPException(
-            status_code=400,
-            detail=f"Path {resolved_path} is not a git repository"
+            status_code=400, detail=f"Path {resolved_path} is not a git repository"
         )
 
     return resolved_path
@@ -81,10 +83,12 @@ class GitStatus(BaseModel):
     status: str
     repository: str
 
+
 class GitLog(BaseModel):
     log: List[str]
     count: int
     repository: str
+
 
 class GitDiff(BaseModel):
     diff: str
@@ -98,16 +102,13 @@ async def health():
     try:
         # Check git is available
         result = subprocess.run(
-            ["git", "--version"],
-            capture_output=True,
-            text=True,
-            timeout=5
+            ["git", "--version"], capture_output=True, text=True, timeout=5
         )
         return {
             "status": "healthy",
             "service": "Git MCP",
             "git_version": result.stdout.strip(),
-            "timestamp": datetime.now().isoformat()
+            "timestamp": datetime.now().isoformat(),
         }
     except Exception as e:
         raise HTTPException(status_code=503, detail=f"Git unavailable: {str(e)}")
@@ -127,13 +128,10 @@ async def git_status(path: str):
             capture_output=True,
             text=True,
             check=True,
-            timeout=GIT_TIMEOUT
+            timeout=GIT_TIMEOUT,
         )
 
-        return GitStatus(
-            status=result.stdout,
-            repository=validated_path
-        )
+        return GitStatus(status=result.stdout, repository=validated_path)
 
     except HTTPException:
         raise
@@ -142,13 +140,17 @@ async def git_status(path: str):
     except subprocess.CalledProcessError as e:
         raise HTTPException(status_code=500, detail=f"Git command failed: {e.stderr}")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to get git status: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to get git status: {str(e)}"
+        )
 
 
 @app.get("/git/{path:path}/log", response_model=GitLog)
 async def git_log(
     path: str,
-    limit: int = Query(5, ge=1, le=MAX_LOG_ENTRIES, description="Number of commits to show")
+    limit: int = Query(
+        5, ge=1, le=MAX_LOG_ENTRIES, description="Number of commits to show"
+    ),
 ):
     """
     Get git commit log with limits.
@@ -162,16 +164,12 @@ async def git_log(
             capture_output=True,
             text=True,
             check=True,
-            timeout=GIT_TIMEOUT
+            timeout=GIT_TIMEOUT,
         )
 
         log_lines = result.stdout.strip().split("\n") if result.stdout.strip() else []
 
-        return GitLog(
-            log=log_lines,
-            count=len(log_lines),
-            repository=validated_path
-        )
+        return GitLog(log=log_lines, count=len(log_lines), repository=validated_path)
 
     except HTTPException:
         raise
@@ -197,7 +195,7 @@ async def git_diff(path: str):
             capture_output=True,
             text=True,
             check=True,
-            timeout=GIT_TIMEOUT
+            timeout=GIT_TIMEOUT,
         )
 
         diff_output = result.stdout
@@ -208,11 +206,7 @@ async def git_diff(path: str):
             diff_output = diff_output[:MAX_DIFF_SIZE] + "\n... (diff truncated)"
             truncated = True
 
-        return GitDiff(
-            diff=diff_output,
-            truncated=truncated,
-            repository=validated_path
-        )
+        return GitDiff(diff=diff_output, truncated=truncated, repository=validated_path)
 
     except HTTPException:
         raise

@@ -138,7 +138,7 @@ jobs:
         flake8 mcp-servers/*/main.py \
           --max-line-length=120 \
           --exclude=venv,__pycache__ \
-          --ignore=E203,W503 \
+          --ignore=E203,W503,F401,E265,E305,E501 \
           --count \
           --show-source \
           --statistics

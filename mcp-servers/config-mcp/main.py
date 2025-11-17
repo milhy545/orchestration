@@ -3,19 +3,20 @@
 Config MCP Service - Environment variables, configuration management
 Port: 8009
 """
+import configparser
+import json
+import logging
+import os
+import shutil
+import tempfile
+from datetime import datetime
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Union
+
+import yaml
 from fastapi import FastAPI, HTTPException
 from prometheus_fastapi_instrumentator import Instrumentator
 from pydantic import BaseModel, Field
-import os
-import json
-import yaml
-import configparser
-import tempfile
-from typing import Dict, List, Optional, Any, Union
-from datetime import datetime
-import logging
-from pathlib import Path
-import shutil
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -24,7 +25,7 @@ logger = logging.getLogger(__name__)
 app = FastAPI(
     title="Config MCP Service",
     description="Environment variables and configuration file management",
-    version="1.0.0"
+    version="1.0.0",
 )
 # Prometheus metrics instrumentation
 Instrumentator().instrument(app).expose(app)
@@ -35,33 +36,43 @@ CONFIG_BASE_PATH = Path("/app/configs")
 CONFIG_BASE_PATH.mkdir(exist_ok=True)
 
 # Request/Response Models
+
+
 class EnvVarRequest(BaseModel):
     """Environment variable operation request"""
+
     operation: str = Field(..., description="get, set, list, delete")
     key: Optional[str] = None
     value: Optional[str] = None
     prefix: Optional[str] = None  # For listing with prefix filter
 
+
 class ConfigFileRequest(BaseModel):
     """Configuration file operation request"""
+
     operation: str = Field(..., description="read, write, create, delete, list")
     file_path: str
     format: Optional[str] = "json"  # json, yaml, ini, env
     content: Optional[Dict[str, Any]] = None
     section: Optional[str] = None  # For INI files
 
+
 class ConfigValidateRequest(BaseModel):
     """Configuration validation request"""
+
     config_data: Dict[str, Any]
     schema: Optional[Dict[str, Any]] = None
     required_keys: Optional[List[str]] = []
     value_types: Optional[Dict[str, str]] = {}  # key -> type mapping
 
+
 class ConfigBackupRequest(BaseModel):
     """Configuration backup request"""
+
     operation: str = Field(..., description="create, restore, list, delete")
     backup_name: Optional[str] = None
     file_patterns: Optional[List[str]] = ["*.json", "*.yaml", "*.yml", "*.ini", "*.env"]
+
 
 @app.get("/health")
 async def health_check():
@@ -74,91 +85,105 @@ async def health_check():
         "features": ["env_vars", "config_files", "validation", "backup"],
         "storage": {
             "config_path": str(CONFIG_BASE_PATH),
-            "writable": os.access(CONFIG_BASE_PATH, os.W_OK)
-        }
+            "writable": os.access(CONFIG_BASE_PATH, os.W_OK),
+        },
     }
+
 
 @app.post("/tools/env_vars")
 async def env_vars_tool(request: EnvVarRequest) -> Dict[str, Any]:
     """
     Manage environment variables
-    
+
     Tool: env_vars
     Description: Get, set, list, or delete environment variables
     """
     try:
         if request.operation == "get":
             if not request.key:
-                raise HTTPException(status_code=400, detail="Key required for get operation")
-                
+                raise HTTPException(
+                    status_code=400, detail="Key required for get operation"
+                )
+
             value = os.environ.get(request.key)
             return {
                 "operation": "get",
                 "key": request.key,
                 "value": value,
                 "found": value is not None,
-                "timestamp": datetime.now().isoformat()
+                "timestamp": datetime.now().isoformat(),
             }
-            
+
         elif request.operation == "set":
             if not request.key or request.value is None:
-                raise HTTPException(status_code=400, detail="Key and value required for set operation")
-                
+                raise HTTPException(
+                    status_code=400, detail="Key and value required for set operation"
+                )
+
             old_value = os.environ.get(request.key)
             os.environ[request.key] = request.value
-            
+
             return {
                 "operation": "set",
                 "key": request.key,
                 "new_value": request.value,
                 "old_value": old_value,
-                "timestamp": datetime.now().isoformat()
+                "timestamp": datetime.now().isoformat(),
             }
-            
+
         elif request.operation == "list":
             env_vars = dict(os.environ)
-            
+
             if request.prefix:
-                env_vars = {k: v for k, v in env_vars.items() if k.startswith(request.prefix)}
-            
+                env_vars = {
+                    k: v for k, v in env_vars.items() if k.startswith(request.prefix)
+                }
+
             return {
                 "operation": "list",
                 "count": len(env_vars),
                 "prefix_filter": request.prefix,
                 "variables": env_vars,
-                "timestamp": datetime.now().isoformat()
+                "timestamp": datetime.now().isoformat(),
             }
-            
+
         elif request.operation == "delete":
             if not request.key:
-                raise HTTPException(status_code=400, detail="Key required for delete operation")
-                
+                raise HTTPException(
+                    status_code=400, detail="Key required for delete operation"
+                )
+
             old_value = os.environ.get(request.key)
             if old_value is not None:
                 del os.environ[request.key]
-                
+
             return {
                 "operation": "delete",
                 "key": request.key,
                 "deleted": old_value is not None,
                 "old_value": old_value,
-                "timestamp": datetime.now().isoformat()
+                "timestamp": datetime.now().isoformat(),
             }
-            
+
         else:
-            raise HTTPException(status_code=400, detail=f"Unknown operation: {request.operation}")
+            raise HTTPException(
+                status_code=400, detail=f"Unknown operation: {request.operation}"
+            )
 
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Environment variable operation failed: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Env var operation failed: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Env var operation failed: {str(e)}"
+        )
+
 
 @app.post("/tools/config_file")
 async def config_file_tool(request: ConfigFileRequest) -> Dict[str, Any]:
     """
     Manage configuration files
-    
+
     Tool: config_file
     Description: Read, write, create, delete, or list configuration files
     """
@@ -170,14 +195,16 @@ async def config_file_tool(request: ConfigFileRequest) -> Dict[str, Any]:
             file_path = file_path.resolve()
             file_path.relative_to(CONFIG_BASE_PATH.resolve())
         except ValueError:
-            raise HTTPException(status_code=403, detail="Path outside allowed directory")
-        
+            raise HTTPException(
+                status_code=403, detail="Path outside allowed directory"
+            )
+
         if request.operation == "read":
             if not file_path.exists():
                 raise HTTPException(status_code=404, detail="File not found")
-                
+
             content = file_path.read_text()
-            
+
             # Parse based on format
             parsed_content = None
             if request.format == "json":
@@ -187,14 +214,16 @@ async def config_file_tool(request: ConfigFileRequest) -> Dict[str, Any]:
             elif request.format == "ini":
                 config = configparser.ConfigParser()
                 config.read_string(content)
-                parsed_content = {section: dict(config[section]) for section in config.sections()}
+                parsed_content = {
+                    section: dict(config[section]) for section in config.sections()
+                }
             elif request.format == "env":
                 parsed_content = {}
-                for line in content.strip().split('\n'):
-                    if '=' in line and not line.startswith('#'):
-                        key, value = line.split('=', 1)
-                        parsed_content[key.strip()] = value.strip().strip('"\'')
-            
+                for line in content.strip().split("\n"):
+                    if "=" in line and not line.startswith("#"):
+                        key, value = line.split("=", 1)
+                        parsed_content[key.strip()] = value.strip().strip("\"'")
+
             return {
                 "operation": "read",
                 "file_path": request.file_path,
@@ -202,17 +231,21 @@ async def config_file_tool(request: ConfigFileRequest) -> Dict[str, Any]:
                 "raw_content": content,
                 "parsed_content": parsed_content,
                 "file_size": file_path.stat().st_size,
-                "modified_time": datetime.fromtimestamp(file_path.stat().st_mtime).isoformat(),
-                "timestamp": datetime.now().isoformat()
+                "modified_time": datetime.fromtimestamp(
+                    file_path.stat().st_mtime
+                ).isoformat(),
+                "timestamp": datetime.now().isoformat(),
             }
-            
+
         elif request.operation == "write":
             if request.content is None:
-                raise HTTPException(status_code=400, detail="Content required for write operation")
-                
+                raise HTTPException(
+                    status_code=400, detail="Content required for write operation"
+                )
+
             # Ensure directory exists
             file_path.parent.mkdir(parents=True, exist_ok=True)
-            
+
             # Format content based on format
             if request.format == "json":
                 content = json.dumps(request.content, indent=2)
@@ -222,32 +255,32 @@ async def config_file_tool(request: ConfigFileRequest) -> Dict[str, Any]:
                 config = configparser.ConfigParser()
                 for section, values in request.content.items():
                     config[section] = values
-                with tempfile.NamedTemporaryFile(mode='w', delete=False) as tmp:
+                with tempfile.NamedTemporaryFile(mode="w", delete=False) as tmp:
                     config.write(tmp)
                     tmp.flush()
                     content = Path(tmp.name).read_text()
                 Path(tmp.name).unlink()
             elif request.format == "env":
-                content = '\n'.join([f"{k}={v}" for k, v in request.content.items()])
+                content = "\n".join([f"{k}={v}" for k, v in request.content.items()])
             else:
                 content = str(request.content)
-            
+
             file_path.write_text(content)
-            
+
             return {
                 "operation": "write",
                 "file_path": request.file_path,
                 "format": request.format,
                 "bytes_written": len(content),
-                "timestamp": datetime.now().isoformat()
+                "timestamp": datetime.now().isoformat(),
             }
-            
+
         elif request.operation == "create":
             if file_path.exists():
                 raise HTTPException(status_code=409, detail="File already exists")
-                
+
             file_path.parent.mkdir(parents=True, exist_ok=True)
-            
+
             # Create empty file with appropriate format
             if request.format == "json":
                 initial_content = "{}"
@@ -259,109 +292,130 @@ async def config_file_tool(request: ConfigFileRequest) -> Dict[str, Any]:
                 initial_content = ""
             else:
                 initial_content = ""
-            
+
             file_path.write_text(initial_content)
-            
+
             return {
                 "operation": "create",
                 "file_path": request.file_path,
                 "format": request.format,
                 "created": True,
-                "timestamp": datetime.now().isoformat()
+                "timestamp": datetime.now().isoformat(),
             }
-            
+
         elif request.operation == "delete":
             if not file_path.exists():
                 raise HTTPException(status_code=404, detail="File not found")
-                
+
             file_size = file_path.stat().st_size
             file_path.unlink()
-            
+
             return {
                 "operation": "delete",
                 "file_path": request.file_path,
                 "deleted": True,
                 "file_size": file_size,
-                "timestamp": datetime.now().isoformat()
+                "timestamp": datetime.now().isoformat(),
             }
-            
+
         elif request.operation == "list":
             if not CONFIG_BASE_PATH.exists():
                 return {
                     "operation": "list",
                     "files": [],
                     "count": 0,
-                    "timestamp": datetime.now().isoformat()
+                    "timestamp": datetime.now().isoformat(),
                 }
-            
+
             files = []
             for file_path in CONFIG_BASE_PATH.rglob("*"):
                 if file_path.is_file():
                     relative_path = file_path.relative_to(CONFIG_BASE_PATH)
-                    files.append({
-                        "path": str(relative_path),
-                        "size": file_path.stat().st_size,
-                        "modified": datetime.fromtimestamp(file_path.stat().st_mtime).isoformat(),
-                        "extension": file_path.suffix
-                    })
-            
+                    files.append(
+                        {
+                            "path": str(relative_path),
+                            "size": file_path.stat().st_size,
+                            "modified": datetime.fromtimestamp(
+                                file_path.stat().st_mtime
+                            ).isoformat(),
+                            "extension": file_path.suffix,
+                        }
+                    )
+
             return {
                 "operation": "list",
                 "files": files,
                 "count": len(files),
                 "base_path": str(CONFIG_BASE_PATH),
-                "timestamp": datetime.now().isoformat()
+                "timestamp": datetime.now().isoformat(),
             }
-            
+
         else:
-            raise HTTPException(status_code=400, detail=f"Unknown operation: {request.operation}")
-            
+            raise HTTPException(
+                status_code=400, detail=f"Unknown operation: {request.operation}"
+            )
+
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Config file operation failed: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Config file operation failed: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Config file operation failed: {str(e)}"
+        )
+
 
 @app.post("/tools/validate")
 async def validate_tool(request: ConfigValidateRequest) -> Dict[str, Any]:
     """
     Validate configuration data
-    
+
     Tool: validate
     Description: Validate configuration data against schema or rules
     """
     try:
         validation_errors = []
         warnings = []
-        
+
         # Check required keys
         missing_keys = []
         for key in request.required_keys:
             if key not in request.config_data:
                 missing_keys.append(key)
                 validation_errors.append(f"Required key '{key}' is missing")
-        
+
         # Check value types
         type_errors = []
         for key, expected_type in request.value_types.items():
             if key in request.config_data:
                 value = request.config_data[key]
-                
+
                 if expected_type == "string" and not isinstance(value, str):
-                    type_errors.append(f"Key '{key}' should be string, got {type(value).__name__}")
+                    type_errors.append(
+                        f"Key '{key}' should be string, got {type(value).__name__}"
+                    )
                 elif expected_type == "integer" and not isinstance(value, int):
-                    type_errors.append(f"Key '{key}' should be integer, got {type(value).__name__}")
+                    type_errors.append(
+                        f"Key '{key}' should be integer, got {type(value).__name__}"
+                    )
                 elif expected_type == "float" and not isinstance(value, (int, float)):
-                    type_errors.append(f"Key '{key}' should be float, got {type(value).__name__}")
+                    type_errors.append(
+                        f"Key '{key}' should be float, got {type(value).__name__}"
+                    )
                 elif expected_type == "boolean" and not isinstance(value, bool):
-                    type_errors.append(f"Key '{key}' should be boolean, got {type(value).__name__}")
+                    type_errors.append(
+                        f"Key '{key}' should be boolean, got {type(value).__name__}"
+                    )
                 elif expected_type == "list" and not isinstance(value, list):
-                    type_errors.append(f"Key '{key}' should be list, got {type(value).__name__}")
+                    type_errors.append(
+                        f"Key '{key}' should be list, got {type(value).__name__}"
+                    )
                 elif expected_type == "dict" and not isinstance(value, dict):
-                    type_errors.append(f"Key '{key}' should be dict, got {type(value).__name__}")
-        
+                    type_errors.append(
+                        f"Key '{key}' should be dict, got {type(value).__name__}"
+                    )
+
         validation_errors.extend(type_errors)
-        
+
         # Basic value checks
         for key, value in request.config_data.items():
             if isinstance(value, str):
@@ -370,22 +424,26 @@ async def validate_tool(request: ConfigValidateRequest) -> Dict[str, Any]:
                 if value != value.strip():
                     warnings.append(f"Key '{key}' has leading/trailing whitespace")
             elif isinstance(value, (int, float)):
-                if value < 0 and key.lower().endswith(('_port', '_timeout', '_count', '_size')):
-                    validation_errors.append(f"Key '{key}' should be positive, got {value}")
-        
+                if value < 0 and key.lower().endswith(
+                    ("_port", "_timeout", "_count", "_size")
+                ):
+                    validation_errors.append(
+                        f"Key '{key}' should be positive, got {value}"
+                    )
+
         # Schema validation if provided
         schema_errors = []
         if request.schema:
             # Basic schema validation (simplified)
             for schema_key, schema_def in request.schema.items():
-                if isinstance(schema_def, dict) and 'required' in schema_def:
-                    if schema_def['required'] and schema_key not in request.config_data:
+                if isinstance(schema_def, dict) and "required" in schema_def:
+                    if schema_def["required"] and schema_key not in request.config_data:
                         schema_errors.append(f"Schema requires key '{schema_key}'")
-        
+
         validation_errors.extend(schema_errors)
-        
+
         is_valid = len(validation_errors) == 0
-        
+
         return {
             "is_valid": is_valid,
             "validation_errors": validation_errors,
@@ -395,38 +453,39 @@ async def validate_tool(request: ConfigValidateRequest) -> Dict[str, Any]:
                 "missing_required": len(missing_keys),
                 "type_errors": len(type_errors),
                 "schema_errors": len(schema_errors),
-                "warning_count": len(warnings)
+                "warning_count": len(warnings),
             },
-            "timestamp": datetime.now().isoformat()
+            "timestamp": datetime.now().isoformat(),
         }
-        
+
     except Exception as e:
         logger.error(f"Config validation failed: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Validation failed: {str(e)}")
+
 
 @app.post("/tools/backup")
 async def backup_tool(request: ConfigBackupRequest) -> Dict[str, Any]:
     """
     Backup and restore configuration files
-    
+
     Tool: backup
     Description: Create, restore, list, or delete configuration backups
     """
     try:
         backup_dir = CONFIG_BASE_PATH / "backups"
         backup_dir.mkdir(exist_ok=True)
-        
+
         if request.operation == "create":
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             backup_name = request.backup_name or f"backup_{timestamp}"
             backup_path = backup_dir / backup_name
-            
+
             if backup_path.exists():
                 raise HTTPException(status_code=409, detail="Backup already exists")
-            
+
             backup_path.mkdir()
             backed_up_files = []
-            
+
             # Copy files matching patterns
             for pattern in request.file_patterns:
                 for file_path in CONFIG_BASE_PATH.glob(pattern):
@@ -436,44 +495,59 @@ async def backup_tool(request: ConfigBackupRequest) -> Dict[str, Any]:
                         backup_file_path.parent.mkdir(parents=True, exist_ok=True)
                         shutil.copy2(file_path, backup_file_path)
                         backed_up_files.append(str(relative_path))
-            
+
             return {
                 "operation": "create",
                 "backup_name": backup_name,
                 "backup_path": str(backup_path),
                 "files_backed_up": backed_up_files,
                 "file_count": len(backed_up_files),
-                "timestamp": datetime.now().isoformat()
+                "timestamp": datetime.now().isoformat(),
             }
-            
+
         elif request.operation == "list":
             backups = []
             if backup_dir.exists():
                 for backup_path in backup_dir.iterdir():
                     if backup_path.is_dir():
                         file_count = len(list(backup_path.rglob("*")))
-                        backups.append({
-                            "name": backup_path.name,
-                            "created": datetime.fromtimestamp(backup_path.stat().st_mtime).isoformat(),
-                            "file_count": file_count,
-                            "size_mb": round(sum(f.stat().st_size for f in backup_path.rglob("*") if f.is_file()) / 1024 / 1024, 2)
-                        })
-            
+                        backups.append(
+                            {
+                                "name": backup_path.name,
+                                "created": datetime.fromtimestamp(
+                                    backup_path.stat().st_mtime
+                                ).isoformat(),
+                                "file_count": file_count,
+                                "size_mb": round(
+                                    sum(
+                                        f.stat().st_size
+                                        for f in backup_path.rglob("*")
+                                        if f.is_file()
+                                    )
+                                    / 1024
+                                    / 1024,
+                                    2,
+                                ),
+                            }
+                        )
+
             return {
                 "operation": "list",
                 "backups": backups,
                 "backup_count": len(backups),
-                "timestamp": datetime.now().isoformat()
+                "timestamp": datetime.now().isoformat(),
             }
-            
+
         elif request.operation == "restore":
             if not request.backup_name:
-                raise HTTPException(status_code=400, detail="Backup name required for restore")
-                
+                raise HTTPException(
+                    status_code=400, detail="Backup name required for restore"
+                )
+
             backup_path = backup_dir / request.backup_name
             if not backup_path.exists():
                 raise HTTPException(status_code=404, detail="Backup not found")
-            
+
             restored_files = []
             for backup_file in backup_path.rglob("*"):
                 if backup_file.is_file():
@@ -482,42 +556,49 @@ async def backup_tool(request: ConfigBackupRequest) -> Dict[str, Any]:
                     target_path.parent.mkdir(parents=True, exist_ok=True)
                     shutil.copy2(backup_file, target_path)
                     restored_files.append(str(relative_path))
-            
+
             return {
                 "operation": "restore",
                 "backup_name": request.backup_name,
                 "files_restored": restored_files,
                 "file_count": len(restored_files),
-                "timestamp": datetime.now().isoformat()
+                "timestamp": datetime.now().isoformat(),
             }
-            
+
         elif request.operation == "delete":
             if not request.backup_name:
-                raise HTTPException(status_code=400, detail="Backup name required for delete")
-                
+                raise HTTPException(
+                    status_code=400, detail="Backup name required for delete"
+                )
+
             backup_path = backup_dir / request.backup_name
             if not backup_path.exists():
                 raise HTTPException(status_code=404, detail="Backup not found")
-            
+
             file_count = len(list(backup_path.rglob("*")))
             shutil.rmtree(backup_path)
-            
+
             return {
                 "operation": "delete",
                 "backup_name": request.backup_name,
                 "deleted": True,
                 "deleted_file_count": file_count,
-                "timestamp": datetime.now().isoformat()
+                "timestamp": datetime.now().isoformat(),
             }
-            
+
         else:
-            raise HTTPException(status_code=400, detail=f"Unknown operation: {request.operation}")
-            
+            raise HTTPException(
+                status_code=400, detail=f"Unknown operation: {request.operation}"
+            )
+
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Backup operation failed: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Backup operation failed: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Backup operation failed: {str(e)}"
+        )
+
 
 @app.get("/tools/list")
 async def list_tools():
@@ -531,8 +612,8 @@ async def list_tools():
                     "operation": "string (required: get|set|list|delete)",
                     "key": "string (optional, variable name)",
                     "value": "string (optional, variable value for set)",
-                    "prefix": "string (optional, prefix filter for list)"
-                }
+                    "prefix": "string (optional, prefix filter for list)",
+                },
             },
             {
                 "name": "config_file",
@@ -542,8 +623,8 @@ async def list_tools():
                     "file_path": "string (required, file path relative to config dir)",
                     "format": "string (optional: json|yaml|ini|env, default json)",
                     "content": "object (optional, content for write operation)",
-                    "section": "string (optional, section for INI files)"
-                }
+                    "section": "string (optional, section for INI files)",
+                },
             },
             {
                 "name": "validate",
@@ -552,8 +633,8 @@ async def list_tools():
                     "config_data": "object (required, configuration data to validate)",
                     "schema": "object (optional, validation schema)",
                     "required_keys": "array (optional, list of required keys)",
-                    "value_types": "object (optional, key->type mappings)"
-                }
+                    "value_types": "object (optional, key->type mappings)",
+                },
             },
             {
                 "name": "backup",
@@ -561,12 +642,14 @@ async def list_tools():
                 "parameters": {
                     "operation": "string (required: create|restore|list|delete)",
                     "backup_name": "string (optional, backup name)",
-                    "file_patterns": "array (optional, file patterns to backup)"
-                }
-            }
+                    "file_patterns": "array (optional, file patterns to backup)",
+                },
+            },
         ]
     }
 
+
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=8000)
