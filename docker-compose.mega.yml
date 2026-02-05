@@ -197,7 +197,7 @@ services:
 
   # 7012: Advanced Memory MCP - AI Memory (vector search, semantic similarity)
   advanced-memory-mcp:
-    image: node:18-alpine
+    image: node:20-alpine
     container_name: mcp-advanced-memory
     ports:
       - "7012:8000"
