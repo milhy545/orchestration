@@ -5,7 +5,7 @@ services:
     build: /home/orchestration/mcp-servers/network-mcp
     container_name: mcp-network
     ports:
-      - "8006:8000"
+      - "7006:8000"
     networks:
       - mcp-network
 
@@ -13,7 +13,7 @@ services:
     build: /home/orchestration/mcp-servers/system-mcp
     container_name: mcp-system
     ports:
-      - "8007:8000"
+      - "7007:8000"
     networks:
       - mcp-network
 
@@ -21,7 +21,7 @@ services:
     build: /home/orchestration/mcp-servers/security-mcp
     container_name: mcp-security
     ports:
-      - "8008:8000"
+      - "7008:8000"
     networks:
       - mcp-network
 
@@ -29,7 +29,7 @@ services:
     build: /home/orchestration/mcp-servers/config-mcp
     container_name: mcp-config
     ports:
-      - "8009:8000"
+      - "7009:8000"
     networks:
       - mcp-network
 
@@ -37,7 +37,7 @@ services:
     build: /home/orchestration/mcp-servers/log-mcp
     container_name: mcp-log
     ports:
-      - "8010:8000"
+      - "7010:8000"
     networks:
       - mcp-network
 
@@ -45,12 +45,12 @@ networks:
   mcp-network:
     driver: bridge
 
-  # 8021: PostgreSQL MCP - Database Operations
+  # 7021: PostgreSQL MCP - Database Operations
   postgresql-mcp:
     build: /home/orchestration/mcp-servers/postgresql-mcp
     container_name: mcp-postgresql-wrapper
     ports:
-      - "8021:8000"
+      - "7021:8000"
     environment:
       - DATABASE_URL=postgresql://mcp_admin:change_me_in_production@postgresql:5432/mcp_unified
     depends_on:

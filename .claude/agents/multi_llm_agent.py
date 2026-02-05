@@ -31,7 +31,7 @@ class MultiLLMAgent:
             'ip': '192.168.0.58',
             'mode': 'admin',  # admin | worker
             'ollama_host': '192.168.0.41:11434',
-            'zen_coordinator': 'http://192.168.0.58:8020'
+            'zen_coordinator': 'http://192.168.0.58:7000'
         }
         
         # Model selection thresholds
@@ -120,8 +120,8 @@ class MultiLLMAgent:
             response = requests.post(f"http://{self.config['ollama_host']}/api/generate", 
                                    json=payload, timeout=30)
             if response.status_code == 200:
-            return {"model": model, "response": response.json()}        else:            return {"error": f"ZEN Coordinator returned status {response.status_code}"}
                 return {'model': 'ollama-qwen2', 'response': response.json()['response']}
+            return {"error": f"ZEN Coordinator returned status {response.status_code}"}
         except Exception as e:
             logger.error(f"OLLAMA execution failed: {e}")
             return self.execute_gemini(task, 'gemini-flash')  # Fallback
@@ -138,8 +138,8 @@ class MultiLLMAgent:
             response = requests.post(f"{self.config['zen_coordinator']}/mcp", 
                                    json=payload, timeout=60)
             if response.status_code == 200:
-            return {"model": model, "response": response.json()}        else:            return {"error": f"ZEN Coordinator returned status {response.status_code}"}
                 return {'model': 'claude-haiku', 'response': response.json()}
+            return {"error": f"ZEN Coordinator returned status {response.status_code}"}
         except Exception as e:
             logger.error(f"Claude Haiku execution failed: {e}")
             return self.execute_gemini(task, 'gemini-flash')
@@ -158,8 +158,8 @@ class MultiLLMAgent:
             response = requests.post(f"{self.config['zen_coordinator']}/mcp", 
                                    json=payload, timeout=90)
             if response.status_code == 200:
-            return {"model": model, "response": response.json()}        else:            return {"error": f"ZEN Coordinator returned status {response.status_code}"}
                 return {'model': model, 'response': response.json()}
+            return {"error": f"ZEN Coordinator returned status {response.status_code}"}
         except Exception as e:
             logger.error(f"Gemini execution failed: {e}")
             return {'error': f'All models failed for task: {task}'}

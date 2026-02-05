@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Network MCP Service - HTTP requests, API calls, webhooks
-Port: 8006
+Port: 7006
 """
 import asyncio
 import json
@@ -92,7 +92,7 @@ async def health_check():
     return {
         "status": "healthy",
         "service": "Network MCP",
-        "port": 8006,
+        "port": 7006,
         "timestamp": datetime.now().isoformat(),
         "features": ["http_requests", "webhooks", "dns_lookup", "api_testing"],
     }
@@ -164,7 +164,7 @@ async def webhook_create_tool(config: WebhookConfig) -> Dict[str, Any]:
     active_webhooks[config.webhook_id] = config
 
     # Generate webhook URL
-    webhook_url = f"http://localhost:8006/webhooks/{config.webhook_id}"
+    webhook_url = f"http://localhost:7006/webhooks/{config.webhook_id}"
 
     logger.info(f"Created webhook {config.webhook_id} for URL: {config.url}")
 

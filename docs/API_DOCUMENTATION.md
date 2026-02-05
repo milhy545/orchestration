@@ -6,8 +6,8 @@ The Orchestration platform provides a unified REST API through the **ZEN Coordin
 
 ### Base URL
 ```
-Production: http://192.168.0.58:8020
-Local Development: http://localhost:8020
+Production: http://192.168.0.58:7000
+Local Development: http://localhost:7000
 ```
 
 ### Authentication
@@ -23,13 +23,13 @@ X-API-Key: your_api_token_here
 
 ### Network Security Model
 ```
-Internet → ZEN Coordinator (8020) → Internal MCP Services (8001-8013)
+Internet → ZEN Coordinator (7000) → Internal MCP Services (7001-7017)
           ✅ Only exposed port       ❌ Not directly accessible
 ```
 
 **Critical Security Rules:**
-- **NEVER** expose MCP service ports (8001-8013) directly to internet
-- **ALL** external access must go through ZEN Coordinator (8020)
+- **NEVER** expose MCP service ports (7001-7017) directly to internet
+- **ALL** external access must go through ZEN Coordinator (7000)
 - **Portainer Agent** required for container management (port 9001)
 
 ## 📋 Core API Endpoints
@@ -41,7 +41,7 @@ Check overall system health and coordinator status.
 
 **Request:**
 ```bash
-curl http://192.168.0.58:8020/health
+curl http://192.168.0.58:7000/health
 ```
 
 **Response:**
@@ -60,7 +60,7 @@ List all available MCP services and their status.
 
 **Request:**
 ```bash
-curl http://192.168.0.58:8020/services
+curl http://192.168.0.58:7000/services
 ```
 
 **Response:**
@@ -69,7 +69,7 @@ curl http://192.168.0.58:8020/services
   "services": [
     {
       "name": "filesystem",
-      "port": 8001,
+      "port": 7001,
       "status": "running",
       "container": "mcp-filesystem",
       "uptime": "26h",
@@ -77,7 +77,7 @@ curl http://192.168.0.58:8020/services
     },
     {
       "name": "git",
-      "port": 8002,
+      "port": 7002,
       "status": "running", 
       "container": "mcp-git",
       "uptime": "26h",
@@ -95,7 +95,7 @@ List all available MCP tools across all services.
 
 **Request:**
 ```bash
-curl http://192.168.0.58:8020/tools/list
+curl http://192.168.0.58:7000/tools/list
 ```
 
 **Response:**
@@ -124,7 +124,7 @@ Execute any MCP tool with specified arguments.
 
 **Request Format:**
 ```bash
-curl -X POST http://192.168.0.58:8020/mcp \
+curl -X POST http://192.168.0.58:7000/mcp \
   -H "Content-Type: application/json" \
   -d '{
     "tool": "tool_name",
@@ -148,14 +148,14 @@ curl -X POST http://192.168.0.58:8020/mcp \
 }
 ```
 
-## 🗂️ Filesystem MCP API (Port 8001)
+## 🗂️ Filesystem MCP API (Port 7001)
 
 ### file_read
 Read contents of a file.
 
 **Request:**
 ```bash
-curl -X POST http://192.168.0.58:8020/mcp \
+curl -X POST http://192.168.0.58:7000/mcp \
   -H "Content-Type: application/json" \
   -d '{
     "tool": "file_read",
@@ -183,7 +183,7 @@ Write or create a file.
 
 **Request:**
 ```bash
-curl -X POST http://192.168.0.58:8020/mcp \
+curl -X POST http://192.168.0.58:7000/mcp \
   -H "Content-Type: application/json" \
   -d '{
     "tool": "file_write",
@@ -200,7 +200,7 @@ List directory contents.
 
 **Request:**
 ```bash
-curl -X POST http://192.168.0.58:8020/mcp \
+curl -X POST http://192.168.0.58:7000/mcp \
   -H "Content-Type: application/json" \
   -d '{
     "tool": "file_list",
@@ -217,7 +217,7 @@ Search for files by pattern.
 
 **Request:**
 ```bash
-curl -X POST http://192.168.0.58:8020/mcp \
+curl -X POST http://192.168.0.58:7000/mcp \
   -H "Content-Type: application/json" \
   -d '{
     "tool": "file_search",
@@ -234,7 +234,7 @@ Analyze file structure and metadata.
 
 **Request:**
 ```bash
-curl -X POST http://192.168.0.58:8020/mcp \
+curl -X POST http://192.168.0.58:7000/mcp \
   -H "Content-Type: application/json" \
   -d '{
     "tool": "file_analyze",
@@ -244,14 +244,14 @@ curl -X POST http://192.168.0.58:8020/mcp \
   }'
 ```
 
-## 🔄 Git MCP API (Port 8002)
+## 🔄 Git MCP API (Port 7002)
 
 ### git_status
 Check repository status.
 
 **Request:**
 ```bash
-curl -X POST http://192.168.0.58:8020/mcp \
+curl -X POST http://192.168.0.58:7000/mcp \
   -H "Content-Type: application/json" \
   -d '{
     "tool": "git_status",
@@ -280,7 +280,7 @@ Create a git commit.
 
 **Request:**
 ```bash
-curl -X POST http://192.168.0.58:8020/mcp \
+curl -X POST http://192.168.0.58:7000/mcp \
   -H "Content-Type: application/json" \
   -d '{
     "tool": "git_commit",
@@ -297,7 +297,7 @@ Push commits to remote repository.
 
 **Request:**
 ```bash
-curl -X POST http://192.168.0.58:8020/mcp \
+curl -X POST http://192.168.0.58:7000/mcp \
   -H "Content-Type: application/json" \
   -d '{
     "tool": "git_push",
@@ -314,7 +314,7 @@ View commit history.
 
 **Request:**
 ```bash
-curl -X POST http://192.168.0.58:8020/mcp \
+curl -X POST http://192.168.0.58:7000/mcp \
   -H "Content-Type: application/json" \
   -d '{
     "tool": "git_log",
@@ -331,7 +331,7 @@ Show differences between commits/files.
 
 **Request:**
 ```bash
-curl -X POST http://192.168.0.58:8020/mcp \
+curl -X POST http://192.168.0.58:7000/mcp \
   -H "Content-Type: application/json" \
   -d '{
     "tool": "git_diff",
@@ -343,14 +343,14 @@ curl -X POST http://192.168.0.58:8020/mcp \
   }'
 ```
 
-## 💻 Terminal MCP API (Port 8003)
+## 💻 Terminal MCP API (Port 7003)
 
 ### terminal_exec
 Execute terminal commands.
 
 **Request:**
 ```bash
-curl -X POST http://192.168.0.58:8020/mcp \
+curl -X POST http://192.168.0.58:7000/mcp \
   -H "Content-Type: application/json" \
   -d '{
     "tool": "terminal_exec",
@@ -380,7 +380,7 @@ Run shell commands with advanced options.
 
 **Request:**
 ```bash
-curl -X POST http://192.168.0.58:8020/mcp \
+curl -X POST http://192.168.0.58:7000/mcp \
   -H "Content-Type: application/json" \
   -d '{
     "tool": "shell_command",
@@ -397,7 +397,7 @@ Get system information.
 
 **Request:**
 ```bash
-curl -X POST http://192.168.0.58:8020/mcp \
+curl -X POST http://192.168.0.58:7000/mcp \
   -H "Content-Type: application/json" \
   -d '{
     "tool": "system_info",
@@ -407,14 +407,14 @@ curl -X POST http://192.168.0.58:8020/mcp \
   }'
 ```
 
-## 🗃️ Database MCP API (Port 8004)
+## 🗃️ Database MCP API (Port 7004)
 
 ### db_query
 Execute database queries.
 
 **Request:**
 ```bash
-curl -X POST http://192.168.0.58:8020/mcp \
+curl -X POST http://192.168.0.58:7000/mcp \
   -H "Content-Type: application/json" \
   -d '{
     "tool": "db_query",
@@ -446,7 +446,7 @@ Test database connection.
 
 **Request:**
 ```bash
-curl -X POST http://192.168.0.58:8020/mcp \
+curl -X POST http://192.168.0.58:7000/mcp \
   -H "Content-Type: application/json" \
   -d '{
     "tool": "db_connect",
@@ -461,7 +461,7 @@ Get database schema information.
 
 **Request:**
 ```bash
-curl -X POST http://192.168.0.58:8020/mcp \
+curl -X POST http://192.168.0.58:7000/mcp \
   -H "Content-Type: application/json" \
   -d '{
     "tool": "db_schema",
@@ -477,7 +477,7 @@ Create database backup.
 
 **Request:**
 ```bash
-curl -X POST http://192.168.0.58:8020/mcp \
+curl -X POST http://192.168.0.58:7000/mcp \
   -H "Content-Type: application/json" \
   -d '{
     "tool": "db_backup",
@@ -489,14 +489,14 @@ curl -X POST http://192.168.0.58:8020/mcp \
   }'
 ```
 
-## 🧠 Memory MCP API (Port 8005, 8012)
+## 🧠 Memory MCP API (Port 7005, 7012)
 
 ### store_memory
 Store information in memory system.
 
 **Request:**
 ```bash
-curl -X POST http://192.168.0.58:8020/mcp \
+curl -X POST http://192.168.0.58:7000/mcp \
   -H "Content-Type: application/json" \
   -d '{
     "tool": "store_memory",
@@ -527,7 +527,7 @@ Search stored memories.
 
 **Request:**
 ```bash
-curl -X POST http://192.168.0.58:8020/mcp \
+curl -X POST http://192.168.0.58:7000/mcp \
   -H "Content-Type: application/json" \
   -d '{
     "tool": "search_memories",
@@ -565,7 +565,7 @@ Retrieve context information.
 
 **Request:**
 ```bash
-curl -X POST http://192.168.0.58:8020/mcp \
+curl -X POST http://192.168.0.58:7000/mcp \
   -H "Content-Type: application/json" \
   -d '{
     "tool": "get_context",
@@ -581,7 +581,7 @@ Get memory system statistics.
 
 **Request:**
 ```bash
-curl -X POST http://192.168.0.58:8020/mcp \
+curl -X POST http://192.168.0.58:7000/mcp \
   -H "Content-Type: application/json" \
   -d '{
     "tool": "memory_stats",
@@ -596,7 +596,7 @@ List all stored memories.
 
 **Request:**
 ```bash
-curl -X POST http://192.168.0.58:8020/mcp \
+curl -X POST http://192.168.0.58:7000/mcp \
   -H "Content-Type: application/json" \
   -d '{
     "tool": "list_memories",
@@ -609,7 +609,7 @@ curl -X POST http://192.168.0.58:8020/mcp \
   }'
 ```
 
-## 🎵 Transcriber MCP API (Port 8013)
+## 🎵 Transcriber MCP API (Port 7013)
 
 ⚠️ **Status**: Currently unhealthy - debugging required
 
@@ -618,7 +618,7 @@ Transcribe WebM audio files.
 
 **Request:**
 ```bash
-curl -X POST http://192.168.0.58:8020/mcp \
+curl -X POST http://192.168.0.58:7000/mcp \
   -H "Content-Type: application/json" \
   -d '{
     "tool": "transcribe_webm",
@@ -635,7 +635,7 @@ Transcribe audio from URL.
 
 **Request:**
 ```bash
-curl -X POST http://192.168.0.58:8020/mcp \
+curl -X POST http://192.168.0.58:7000/mcp \
   -H "Content-Type: application/json" \
   -d '{
     "tool": "transcribe_url",
@@ -652,7 +652,7 @@ Convert audio formats.
 
 **Request:**
 ```bash
-curl -X POST http://192.168.0.58:8020/mcp \
+curl -X POST http://192.168.0.58:7000/mcp \
   -H "Content-Type: application/json" \
   -d '{
     "tool": "audio_convert",
@@ -664,14 +664,14 @@ curl -X POST http://192.168.0.58:8020/mcp \
   }'
 ```
 
-## 🔍 Research MCP API (Port 8011)
+## 🔍 Research MCP API (Port 7011)
 
 ### research_query
 Execute research queries.
 
 **Request:**
 ```bash
-curl -X POST http://192.168.0.58:8020/mcp \
+curl -X POST http://192.168.0.58:7000/mcp \
   -H "Content-Type: application/json" \
   -d '{
     "tool": "research_query",
@@ -707,7 +707,7 @@ Search using Perplexity AI.
 
 **Request:**
 ```bash
-curl -X POST http://192.168.0.58:8020/mcp \
+curl -X POST http://192.168.0.58:7000/mcp \
   -H "Content-Type: application/json" \
   -d '{
     "tool": "perplexity_search",
@@ -724,7 +724,7 @@ General web search functionality.
 
 **Request:**
 ```bash
-curl -X POST http://192.168.0.58:8020/mcp \
+curl -X POST http://192.168.0.58:7000/mcp \
   -H "Content-Type: application/json" \
   -d '{
     "tool": "web_search",
@@ -902,7 +902,7 @@ curl -X DELETE "$PORTAINER_URL/api/stacks/{stack_id}" \
 ```bash
 #!/bin/bash
 
-BASE_URL="http://192.168.0.58:8020"
+BASE_URL="http://192.168.0.58:7000"
 
 # 1. Check system health
 echo "Checking system health..."
@@ -955,7 +955,7 @@ import requests
 import json
 
 class OrchestrationAPI:
-    def __init__(self, base_url="http://192.168.0.58:8020", api_key=None):
+    def __init__(self, base_url="http://192.168.0.58:7000", api_key=None):
         self.base_url = base_url
         self.headers = {
             "Content-Type": "application/json"

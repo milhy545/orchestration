@@ -16,13 +16,13 @@ class DirectMCPBridge:
     def __init__(self):
         # Přímé porty MCP services na HAS
         self.services = {
-            'filesystem': {'host': '192.168.0.58', 'port': 8001, 'active': True},
-            'git': {'host': '192.168.0.58', 'port': 8002, 'active': True}, 
-            'terminal': {'host': '192.168.0.58', 'port': 8003, 'active': True},
-            'database': {'host': '192.168.0.58', 'port': 8004, 'active': True},
-            'memory': {'host': '192.168.0.58', 'port': 8005, 'active': True},  # Fixed port
-            'transcriber': {'host': '192.168.0.58', 'port': 8010, 'active': True},
-            'research': {'host': '192.168.0.58', 'port': 8011, 'active': True}
+            'filesystem': {'host': '192.168.0.58', 'port': 7001, 'active': True},
+            'git': {'host': '192.168.0.58', 'port': 7002, 'active': True}, 
+            'terminal': {'host': '192.168.0.58', 'port': 7003, 'active': True},
+            'database': {'host': '192.168.0.58', 'port': 7004, 'active': True},
+            'memory': {'host': '192.168.0.58', 'port': 7005, 'active': True},  # Fixed port
+            'transcriber': {'host': '192.168.0.58', 'port': 7013, 'active': True},
+            'research': {'host': '192.168.0.58', 'port': 7011, 'active': True}
         }
         
         # Tool-to-service mapping
@@ -81,22 +81,22 @@ class DirectMCPBridge:
         
         # Kompletní API endpoint mapping pro všechny MCP nástroje
         api_routes = {
-            # Filesystem (port 8001)
+            # Filesystem (port 7001)
             'file_list': {'method': 'GET', 'url': lambda args: f"/files/{args.get('path', '/').lstrip('/')}"},
             'file_read': {'method': 'GET', 'url': lambda args: f"/file/{args.get('path', '').lstrip('/')}"},
             'file_write': {'method': 'POST', 'url': lambda args: f"/file/{args.get('path', '').lstrip('/')}"},
             
-            # Terminal (port 8003)  
+            # Terminal (port 7003)  
             'terminal_exec': {'method': 'POST', 'url': lambda args: '/command'},
             'shell_command': {'method': 'POST', 'url': lambda args: '/command'},
             'system_info': {'method': 'GET', 'url': lambda args: '/processes'},
             
-            # Git (port 8002)
+            # Git (port 7002)
             'git_status': {'method': 'GET', 'url': lambda args: f"/git/{args.get('path', '.').lstrip('/')}/status"},
             'git_log': {'method': 'GET', 'url': lambda args: f"/git/{args.get('path', '.').lstrip('/')}/log"},
             'git_diff': {'method': 'GET', 'url': lambda args: f"/git/{args.get('path', '.').lstrip('/')}/diff"},
             
-            # Memory (port 8005)
+            # Memory (port 7005)
             'search_memories': {'method': 'GET', 'url': lambda args: f"/memory/search?query={args.get('query', '')}&limit={args.get('limit', 5)}"},
             'store_memory': {'method': 'POST', 'url': lambda args: '/memory/store'},
             'list_memories': {'method': 'GET', 'url': lambda args: '/memory/list'},

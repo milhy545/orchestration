@@ -29,7 +29,7 @@ class TestSecurityMCPHealth:
         data = response.json()
         assert data["status"] == "healthy"
         assert data["service"] == "Security MCP"
-        assert data["port"] == 8008
+        assert data["port"] == 7008
         assert "features" in data
         assert len(data["features"]) == 4
         assert "security" in data

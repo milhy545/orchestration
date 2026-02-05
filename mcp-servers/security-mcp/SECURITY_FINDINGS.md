@@ -1,7 +1,7 @@
 # Security Scan Report - Security MCP Service
 
 **Service:** Security MCP
-**Port:** 8008
+**Port:** 7008
 **Scan Date:** 2025-11-17
 **Status:** ⚠️ SYNTAX ERROR + MEDIUM ISSUES
 

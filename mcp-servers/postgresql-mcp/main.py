@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 PostgreSQL MCP Service - Database operations, queries, connections
-Port: 8021
+Port: 7021
 
 SECURITY: This service implements strict SQL injection prevention:
 - Query validation and operation whitelisting
@@ -235,7 +235,7 @@ async def health_check():
     return {
         "status": "healthy",
         "service": "PostgreSQL MCP",
-        "port": 8021,
+        "port": 7021,
         "timestamp": datetime.now().isoformat(),
         "features": [
             "query_execution",

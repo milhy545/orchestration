@@ -13,8 +13,8 @@ docker-compose up -d
 sleep 30
 
 # Verify all services are running
-curl http://localhost:8020/health
-curl http://localhost:8020/services
+curl http://localhost:7000/health
+curl http://localhost:7000/services
 ```
 
 ### Emergency Service Health Check
@@ -33,7 +33,7 @@ if ! docker info >/dev/null 2>&1; then
 fi
 
 # Check ZEN Coordinator
-if curl -s http://localhost:8020/health >/dev/null; then
+if curl -s http://localhost:7000/health >/dev/null; then
     echo "✅ ZEN Coordinator: Running"
 else
     echo "❌ ZEN Coordinator: Failed"
@@ -41,7 +41,7 @@ else
 fi
 
 # Check critical services
-services=(8001 8002 8003 8004 8005 8020 8021 8022)
+services=(7001 7002 7003 7004 7005 7000 7021 7022)
 for port in "${services[@]}"; do
     if nc -z localhost $port 2>/dev/null; then
         echo "✅ Port $port: Open"
@@ -76,12 +76,12 @@ uptime                   # System load
 ### Network Diagnostics
 ```bash
 # Check port bindings
-netstat -tlnp | grep -E ":(80[0-9][0-9]|6333|9001)"
+netstat -tlnp | grep -E ":(70[0-9][0-9]|6333|9001)"
 
 # Test internal connectivity
-curl http://localhost:8020/health    # ZEN Coordinator
-curl http://localhost:8001/health    # Filesystem MCP
-curl http://localhost:8021/         # PostgreSQL (should return error page)
+curl http://localhost:7000/health    # ZEN Coordinator
+curl http://localhost:7001/health    # Filesystem MCP
+curl http://localhost:7021/         # PostgreSQL (should return error page)
 
 # Check Docker networks
 docker network ls
@@ -112,7 +112,7 @@ docker logs mcp-redis --tail=30
 ### 1. ZEN Coordinator Not Responding
 
 **Symptoms:**
-- `curl http://localhost:8020/health` returns connection refused
+- `curl http://localhost:7000/health` returns connection refused
 - Portainer shows coordinator container as stopped
 
 **Diagnosis:**
@@ -124,7 +124,7 @@ docker ps | grep zen-coordinator
 docker logs zen-coordinator --tail=100
 
 # Check if port is in use
-netstat -tlnp | grep :8020
+netstat -tlnp | grep :7000
 ```
 
 **Solutions:**
@@ -133,7 +133,7 @@ netstat -tlnp | grep :8020
 ```bash
 docker-compose restart zen-coordinator
 sleep 10
-curl http://localhost:8020/health
+curl http://localhost:7000/health
 ```
 
 **Solution B: Full Rebuild**
@@ -152,16 +152,16 @@ docker logs zen-coordinator -f
 **Solution C: Check Dependencies**
 ```bash
 # Ensure MCP services are running first
-for port in 8001 8002 8003 8004 8005 8011 8012; do
+for port in 7001 7002 7003 7004 7005 7011 7012; do
     if ! nc -z localhost $port; then
         echo "Service on port $port is down"
-        docker-compose restart mcp-$([ $port -eq 8001 ] && echo "filesystem" || 
-                                        [ $port -eq 8002 ] && echo "git" ||
-                                        [ $port -eq 8003 ] && echo "terminal" ||
-                                        [ $port -eq 8004 ] && echo "database" ||
-                                        [ $port -eq 8005 ] && echo "memory" ||
-                                        [ $port -eq 8011 ] && echo "research" ||
-                                        [ $port -eq 8012 ] && echo "advanced-memory")
+        docker-compose restart mcp-$([ $port -eq 7001 ] && echo "filesystem" || 
+                                        [ $port -eq 7002 ] && echo "git" ||
+                                        [ $port -eq 7003 ] && echo "terminal" ||
+                                        [ $port -eq 7004 ] && echo "database" ||
+                                        [ $port -eq 7005 ] && echo "memory" ||
+                                        [ $port -eq 7011 ] && echo "research" ||
+                                        [ $port -eq 7012 ] && echo "advanced-memory")
     fi
 done
 
@@ -178,9 +178,9 @@ docker-compose restart zen-coordinator
 **Diagnosis:**
 ```bash
 # Test direct service communication
-curl http://localhost:8001/health    # Should return {"status":"ok"}
-curl http://localhost:8002/health    
-curl http://localhost:8003/health
+curl http://localhost:7001/health    # Should return {"status":"ok"}
+curl http://localhost:7002/health    
+curl http://localhost:7003/health
 
 # Check if services are actually MCP compliant
 docker logs mcp-filesystem | grep -i "mcp\|protocol\|error"
@@ -198,7 +198,7 @@ docker-compose restart mcp-filesystem
 sleep 5
 
 # Test service directly
-curl http://localhost:8001/health
+curl http://localhost:7001/health
 ```
 
 **Solution B: Check Service Configuration**
@@ -296,7 +296,7 @@ docker-compose up -d
 **Diagnosis:**
 ```bash
 # Check transcriber status
-curl http://localhost:8013/health
+curl http://localhost:7013/health
 
 # Check transcriber logs
 docker logs mcp-transcriber --tail=100
@@ -313,7 +313,7 @@ docker exec mcp-transcriber python -c "import whisper"
 # Simple restart first
 docker-compose restart mcp-transcriber
 sleep 15
-curl http://localhost:8013/health
+curl http://localhost:7013/health
 
 # If still failing, rebuild
 docker-compose stop mcp-transcriber
@@ -534,9 +534,9 @@ echo "$(date): Starting health check" >> $LOG_FILE
 
 # Check critical services
 critical_services=(
-    "http://localhost:8020/health"  # ZEN Coordinator
-    "http://localhost:8021/"        # PostgreSQL (expect connection)
-    "http://localhost:8022/"        # Redis  
+    "http://localhost:7000/health"  # ZEN Coordinator
+    "http://localhost:7021/"        # PostgreSQL (expect connection)
+    "http://localhost:7022/"        # Redis  
 )
 
 failed_services=()
@@ -692,7 +692,7 @@ sleep 60
 # docker exec -i mcp-postgresql psql -U mcp_admin mcp_unified < /tmp/orchestration_backup/database_backup.sql
 
 echo "Nuclear reset completed. Check service status:"
-curl http://localhost:8020/health
+curl http://localhost:7000/health
 ```
 
 ### Emergency Contact Information

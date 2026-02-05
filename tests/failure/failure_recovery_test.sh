@@ -8,8 +8,8 @@ echo "Start time: $(date)"
 echo
 
 # Test configuration
-ZEN_URL='http://localhost:8020/mcp'
-MEMORY_URL='http://localhost:8007'
+ZEN_URL='http://localhost:7000/mcp'
+MEMORY_URL='http://localhost:7005'
 TEST_ID=$(date +%s)
 PASS_COUNT=0
 FAIL_COUNT=0
@@ -88,8 +88,8 @@ echo '====================================='
 
 # Establish baseline before failure tests
 echo '🔍 Checking initial system state...'
-INITIAL_ZEN_STATUS=$(curl -s http://localhost:8020/health 2>/dev/null)
-INITIAL_MEMORY_STATUS=$(curl -s http://localhost:8007/health 2>/dev/null)
+INITIAL_ZEN_STATUS=$(curl -s http://localhost:7000/health 2>/dev/null)
+INITIAL_MEMORY_STATUS=$(curl -s http://localhost:7005/health 2>/dev/null)
 INITIAL_CONTAINERS=$(docker ps --format '{{.Names}}' | grep mcp | wc -l)
 
 if echo "$INITIAL_ZEN_STATUS" | grep -q '"status": "healthy"'; then
@@ -141,7 +141,7 @@ else
     
     # Verify service is down
     sleep 2
-    if \! curl -s http://localhost:8007/health >/dev/null 2>&1; then
+    if \! curl -s http://localhost:7005/health >/dev/null 2>&1; then
         test_pass "Memory MCP failure simulation"
     else
         test_fail "Memory MCP failure simulation" "Service still responding"
@@ -166,7 +166,7 @@ else
     
     # Measure recovery time
     echo "⏱️  Measuring recovery time..."
-    RECOVERY_TIME=$(wait_for_service "http://localhost:8007/health" 30)
+    RECOVERY_TIME=$(wait_for_service "http://localhost:7005/health" 30)
     RECOVERY_STATUS=$?
     
     if [ $RECOVERY_STATUS -eq 0 ]; then
@@ -218,7 +218,7 @@ else
     
     # Store pre-restart data via direct Memory MCP
     echo "💾 Storing data via direct MCP before Zen restart..."
-    DIRECT_STORE_RESULT=$(curl -s -X POST "http://localhost:8007/memory/store" \
+    DIRECT_STORE_RESULT=$(curl -s -X POST "http://localhost:7005/memory/store" \
         -H 'Content-Type: application/json' \
         -d '{"content": "Direct store before Zen restart - TEST_ID: '${TEST_ID}'", "metadata": {"direct_store": true, "test_id": "'${TEST_ID}'"}}')
     
@@ -235,7 +235,7 @@ else
     sleep 2
     
     # Verify Zen is down
-    if \! curl -s http://localhost:8020/health >/dev/null 2>&1; then
+    if \! curl -s http://localhost:7000/health >/dev/null 2>&1; then
         test_pass "Zen Coordinator shutdown"
     else
         test_fail "Zen Coordinator shutdown" "Service still responding"
@@ -246,7 +246,7 @@ else
     nohup python3 /home/orchestrace/config/zen_coordinator.py >/dev/null 2>&1 &
     
     # Measure Zen recovery time
-    ZEN_RECOVERY_TIME=$(wait_for_service "http://localhost:8020/health" 20)
+    ZEN_RECOVERY_TIME=$(wait_for_service "http://localhost:7000/health" 20)
     ZEN_RECOVERY_STATUS=$?
     
     if [ $ZEN_RECOVERY_STATUS -eq 0 ]; then
@@ -258,7 +258,7 @@ else
     # Test service mesh reconnection
     echo "🔗 Testing service mesh reconnection..."
     sleep 3
-    ZEN_STATUS_AFTER=$(curl -s http://localhost:8020/status)
+    ZEN_STATUS_AFTER=$(curl -s http://localhost:7000/status)
     SERVICES_CONNECTED=$(echo "$ZEN_STATUS_AFTER" | grep -o '"[a-z_]*": "http[^"]*"' | wc -l)
     
     if [ $SERVICES_CONNECTED -ge 6 ]; then

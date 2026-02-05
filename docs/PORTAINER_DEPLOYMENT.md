@@ -218,7 +218,7 @@ Create `portainer_stack_config.json`:
     },
     {
       "name": "ZEN_COORDINATOR_PORT",
-      "value": "8020"
+      "value": "7000"
     }
   ]
 }
@@ -459,7 +459,7 @@ deploy_stack() {
     },
     {
       "name": "ZEN_COORDINATOR_PORT",
-      "value": "8020"
+      "value": "7000"
     }
   ]
 }
@@ -521,18 +521,18 @@ verify_services() {
     sleep 30
     
     # Check ZEN Coordinator
-    if curl -s -f http://192.168.0.58:8020/health >/dev/null; then
+    if curl -s -f http://192.168.0.58:7000/health >/dev/null; then
         log "✅ ZEN Coordinator is healthy"
     else
         warn "⚠️ ZEN Coordinator not responding yet"
     fi
     
     # Check service list
-    if curl -s -f http://192.168.0.58:8020/services >/dev/null; then
+    if curl -s -f http://192.168.0.58:7000/services >/dev/null; then
         log "✅ Services endpoint is responding"
         
         # Get service count
-        SERVICE_COUNT=$(curl -s http://192.168.0.58:8020/services | jq -r '.total_services // 0')
+        SERVICE_COUNT=$(curl -s http://192.168.0.58:7000/services | jq -r '.total_services // 0')
         log "📊 Running services: $SERVICE_COUNT"
     else
         warn "⚠️ Services endpoint not responding yet"
@@ -571,9 +571,9 @@ main() {
     verify_services
     
     log "🎉 Deployment completed successfully!"
-    log "🌐 ZEN Coordinator available at: http://192.168.0.58:8020"
-    log "📋 Health check: curl http://192.168.0.58:8020/health"
-    log "🔧 Services list: curl http://192.168.0.58:8020/services"
+    log "🌐 ZEN Coordinator available at: http://192.168.0.58:7000"
+    log "📋 Health check: curl http://192.168.0.58:7000/health"
+    log "🔧 Services list: curl http://192.168.0.58:7000/services"
 }
 
 # Run main function
@@ -617,7 +617,7 @@ curl -X GET "$PORTAINER_URL/api/stacks/$STACK_ID" \
 
 ```bash
 # Check ZEN Coordinator
-curl http://192.168.0.58:8020/health
+curl http://192.168.0.58:7000/health
 
 # Expected response:
 {
@@ -629,17 +629,17 @@ curl http://192.168.0.58:8020/health
 }
 
 # Check all services
-curl http://192.168.0.58:8020/services
+curl http://192.168.0.58:7000/services
 
 # Check available tools
-curl http://192.168.0.58:8020/tools/list
+curl http://192.168.0.58:7000/tools/list
 ```
 
 ### Step 3: Test MCP Functionality
 
 ```bash
 # Test memory storage
-curl -X POST http://192.168.0.58:8020/mcp \
+curl -X POST http://192.168.0.58:7000/mcp \
   -H "Content-Type: application/json" \
   -d '{
     "tool": "store_memory",
@@ -650,7 +650,7 @@ curl -X POST http://192.168.0.58:8020/mcp \
   }'
 
 # Test file operations
-curl -X POST http://192.168.0.58:8020/mcp \
+curl -X POST http://192.168.0.58:7000/mcp \
   -H "Content-Type: application/json" \
   -d '{
     "tool": "system_info",
@@ -888,7 +888,7 @@ STACK_STATUS=$(curl -s -X GET "$PORTAINER_URL/api/stacks" \
 echo "Stack Status: $STACK_STATUS"
 
 # Check service health
-SERVICE_HEALTH=$(curl -s http://192.168.0.58:8020/health | jq -r '.status')
+SERVICE_HEALTH=$(curl -s http://192.168.0.58:7000/health | jq -r '.status')
 echo "Service Health: $SERVICE_HEALTH"
 
 # Alert if unhealthy
@@ -930,4 +930,4 @@ Monitor key metrics via Portainer:
 
 **Your Orchestration MCP Platform is now successfully deployed via Portainer!**
 
-Access your platform at: `http://192.168.0.58:8020`
+Access your platform at: `http://192.168.0.58:7000`

@@ -26,7 +26,7 @@ scrape_configs:
           service: 'zen-coordinator'
           type: 'coordinator'
 
-  # Core MCP Services (8001-8010)
+  # Core MCP Services (7001-7010)
   - job_name: 'mcp-core-services'
     static_configs:
       - targets:
@@ -48,7 +48,7 @@ scrape_configs:
         target_label: service
         replacement: '${1}'
 
-  # AI/Enhanced Services (8011-8013)
+  # AI/Enhanced Services (7011-7017)
   - job_name: 'mcp-ai-services'
     static_configs:
       - targets:
@@ -63,7 +63,7 @@ scrape_configs:
         target_label: service
         replacement: '${1}'
 
-  # Database Wrappers (8024-8026)
+  # Database Wrappers (7024-7026)
   - job_name: 'mcp-db-wrappers'
     static_configs:
       - targets:

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 MQTT MCP Server - Model Context Protocol compliant MQTT broker interface
-Port: 8015 (external) -> 8000 (internal)
+Port: 7019 (external) -> 8000 (internal)
 Broker: mqtt-broker:1883 (internal Docker network)
 
 Provides JSON-RPC 2.0 tools for MQTT operations

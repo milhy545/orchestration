@@ -28,7 +28,7 @@ This directory contains comprehensive documentation for the **Orchestration MCP 
 
 **Key Sections:**
 - Architecture overview with security model
-- Service port mapping (8001-8013, 8020-8022)
+- Service port mapping (7001-7017, 7000-7022)
 - Docker Compose deployment
 - Environment configuration
 - Performance benchmarks
@@ -163,29 +163,29 @@ This directory contains comprehensive documentation for the **Orchestration MCP 
 - **Tools Available**: 28 MCP tools
 
 ### Critical Ports
-- **8020**: ZEN Coordinator (main entry point)
-- **8001-8013**: MCP Services (internal only)
-- **8021**: PostgreSQL database
-- **8022**: Redis cache
+- **7000**: ZEN Coordinator (main entry point)
+- **7001-7017**: MCP Services (internal only)
+- **7021**: PostgreSQL database
+- **7022**: Redis cache
 - **6333**: Qdrant vector database
 - **9001**: Portainer Agent (required for Portainer)
 
 ### API Endpoints
-- **Health**: `http://192.168.0.58:8020/health`
-- **Services**: `http://192.168.0.58:8020/services`
-- **Tools**: `http://192.168.0.58:8020/tools/list`
-- **MCP**: `http://192.168.0.58:8020/mcp` (POST)
+- **Health**: `http://192.168.0.58:7000/health`
+- **Services**: `http://192.168.0.58:7000/services`
+- **Tools**: `http://192.168.0.58:7000/tools/list`
+- **MCP**: `http://192.168.0.58:7000/mcp` (POST)
 
 ### Quick Health Check
 ```bash
 # Overall system health
-curl http://192.168.0.58:8020/health
+curl http://192.168.0.58:7000/health
 
 # List all services
-curl http://192.168.0.58:8020/services
+curl http://192.168.0.58:7000/services
 
 # Test MCP tool
-curl -X POST http://192.168.0.58:8020/mcp \
+curl -X POST http://192.168.0.58:7000/mcp \
   -H "Content-Type: application/json" \
   -d '{"tool":"system_info","arguments":{}}'
 ```

@@ -195,15 +195,13 @@ class MegaOrchestrator:
     async def _init_infrastructure(self):
         """Initialize Redis and PostgreSQL connections"""
         # Connect to Redis
-        redis_url = "redis://localhost:7022" if not self.backup_mode else "redis://localhost:8022"
+        redis_url = "redis://localhost:7022"
         self.redis = aioredis.from_url(redis_url)
         await self.redis.ping()
         logging.info("✅ Redis connection established")
         
         # Connect to PostgreSQL
-        db_url = ("postgresql://mcp_admin:change_me_in_production@localhost:7021/mcp_unified" 
-                 if not self.backup_mode else 
-                 "postgresql://mcp_admin:change_me_in_production@localhost:8021/mcp_unified")
+        db_url = "postgresql://mcp_admin:change_me_in_production@localhost:7021/mcp_unified"
         
         self.db_pool = await asyncpg.create_pool(db_url, min_size=2, max_size=10)
         logging.info("✅ PostgreSQL connection pool established")

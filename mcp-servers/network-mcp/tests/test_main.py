@@ -27,7 +27,7 @@ class TestNetworkMCPHealth:
         data = response.json()
         assert data["status"] == "healthy"
         assert data["service"] == "Network MCP"
-        assert data["port"] == 8006
+        assert data["port"] == 7006
         assert "features" in data
         assert len(data["features"]) == 4
 

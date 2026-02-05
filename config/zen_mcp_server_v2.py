@@ -14,14 +14,14 @@ class ZENMCPServerV2:
     def __init__(self):
         self.services = {
             # Core MCP Services
-            'filesystem': {'port': 8001, 'methods': ['read', 'write', 'list', 'search']},
-            'git': {'port': 8002, 'methods': ['status', 'commit', 'push', 'log']},
-            'terminal': {'port': 8003, 'methods': ['execute', 'info', 'shell']},
-            'database': {'port': 8004, 'methods': ['query', 'execute', 'schema']},
-            'memory': {'port': 8005, 'methods': ['store', 'search', 'retrieve']},
-            'advanced_memory': {'port': 8012, 'methods': ['semantic_store', 'vector_search', 'analyze']},
-            'research': {'port': 8011, 'methods': ['query', 'web_search', 'perplexity']},
-            'transcriber': {'port': 8013, 'methods': ['audio', 'video', 'convert']},
+            'filesystem': {'port': 7001, 'methods': ['read', 'write', 'list', 'search']},
+            'git': {'port': 7002, 'methods': ['status', 'commit', 'push', 'log']},
+            'terminal': {'port': 7003, 'methods': ['execute', 'info', 'shell']},
+            'database': {'port': 7004, 'methods': ['query', 'execute', 'schema']},
+            'memory': {'port': 7005, 'methods': ['store', 'search', 'retrieve']},
+            'advanced_memory': {'port': 7012, 'methods': ['semantic_store', 'vector_search', 'analyze']},
+            'research': {'port': 7011, 'methods': ['query', 'web_search', 'perplexity']},
+            'transcriber': {'port': 7013, 'methods': ['audio', 'video', 'convert']},
         }
         
         self.tool_service_mapping = {

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Log MCP Service - Log aggregation, analysis, and monitoring
-Port: 8010
+Port: 7010
 """
 import gzip
 import json
@@ -178,7 +178,7 @@ async def health_check():
     return {
         "status": "healthy",
         "service": "Log MCP",
-        "port": 8010,
+        "port": 7010,
         "timestamp": datetime.now().isoformat(),
         "features": ["log_analysis", "log_monitor", "log_aggregate", "log_search"],
         "patterns": list(LOG_PATTERNS.keys()),

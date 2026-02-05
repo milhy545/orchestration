@@ -189,9 +189,9 @@ echo "-----------------------------------"
 
 # Expected ports
 declare -A EXPECTED_PORTS=(
-    ["prometheus"]="8028:9090"
-    ["grafana"]="8031:3000"
-    ["loki"]="8032:3100"
+    ["prometheus"]="7028:9090"
+    ["grafana"]="7031:3000"
+    ["loki"]="7032:3100"
 )
 
 for service in "${!EXPECTED_PORTS[@]}"; do
@@ -219,9 +219,9 @@ if [ $ERRORS -eq 0 ] && [ $WARNINGS -eq 0 ]; then
     echo "  docker-compose up -d prometheus grafana loki promtail"
     echo ""
     echo "Access points:"
-    echo "  - Grafana:    http://localhost:8031 (admin/admin)"
-    echo "  - Prometheus: http://localhost:8028"
-    echo "  - Loki:       http://localhost:8032"
+    echo "  - Grafana:    http://localhost:7031 (admin/admin)"
+    echo "  - Prometheus: http://localhost:7028"
+    echo "  - Loki:       http://localhost:7032"
     exit 0
 elif [ $ERRORS -eq 0 ]; then
     echo -e "${YELLOW}⚠ Checks passed with $WARNINGS warning(s)${NC}"

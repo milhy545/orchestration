@@ -53,16 +53,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ### **Live Production Services (HAS):**
 ```
-Port 8001: Filesystem MCP    (Up 26h)
-Port 8002: Git MCP           (Up 26h)  
-Port 8003: Terminal MCP      (Up 26h)
-Port 8004: Database MCP      (Up 26h)
-Port 8005: Memory MCP        (Up 26h)
-Port 8011: Research MCP      (Up 26h)
-Port 8012: Advanced Memory   (Up 26h) 🆕
-Port 8013: Transcriber MCP   (Up 26h, unhealthy) ⚠️
-Port 8021: PostgreSQL        (Up 26h)
-Port 8022: Redis             (Up 26h)
+Port 7001: Filesystem MCP    (Up 26h)
+Port 7002: Git MCP           (Up 26h)  
+Port 7003: Terminal MCP      (Up 26h)
+Port 7004: Database MCP      (Up 26h)
+Port 7005: Memory MCP        (Up 26h)
+Port 7011: Research MCP      (Up 26h)
+Port 7012: Advanced Memory   (Up 26h) 🆕
+Port 7013: Transcriber MCP   (Up 26h, unhealthy) ⚠️
+Port 7021: PostgreSQL        (Up 26h)
+Port 7022: Redis             (Up 26h)
 ```
 
 ### **Development Stack:**
@@ -100,7 +100,7 @@ docker-compose down                 # Stop all services
 # Health monitoring
 ./scripts/health-check.sh           # Check all service health
 ./scripts/monitor-services.sh       # Continuous monitoring
-curl http://localhost:8020/health   # Test ZEN coordinator
+curl http://localhost:7000/health   # Test ZEN coordinator
 
 # Testing
 ./tests/unit/orchestration_workflow_test.sh    # Unit tests
@@ -114,9 +114,9 @@ git commit -m "Update message"
 git push origin master
 
 # ZEN Coordinator testing
-curl http://192.168.0.58:8020/services         # List MCP services
-curl http://192.168.0.58:8020/tools/list       # List available tools
-curl -X POST http://192.168.0.58:8020/mcp \
+curl http://192.168.0.58:7000/services         # List MCP services
+curl http://192.168.0.58:7000/tools/list       # List available tools
+curl -X POST http://192.168.0.58:7000/mcp \
   -H "Content-Type: application/json" \
   -d '{"tool":"store_memory","arguments":{"content":"test"}}'
 ```
@@ -140,38 +140,38 @@ curl -X POST http://192.168.0.58:8020/mcp \
 
 ### **MCP Microservices Architecture:**
 ```
-Internet → ZEN Coordinator (8020) → MCP Services (8001-8013)
+Internet → ZEN Coordinator (7000) → MCP Services (7001-7017)
           ✅ Security Gateway      ❌ Not directly accessible
 ```
 
 ### **Available MCP Tools via ZEN Coordinator:**
 ```python
-# Memory operations (ports 8005, 8012)
+# Memory operations (ports 7005, 7012)
 "store_memory", "search_memories", "get_context", "memory_stats"
 
-# Filesystem operations (port 8001)  
+# Filesystem operations (port 7001)  
 "file_read", "file_write", "file_list", "file_search"
 
-# Git operations (port 8002)
+# Git operations (port 7002)
 "git_status", "git_commit", "git_push", "git_log", "git_diff"
 
-# Terminal operations (port 8003)
+# Terminal operations (port 7003)
 "execute_command", "shell_command", "system_info"
 
-# Database operations (port 8004)
+# Database operations (port 7004)
 "database_query", "database_execute", "database_schema"
 
-# Research operations (port 8011)
+# Research operations (port 7011)
 "research_query", "perplexity_search", "web_search"
 
-# Audio/transcription (port 8013 - currently unhealthy)
+# Audio/transcription (port 7013 - currently unhealthy)
 "transcribe_webm", "transcribe_url", "audio_convert"
 ```
 
 ### **Infrastructure Stack:**
 - **Docker Compose**: Complete microservices orchestration
-- **PostgreSQL** (port 8021): Primary database for MCP services
-- **Redis** (port 8022): Caching and session management
+- **PostgreSQL** (port 7021): Primary database for MCP services
+- **Redis** (port 7022): Caching and session management
 - **Qdrant** (port 6333): Vector database for AI embeddings
 - **Health Monitoring**: Comprehensive service discovery and health checks
 
@@ -222,11 +222,11 @@ docker logs mcp-transcriber
 docker restart mcp-transcriber
 
 # Memory service diagnostics  
-curl http://192.168.0.58:8005/health
-curl http://192.168.0.58:8012/health
+curl http://192.168.0.58:7005/health
+curl http://192.168.0.58:7012/health
 
 # ZEN Coordinator health check
-curl http://192.168.0.58:8020/health
+curl http://192.168.0.58:7000/health
 ```
 
 ---

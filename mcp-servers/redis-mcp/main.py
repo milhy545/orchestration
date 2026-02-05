@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Redis MCP Service - Cache, session management, pub/sub
-Port: 8022
+Port: 7022
 """
 import json
 import logging
@@ -150,7 +150,7 @@ async def health_check():
     return {
         "status": "healthy",
         "service": "Redis MCP",
-        "port": 8022,
+        "port": 7022,
         "timestamp": datetime.now().isoformat(),
         "features": ["cache", "hash", "list", "set", "pubsub", "session"],
         "redis": {"status": redis_status, "info": info},

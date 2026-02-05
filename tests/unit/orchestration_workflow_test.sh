@@ -8,7 +8,7 @@ echo "Start time: $(date)"
 echo
 
 # Test configuration
-ZEN_URL='http://localhost:8020/mcp'
+ZEN_URL='http://localhost:7000/mcp'
 TEST_ID=$(date +%s)
 PASS_COUNT=0
 FAIL_COUNT=0
@@ -38,7 +38,7 @@ echo '=============================='
 
 # Check all required services
 echo '🔍 Checking Zen Coordinator status...'
-ZEN_STATUS=$(curl -s http://localhost:8020/health)
+ZEN_STATUS=$(curl -s http://localhost:7000/health)
 if echo "$ZEN_STATUS" | grep -q '"status": "healthy"'; then
     test_pass "Zen Coordinator is healthy"
     echo "   Services: $(echo "$ZEN_STATUS" | grep -o '"services_running": [0-9]*' | grep -o '[0-9]*') running"

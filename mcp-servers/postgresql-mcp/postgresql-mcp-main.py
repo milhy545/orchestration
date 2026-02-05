@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 PostgreSQL MCP Service - Database operations, queries, connections
-Port: 8021
+Port: 7021
 """
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
@@ -105,7 +105,7 @@ async def health_check():
     return {
         "status": "healthy",
         "service": "PostgreSQL MCP",
-        "port": 8021,
+        "port": 7021,
         "timestamp": datetime.now().isoformat(),
         "features": ["query_execution", "transactions", "schema_management", "connection_management", "backup_operations"],
         "database": {

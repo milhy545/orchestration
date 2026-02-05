@@ -68,7 +68,7 @@ class HASClaudeAgent:
                     'cpu_critical_percent': 85
                 },
                 'mcp': {
-                    'base_url': 'http://localhost:8020',
+                    'base_url': 'http://localhost:7000',
                     'tools': [
                         'file_list', 'file_read', 'file_write', 'file_search',
                         'terminal_exec', 'shell_command', 'system_info',

@@ -10,7 +10,7 @@ The Orchestration MCP Platform is a microservices-based system that implements t
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
 │   External      │    │  ZEN            │    │   MCP           │
 │   Clients       ├────┤  Coordinator    ├────┤   Services      │
-│   (Port varies) │    │  (Port 8020)    │    │   (8001-8013)   │
+│   (Port varies) │    │  (Port 7000)    │    │   (7001-7017)   │
 └─────────────────┘    └─────────────────┘    └─────────────────┘
                               │
                               │
@@ -28,8 +28,8 @@ The Orchestration MCP Platform is a microservices-based system that implements t
 
 The platform implements a **Zero Trust** security model where:
 
-1. **Single Entry Point**: Only ZEN Coordinator (port 8020) is exposed externally
-2. **Internal Isolation**: MCP services (8001-8013) are not directly accessible
+1. **Single Entry Point**: Only ZEN Coordinator (port 7000) is exposed externally
+2. **Internal Isolation**: MCP services (7001-7017) are not directly accessible
 3. **Service Mesh**: All internal communication is controlled and monitored
 4. **Authentication**: JWT-based authentication for API access
 5. **Authorization**: Role-based access control for MCP tools
@@ -42,7 +42,7 @@ The platform implements a **Zero Trust** security model where:
 │                         │                                   │
 │               ┌─────────▼─────────┐                         │
 │               │  ZEN Coordinator  │ ◄─ ONLY EXPOSED PORT   │
-│               │    (Port 8020)    │                         │
+│               │    (Port 7000)    │                         │
 │               └─────────┬─────────┘                         │
 └─────────────────────────┼─────────────────────────────────────┘
                           │
@@ -51,12 +51,12 @@ The platform implements a **Zero Trust** security model where:
 │                                                               │
 │  ┌─────────┐  ┌─────────┐  ┌─────────┐  ┌─────────┐         │
 │  │   MCP   │  │   MCP   │  │   MCP   │  │   MCP   │         │
-│  │   8001  │  │   8002  │  │   8003  │  │   8004  │         │
+│  │   7001  │  │   7002  │  │   7003  │  │   7004  │         │
 │  └─────────┘  └─────────┘  └─────────┘  └─────────┘         │
 │                                                               │
 │  ┌─────────┐  ┌─────────┐  ┌─────────┐  ┌─────────┐         │
 │  │Database │  │  Redis  │  │ Qdrant  │  │Portainer│         │
-│  │  8021   │  │  8022   │  │  6333   │  │  9001   │         │
+│  │  7021   │  │  7022   │  │  6333   │  │  9001   │         │
 │  └─────────┘  └─────────┘  └─────────┘  └─────────┘         │
 └───────────────────────────────────────────────────────────────┘
 ```
@@ -65,15 +65,15 @@ The platform implements a **Zero Trust** security model where:
 
 | Port Range | Purpose | Security Level | Access |
 |------------|---------|----------------|--------|
-| 8020 | ZEN Coordinator | Public | External + Internal |
-| 8001-8013 | MCP Services | Private | Internal Only |
-| 8021-8022 | Databases | Private | Internal Only |
+| 7000 | ZEN Coordinator | Public | External + Internal |
+| 7001-7017 | MCP Services | Private | Internal Only |
+| 7021-7022 | Databases | Private | Internal Only |
 | 6333 | Vector Store | Private | Internal Only |
 | 9001 | Management | Limited | Portainer Only |
 
 ## 🧩 Component Architecture
 
-### ZEN Coordinator (Port 8020)
+### ZEN Coordinator (Port 7000)
 
 **Purpose**: Central orchestration hub and security gateway
 **Technology**: Python FastAPI
@@ -104,7 +104,7 @@ zen_mcp_server.py (408 lines, 16.4KB)
 
 ### MCP Services Layer
 
-#### 1. Filesystem MCP (Port 8001)
+#### 1. Filesystem MCP (Port 7001)
 **Container**: `mcp-filesystem`
 **Purpose**: File system operations and management
 **Tools**: 5 tools
@@ -120,7 +120,7 @@ zen_mcp_server.py (408 lines, 16.4KB)
 - File I/O: aiofiles for async operations
 - Security: Path traversal protection
 
-#### 2. Git MCP (Port 8002)
+#### 2. Git MCP (Port 7002)
 **Container**: `mcp-git`
 **Purpose**: Version control operations
 **Tools**: 5 tools
@@ -136,7 +136,7 @@ zen_mcp_server.py (408 lines, 16.4KB)
 - Authentication: SSH key / token support
 - Repository: Local git operations
 
-#### 3. Terminal MCP (Port 8003)
+#### 3. Terminal MCP (Port 7003)
 **Container**: `mcp-terminal`
 **Purpose**: System command execution
 **Tools**: 3 tools
@@ -150,7 +150,7 @@ zen_mcp_server.py (408 lines, 16.4KB)
 - Security: Command sanitization
 - Isolation: Containerized execution
 
-#### 4. Database MCP (Port 8004)
+#### 4. Database MCP (Port 7004)
 **Container**: `mcp-database`
 **Purpose**: Database operations and management
 **Tools**: 4 tools
@@ -165,7 +165,7 @@ zen_mcp_server.py (408 lines, 16.4KB)
 - Connection Pooling: Built-in pool management
 - Security: Parameterized queries
 
-#### 5. Memory MCP (Port 8005)
+#### 5. Memory MCP (Port 7005)
 **Container**: `mcp-memory`
 **Purpose**: Information storage and retrieval
 **Tools**: 5 tools
@@ -181,7 +181,7 @@ zen_mcp_server.py (408 lines, 16.4KB)
 - Embeddings: sentence-transformers
 - Database: PostgreSQL for metadata
 
-#### 6. Research MCP (Port 8011)
+#### 6. Research MCP (Port 7011)
 **Container**: `mcp-research`
 **Purpose**: Research and web search operations
 **Tools**: 3 tools
@@ -195,7 +195,7 @@ zen_mcp_server.py (408 lines, 16.4KB)
 - Caching: Redis for search results
 - Rate Limiting: API quota management
 
-#### 7. Advanced Memory MCP (Port 8012)
+#### 7. Advanced Memory MCP (Port 7012)
 **Container**: `mcp-advanced-memory`
 **Purpose**: Enhanced memory with AI capabilities
 **Technology Stack**:
@@ -204,7 +204,7 @@ zen_mcp_server.py (408 lines, 16.4KB)
 - Enhanced Embeddings: Multi-model support
 - Context Management: Advanced context windows
 
-#### 8. Transcriber MCP (Port 8013) ⚠️
+#### 8. Transcriber MCP (Port 7013) ⚠️
 **Container**: `mcp-transcriber`
 **Purpose**: Audio/video transcription
 **Status**: Currently unhealthy - requires debugging
@@ -223,7 +223,7 @@ zen_mcp_server.py (408 lines, 16.4KB)
 
 ### Database Layer
 
-#### PostgreSQL (Port 8021)
+#### PostgreSQL (Port 7021)
 **Container**: `mcp-postgresql`
 **Purpose**: Primary relational database
 **Databases**:
@@ -262,7 +262,7 @@ CREATE TABLE service_logs (
 );
 ```
 
-#### Redis (Port 8022)
+#### Redis (Port 7022)
 **Container**: `mcp-redis`
 **Purpose**: Caching and session management
 **Usage**:
@@ -377,7 +377,7 @@ ZEN Coordinator maintains service registry:
     {
       "name": "filesystem",
       "host": "mcp-filesystem",
-      "port": 8001,
+      "port": 7001,
       "status": "healthy",
       "tools": ["file_read", "file_write", ...]
     }
@@ -422,7 +422,7 @@ services:
   # Coordinator (Only service with external port)
   zen-coordinator:
     build: ./coordinator
-    ports: ["8020:8020"]
+    ports: ["7000:8020"]
     networks: [orchestration_network]
     depends_on: [all_mcp_services]
 ```
@@ -479,7 +479,7 @@ services:
 ```bash
 # Network Configuration
 ZEN_COORDINATOR_HOST=0.0.0.0
-ZEN_COORDINATOR_PORT=8020
+ZEN_COORDINATOR_PORT=7000
 INTERNAL_NETWORK=orchestration_network
 
 # Security Configuration

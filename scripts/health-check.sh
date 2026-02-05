@@ -13,7 +13,7 @@ ls -la /home/orchestration/data/databases/
 
 echo  
 echo "=== COORDINATOR STATUS ===" 
-curl -s http://localhost:8020/health 2>/dev/null || echo "Coordinator not responding"
+curl -s http://localhost:7000/health 2>/dev/null || echo "Coordinator not responding"
 
 echo
 echo "=== DISK USAGE ===" 

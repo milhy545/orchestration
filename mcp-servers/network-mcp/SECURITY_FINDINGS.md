@@ -1,7 +1,7 @@
 # Security Scan Report - Network MCP Service
 
 **Service:** Network MCP
-**Port:** 8006
+**Port:** 7006
 **Scan Date:** 2025-11-17
 **Status:** ⚠️ MEDIUM ISSUES FOUND
 
@@ -36,15 +36,15 @@ async def http_request_tool(request: HttpRequest) -> HttpResponse:
 **Attack Vectors:**
 ```bash
 # Access AWS metadata
-curl -X POST http://localhost:8006/tools/http_request \
+curl -X POST http://localhost:7006/tools/http_request \
   -d '{"url": "http://169.254.169.254/latest/meta-data/"}'
 
 # Access internal Redis
-curl -X POST http://localhost:8006/tools/http_request \
+curl -X POST http://localhost:7006/tools/http_request \
   -d '{"url": "http://redis:6379/"}'
 
 # Scan internal network
-curl -X POST http://localhost:8006/tools/http_request \
+curl -X POST http://localhost:7006/tools/http_request \
   -d '{"url": "http://10.0.0.1:22/"}'
 ```
 
@@ -68,7 +68,7 @@ async def webhook_create_tool(config: WebhookConfig) -> Dict[str, Any]:
     # Store webhook configuration
     active_webhooks[config.webhook_id] = config  # ❌ No URL validation
 
-    webhook_url = f"http://localhost:8006/webhooks/{config.webhook_id}"
+    webhook_url = f"http://localhost:7006/webhooks/{config.webhook_id}"
 ```
 
 **Risk:**

@@ -2,26 +2,27 @@
 
 ## 🎯 Services Overview
 
-The Orchestration MCP Platform consists of **7 core services** providing **28 specialized tools** for AI agents and applications. Each service is containerized and communicates through the MCP (Model Context Protocol) standard.
+The Orchestration MCP Platform consists of **8 MCP services** providing **28 specialized tools** for AI agents and applications, plus a ZEN MCP gateway for orchestration. Each service is containerized and communicates through the MCP (Model Context Protocol) standard.
 
 ### Service Architecture Summary
 
 | Service | Port | Container | Tools | Status | Purpose |
 |---------|------|-----------|-------|--------|---------|
-| [Filesystem MCP](#filesystem-mcp-port-8001) | 8001 | `mcp-filesystem` | 5 | ✅ Running | File operations |
-| [Git MCP](#git-mcp-port-8002) | 8002 | `mcp-git` | 5 | ✅ Running | Version control |
-| [Terminal MCP](#terminal-mcp-port-8003) | 8003 | `mcp-terminal` | 3 | ✅ Running | System commands |
-| [Database MCP](#database-mcp-port-8004) | 8004 | `mcp-database` | 4 | ✅ Running | Database operations |
-| [Memory MCP](#memory-mcp-port-8005) | 8005 | `mcp-memory` | 5 | ✅ Running | Information storage |
-| [Research MCP](#research-mcp-port-8011) | 8011 | `mcp-research` | 3 | ✅ Running | Web search & research |
-| [Advanced Memory MCP](#advanced-memory-mcp-port-8012) | 8012 | `mcp-advanced-memory` | 0 | ✅ Running | Enhanced AI memory |
-| [Transcriber MCP](#transcriber-mcp-port-8013) | 8013 | `mcp-transcriber` | 3 | ⚠️ Debugging | Audio/video processing |
+| [Filesystem MCP](#filesystem-mcp-port-7001) | 7001 | `mcp-filesystem` | 5 | ✅ Running | File operations |
+| [Git MCP](#git-mcp-port-7002) | 7002 | `mcp-git` | 5 | ✅ Running | Version control |
+| [Terminal MCP](#terminal-mcp-port-7003) | 7003 | `mcp-terminal` | 3 | ✅ Running | System commands |
+| [Database MCP](#database-mcp-port-7004) | 7004 | `mcp-database` | 4 | ✅ Running | Database operations |
+| [Memory MCP](#memory-mcp-port-7005) | 7005 | `mcp-memory` | 5 | ✅ Running | Information storage |
+| [Research MCP](#research-mcp-port-7011) | 7011 | `mcp-research` | 3 | ✅ Running | Web search & research |
+| [Advanced Memory MCP](#advanced-memory-mcp-port-7012) | 7012 | `mcp-advanced-memory` | 0 | ✅ Running | Enhanced AI memory |
+| [Transcriber MCP](#transcriber-mcp-port-7013) | 7013 | `mcp-transcriber` | 3 | ⚠️ Debugging | Audio/video processing |
+| [ZEN MCP Server](#zen-mcp-server-port-7017) | 7017 | `zen-mcp-server` | N/A | ✅ Running | MCP tool orchestration gateway |
 
-**Total: 28 MCP Tools across 8 Services**
+**Total: 28 MCP Tools across 9 Services**
 
 ---
 
-## 🗄️ Filesystem MCP (Port 8001)
+## 🗄️ Filesystem MCP (Port 7001)
 
 **Container**: `mcp-filesystem`  
 **Purpose**: Comprehensive file system operations and management  
@@ -56,7 +57,7 @@ The Orchestration MCP Platform consists of **7 core services** providing **28 sp
 
 **Example**:
 ```bash
-curl -X POST http://192.168.0.58:8020/mcp \
+curl -X POST http://192.168.0.58:7000/mcp \
   -H "Content-Type: application/json" \
   -d '{
     "tool": "file_read",
@@ -205,7 +206,7 @@ curl -X POST http://192.168.0.58:8020/mcp \
 
 ---
 
-## 🔄 Git MCP (Port 8002)
+## 🔄 Git MCP (Port 7002)
 
 **Container**: `mcp-git`  
 **Purpose**: Version control operations and repository management  
@@ -374,7 +375,7 @@ curl -X POST http://192.168.0.58:8020/mcp \
 
 ---
 
-## 💻 Terminal MCP (Port 8003)
+## 💻 Terminal MCP (Port 7003)
 
 **Container**: `mcp-terminal`  
 **Purpose**: System command execution and system information  
@@ -501,7 +502,7 @@ curl -X POST http://192.168.0.58:8020/mcp \
 
 ---
 
-## 🗃️ Database MCP (Port 8004)
+## 🗃️ Database MCP (Port 7004)
 
 **Container**: `mcp-database`  
 **Purpose**: Multi-database operations and management  
@@ -675,7 +676,7 @@ curl -X POST http://192.168.0.58:8020/mcp \
 
 ---
 
-## 🧠 Memory MCP (Port 8005)
+## 🧠 Memory MCP (Port 7005)
 
 **Container**: `mcp-memory`  
 **Purpose**: Information storage and retrieval with semantic search  
@@ -897,7 +898,7 @@ curl -X POST http://192.168.0.58:8020/mcp \
 
 ---
 
-## 🔍 Research MCP (Port 8011)
+## 🔍 Research MCP (Port 7011)
 
 **Container**: `mcp-research`  
 **Purpose**: Web search, research, and information gathering  
@@ -1050,7 +1051,7 @@ curl -X POST http://192.168.0.58:8020/mcp \
 
 ---
 
-## 🧠+ Advanced Memory MCP (Port 8012)
+## 🧠+ Advanced Memory MCP (Port 7012)
 
 **Container**: `mcp-advanced-memory`  
 **Purpose**: Enhanced memory capabilities with AI integration  
@@ -1077,7 +1078,7 @@ The service is healthy and running, with basic memory operations delegated to th
 
 ---
 
-## 🎵 Transcriber MCP (Port 8013)
+## 🎵 Transcriber MCP (Port 7013)
 
 **Container**: `mcp-transcriber`  
 **Purpose**: Audio and video transcription services  
@@ -1143,9 +1144,22 @@ The service is healthy and running, with basic memory operations delegated to th
 
 ---
 
+## 🤖 ZEN MCP Server (Port 7017)
+
+**Container**: `zen-mcp-server`  
+**Purpose**: MCP tool orchestration gateway for multi-model providers  
+**Status**: ✅ Running  
+**Technology**: Python 3.11+, FastAPI (runtime target)
+
+### Notes
+- Exposes MCP tool orchestration endpoints for LLM routing.
+- Health check: `GET /health`
+
+---
+
 ## 🔧 Infrastructure Services
 
-### PostgreSQL Database (Port 8021)
+### PostgreSQL Database (Port 7021)
 
 **Container**: `mcp-postgresql`  
 **Purpose**: Primary relational database for all MCP services  
@@ -1162,7 +1176,7 @@ The service is healthy and running, with basic memory operations delegated to th
 - `service_logs`: Audit logs for all MCP operations
 - `user_sessions`: Session management data
 
-### Redis Cache (Port 8022)
+### Redis Cache (Port 7022)
 
 **Container**: `mcp-redis`  
 **Purpose**: Caching, session storage, and temporary data  
@@ -1197,30 +1211,30 @@ All services expose standard health endpoints:
 
 ```bash
 # Individual service health
-curl http://192.168.0.58:8001/health  # Filesystem MCP
-curl http://192.168.0.58:8002/health  # Git MCP
-curl http://192.168.0.58:8003/health  # Terminal MCP
-curl http://192.168.0.58:8004/health  # Database MCP
-curl http://192.168.0.58:8005/health  # Memory MCP
-curl http://192.168.0.58:8011/health  # Research MCP
-curl http://192.168.0.58:8012/health  # Advanced Memory MCP
-curl http://192.168.0.58:8013/health  # Transcriber MCP (unhealthy)
+curl http://192.168.0.58:7001/health  # Filesystem MCP
+curl http://192.168.0.58:7002/health  # Git MCP
+curl http://192.168.0.58:7003/health  # Terminal MCP
+curl http://192.168.0.58:7004/health  # Database MCP
+curl http://192.168.0.58:7005/health  # Memory MCP
+curl http://192.168.0.58:7011/health  # Research MCP
+curl http://192.168.0.58:7012/health  # Advanced Memory MCP
+curl http://192.168.0.58:7013/health  # Transcriber MCP (unhealthy)
 
 # Unified health via ZEN Coordinator
-curl http://192.168.0.58:8020/health
-curl http://192.168.0.58:8020/services
+curl http://192.168.0.58:7000/health
+curl http://192.168.0.58:7000/services
 ```
 
 ### Service Dependencies
 
 ```
-ZEN Coordinator (8020)
-├── Depends on all MCP services (8001-8013)
-├── PostgreSQL (8021) ← Required for Database MCP
-├── Redis (8022) ← Required for caching
+ZEN Coordinator (7000)
+├── Depends on all MCP services (7001-7017)
+├── PostgreSQL (7021) ← Required for Database MCP
+├── Redis (7022) ← Required for caching
 └── Qdrant (6333) ← Required for Memory MCP
 
-MCP Services (8001-8013)
+MCP Services (7001-7017)
 ├── Independent of each other
 ├── May use PostgreSQL for data storage
 ├── May use Redis for caching
@@ -1244,7 +1258,7 @@ Current performance benchmarks:
 
 ```bash
 # 1. Search for information using Research MCP
-curl -X POST http://192.168.0.58:8020/mcp \
+curl -X POST http://192.168.0.58:7000/mcp \
   -H "Content-Type: application/json" \
   -d '{
     "tool": "research_query",
@@ -1255,7 +1269,7 @@ curl -X POST http://192.168.0.58:8020/mcp \
   }'
 
 # 2. Store the research results in Memory MCP
-curl -X POST http://192.168.0.58:8020/mcp \
+curl -X POST http://192.168.0.58:7000/mcp \
   -H "Content-Type: application/json" \
   -d '{
     "tool": "store_memory",
@@ -1267,7 +1281,7 @@ curl -X POST http://192.168.0.58:8020/mcp \
   }'
 
 # 3. Create a configuration file using Filesystem MCP
-curl -X POST http://192.168.0.58:8020/mcp \
+curl -X POST http://192.168.0.58:7000/mcp \
   -H "Content-Type: application/json" \
   -d '{
     "tool": "file_write",
@@ -1278,7 +1292,7 @@ curl -X POST http://192.168.0.58:8020/mcp \
   }'
 
 # 4. Commit the changes using Git MCP
-curl -X POST http://192.168.0.58:8020/mcp \
+curl -X POST http://192.168.0.58:7000/mcp \
   -H "Content-Type: application/json" \
   -d '{
     "tool": "git_commit",

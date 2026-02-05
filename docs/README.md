@@ -53,8 +53,8 @@ docker-compose up -d
 
 4. **Verify deployment**:
 ```bash
-curl http://localhost:8020/health
-curl http://localhost:8020/services
+curl http://localhost:7000/health
+curl http://localhost:7000/services
 ```
 
 ## 🏛️ Architecture Overview
@@ -62,7 +62,7 @@ curl http://localhost:8020/services
 ### Core Components
 
 ```
-Internet → ZEN Coordinator (8020) → MCP Services (8001-8013)
+Internet → ZEN Coordinator (7000) → MCP Services (7001-7017)
           ✅ Security Gateway      ❌ Not directly accessible
 ```
 
@@ -70,59 +70,60 @@ Internet → ZEN Coordinator (8020) → MCP Services (8001-8013)
 
 | Port | Service | Status | Description |
 |------|---------|--------|-------------|
-| 8001 | Filesystem MCP | ✅ Running | File operations, search, analysis |
-| 8002 | Git MCP | ✅ Running | Git operations, version control |
-| 8003 | Terminal MCP | ✅ Running | Shell commands, system info |
-| 8004 | Database MCP | ✅ Running | Database queries, schema management |
-| 8005 | Memory MCP | ✅ Running | Memory storage, context management |
-| 8011 | Research MCP | ✅ Running | Web search, Perplexity integration |
-| 8012 | Advanced Memory | ✅ Running | Enhanced memory with AI |
-| 8013 | Transcriber MCP | ⚠️ Needs Debug | Audio/video transcription |
-| 8020 | **ZEN Coordinator** | ✅ Running | **Central orchestration hub** |
-| 8021 | PostgreSQL | ✅ Running | Primary database |
-| 8022 | Redis | ✅ Running | Caching, sessions |
+| 7001 | Filesystem MCP | ✅ Running | File operations, search, analysis |
+| 7002 | Git MCP | ✅ Running | Git operations, version control |
+| 7003 | Terminal MCP | ✅ Running | Shell commands, system info |
+| 7004 | Database MCP | ✅ Running | Database queries, schema management |
+| 7005 | Memory MCP | ✅ Running | Memory storage, context management |
+| 7011 | Research MCP | ✅ Running | Web search, Perplexity integration |
+| 7012 | Advanced Memory | ✅ Running | Enhanced memory with AI |
+| 7013 | Transcriber MCP | ⚠️ Needs Debug | Audio/video transcription |
+| 7017 | ZEN MCP Server | ✅ Running | MCP tool orchestration gateway |
+| 7000 | **ZEN Coordinator** | ✅ Running | **Central orchestration hub** |
+| 7021 | PostgreSQL | ✅ Running | Primary database |
+| 7022 | Redis | ✅ Running | Caching, sessions |
 | 6333 | Qdrant | ✅ Running | Vector database |
 
 ### Available MCP Tools (28 total)
 
-#### 🗄️ Filesystem Operations (Port 8001)
+#### 🗄️ Filesystem Operations (Port 7001)
 - `file_read` - Read file contents
 - `file_write` - Write/create files  
 - `file_list` - List directory contents
 - `file_search` - Search files by pattern
 - `file_analyze` - Analyze file structure
 
-#### 🔄 Git Operations (Port 8002)
+#### 🔄 Git Operations (Port 7002)
 - `git_status` - Check repository status
 - `git_commit` - Create commits
 - `git_push` - Push to remote repository
 - `git_log` - View commit history
 - `git_diff` - Show differences
 
-#### 💻 Terminal Operations (Port 8003)
+#### 💻 Terminal Operations (Port 7003)
 - `terminal_exec` - Execute commands
 - `shell_command` - Run shell commands
 - `system_info` - Get system information
 
-#### 🗃️ Database Operations (Port 8004)
+#### 🗃️ Database Operations (Port 7004)
 - `db_query` - Execute database queries
 - `db_connect` - Connect to databases
 - `db_schema` - Get database schema
 - `db_backup` - Backup databases
 
-#### 🧠 Memory Operations (Port 8005, 8012)
+#### 🧠 Memory Operations (Port 7005, 7012)
 - `store_memory` - Store information in memory
 - `search_memories` - Search stored memories
 - `get_context` - Retrieve context information
 - `memory_stats` - Get memory statistics
 - `list_memories` - List all memories
 
-#### 🎵 Audio/Transcription (Port 8013)
+#### 🎵 Audio/Transcription (Port 7013)
 - `transcribe_webm` - Transcribe WebM audio
 - `transcribe_url` - Transcribe from URL
 - `audio_convert` - Convert audio formats
 
-#### 🔍 Research Operations (Port 8011)
+#### 🔍 Research Operations (Port 7011)
 - `research_query` - Research queries
 - `perplexity_search` - Perplexity AI search
 - `web_search` - Web search functionality
@@ -165,13 +166,13 @@ docker-compose logs -f zen-coordinator
 3. **Health Verification**:
 ```bash
 # Check ZEN Coordinator
-curl http://localhost:8020/health
+curl http://localhost:7000/health
 
 # List all services
-curl http://localhost:8020/services
+curl http://localhost:7000/services
 
 # List available tools
-curl http://localhost:8020/tools/list
+curl http://localhost:7000/tools/list
 ```
 
 ### Portainer Deployment
@@ -306,7 +307,7 @@ GEMINI_API_KEY=your_gemini_key
 
 # ZEN Coordinator
 ZEN_COORDINATOR_HOST=0.0.0.0
-ZEN_COORDINATOR_PORT=8020
+ZEN_COORDINATOR_PORT=7000
 ZEN_COORDINATOR_DEBUG=false
 
 # Security
@@ -321,35 +322,37 @@ The services have the following startup dependencies:
 
 ```yaml
 # Dependency Order:
-1. PostgreSQL (8021)
-2. Redis (8022) 
+1. PostgreSQL (7021)
+2. Redis (7022) 
 3. Qdrant (6333)
-4. MCP Services (8001-8013)
-5. ZEN Coordinator (8020)
+4. MCP Services (7001-7017)
+5. ZEN Coordinator (7000)
 ```
 
 ### Port Mapping Strategy
 
 ```bash
 # Core Infrastructure
-8020: ZEN Coordinator (main entry point)
-8021: PostgreSQL 
-8022: Redis
+7000: ZEN Coordinator (main entry point)
+7021: PostgreSQL 
+7022: Redis
 6333: Qdrant Vector DB
 
 # MCP Services (isolated)
-8001: Filesystem MCP
-8002: Git MCP  
-8003: Terminal MCP
-8004: Database MCP
-8005: Memory MCP
-8011: Research MCP
-8012: Advanced Memory MCP
-8013: Transcriber MCP (debugging needed)
+7001: Filesystem MCP
+7002: Git MCP  
+7003: Terminal MCP
+7004: Database MCP
+7005: Memory MCP
+7011: Research MCP
+7012: Advanced Memory MCP
+7013: Transcriber MCP (debugging needed)
+7017: ZEN MCP Server (tool orchestration gateway)
 
 # Reserved for future expansion
-8006-8010: Available for new MCP services
-8014-8030: Reserved for specialized services
+7014-7016: Reserved for specialized services
+7024-7026: Service wrappers
+7028-7032: Monitoring & management
 ```
 
 ## 🐛 Troubleshooting
@@ -361,12 +364,12 @@ The services have the following startup dependencies:
 ./scripts/health-check.sh
 
 # Individual service checks
-curl http://localhost:8020/health  # ZEN Coordinator
-curl http://localhost:8001/health  # Filesystem MCP
-curl http://localhost:8002/health  # Git MCP
-curl http://localhost:8003/health  # Terminal MCP
-curl http://localhost:8004/health  # Database MCP
-curl http://localhost:8005/health  # Memory MCP
+curl http://localhost:7000/health  # ZEN Coordinator
+curl http://localhost:7001/health  # Filesystem MCP
+curl http://localhost:7002/health  # Git MCP
+curl http://localhost:7003/health  # Terminal MCP
+curl http://localhost:7004/health  # Database MCP
+curl http://localhost:7005/health  # Memory MCP
 ```
 
 ### Common Issues
@@ -381,7 +384,7 @@ docker logs mcp-transcriber
 docker-compose restart mcp-transcriber
 
 # Debug transcriber connectivity
-curl http://localhost:8013/health
+curl http://localhost:7013/health
 ```
 
 #### 2. Database Connection Issues
@@ -406,7 +409,7 @@ docker-compose up -d
 docker logs zen-coordinator
 
 # Test MCP tool directly
-curl -X POST http://localhost:8020/mcp \
+curl -X POST http://localhost:7000/mcp \
   -H "Content-Type: application/json" \
   -d '{"tool":"system_info","arguments":{}}'
 
@@ -434,7 +437,7 @@ docker-compose restart mcp-memory mcp-database
 netstat -tlnp | grep 802
 
 # Test service connectivity
-telnet localhost 8020
+telnet localhost 7000
 
 # Check Docker network
 docker network ls
@@ -466,7 +469,7 @@ docker-compose up -d
 sleep 30
 
 # Verify all services
-curl http://localhost:8020/services
+curl http://localhost:7000/services
 ```
 
 #### Database Recovery
@@ -546,7 +549,7 @@ docker exec -i mcp-postgresql psql -U mcp_admin mcp_unified < backup.sql
 ## 🔐 Security
 
 ### Network Security
-- **Zero External Access**: Only ZEN Coordinator (8020) exposed
+- **Zero External Access**: Only ZEN Coordinator (7000) exposed
 - **Internal Service Isolation**: MCP services accessible only within Docker network
 - **Secure Transport**: All internal communication over secure channels
 

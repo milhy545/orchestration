@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Config MCP Service - Environment variables, configuration management
-Port: 8009
+Port: 7009
 """
 import configparser
 import json
@@ -80,7 +80,7 @@ async def health_check():
     return {
         "status": "healthy",
         "service": "Config MCP",
-        "port": 8009,
+        "port": 7009,
         "timestamp": datetime.now().isoformat(),
         "features": ["env_vars", "config_files", "validation", "backup"],
         "storage": {

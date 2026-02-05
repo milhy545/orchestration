@@ -65,7 +65,7 @@ class ClaudeCodeAgent:
 
     def handle_escalation(self, task):
         '''Handle escalated tasks from multi-LLM agent'''
-        logger.info(f'Processing escalated task: {task.get("id", "unknown")
+        logger.info(f'Processing escalated task: {task.get("id", "unknown")}')
         
         # Simple execution - can be enhanced
         result = {

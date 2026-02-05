@@ -1,7 +1,7 @@
 # Security Scan Report - Log MCP Service
 
 **Service:** Log MCP
-**Port:** 8010
+**Port:** 7010
 **Scan Date:** 2025-11-17
 **Status:** ⚠️ CRITICAL ISSUES FOUND
 
@@ -31,7 +31,7 @@ elif request.log_source == "command":
 **Risk:** Attackers can execute arbitrary system commands
 **Attack Vector:**
 ```bash
-curl -X POST http://localhost:8010/tools/log_analysis \
+curl -X POST http://localhost:7010/tools/log_analysis \
   -H "Content-Type: application/json" \
   -d '{
     "log_source": "command",
@@ -71,7 +71,7 @@ if request.log_source == "file_path":
 **Risk:** Read any file on the system
 **Attack Vector:**
 ```bash
-curl -X POST http://localhost:8010/tools/log_analysis \
+curl -X POST http://localhost:7010/tools/log_analysis \
   -H "Content-Type: application/json" \
   -d '{
     "log_source": "file_path",

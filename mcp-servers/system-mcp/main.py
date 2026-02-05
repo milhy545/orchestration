@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 System MCP Service - Resources monitoring, processes, system info
-Port: 8007
+Port: 7007
 """
 import logging
 import os
@@ -98,7 +98,7 @@ async def health_check():
     return {
         "status": "healthy",
         "service": "System MCP",
-        "port": 8007,
+        "port": 7007,
         "timestamp": datetime.now().isoformat(),
         "features": ["resource_monitor", "process_list", "disk_usage", "system_info"],
         "system": {

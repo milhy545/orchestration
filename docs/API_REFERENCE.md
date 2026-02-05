@@ -2,7 +2,7 @@
 
 ## Base URL
 ```
-http://localhost:8020/mcp
+http://localhost:7000/mcp
 ```
 
 ## Request Format
@@ -30,12 +30,12 @@ All requests use POST method with JSON payload:
 
 ---
 
-## 📁 Filesystem MCP (Port 8001)
+## 📁 Filesystem MCP (Port 7001)
 
 ### `file_read`
 Read file contents
 ```bash
-curl -X POST http://localhost:8020/mcp \
+curl -X POST http://localhost:7000/mcp \
   -H "Content-Type: application/json" \
   -d '{
     "tool": "file_read",
@@ -48,7 +48,7 @@ curl -X POST http://localhost:8020/mcp \
 ### `file_write`
 Write content to file
 ```bash
-curl -X POST http://localhost:8020/mcp \
+curl -X POST http://localhost:7000/mcp \
   -H "Content-Type: application/json" \
   -d '{
     "tool": "file_write",
@@ -62,7 +62,7 @@ curl -X POST http://localhost:8020/mcp \
 ### `file_list`
 List directory contents
 ```bash
-curl -X POST http://localhost:8020/mcp \
+curl -X POST http://localhost:7000/mcp \
   -H "Content-Type: application/json" \
   -d '{
     "tool": "file_list",
@@ -74,12 +74,12 @@ curl -X POST http://localhost:8020/mcp \
 
 ---
 
-## 🗃️ Git MCP (Port 8002)
+## 🗃️ Git MCP (Port 7002)
 
 ### `git_status`
 Get repository status
 ```bash
-curl -X POST http://localhost:8020/mcp \
+curl -X POST http://localhost:7000/mcp \
   -H "Content-Type: application/json" \
   -d '{
     "tool": "git_status",
@@ -92,7 +92,7 @@ curl -X POST http://localhost:8020/mcp \
 ### `git_log`
 Get commit history
 ```bash
-curl -X POST http://localhost:8020/mcp \
+curl -X POST http://localhost:7000/mcp \
   -H "Content-Type: application/json" \
   -d '{
     "tool": "git_log",
@@ -106,7 +106,7 @@ curl -X POST http://localhost:8020/mcp \
 ### `git_diff`
 Show changes between commits
 ```bash
-curl -X POST http://localhost:8020/mcp \
+curl -X POST http://localhost:7000/mcp \
   -H "Content-Type: application/json" \
   -d '{
     "tool": "git_diff",
@@ -120,12 +120,12 @@ curl -X POST http://localhost:8020/mcp \
 
 ---
 
-## 💻 Terminal MCP (Port 8003)
+## 💻 Terminal MCP (Port 7003)
 
 ### `execute_command`
 Execute system command
 ```bash
-curl -X POST http://localhost:8020/mcp \
+curl -X POST http://localhost:7000/mcp \
   -H "Content-Type: application/json" \
   -d '{
     "tool": "execute_command",
@@ -138,7 +138,7 @@ curl -X POST http://localhost:8020/mcp \
 ### `system_info`
 Get system information
 ```bash
-curl -X POST http://localhost:8020/mcp \
+curl -X POST http://localhost:7000/mcp \
   -H "Content-Type: application/json" \
   -d '{
     "tool": "system_info",
@@ -148,12 +148,12 @@ curl -X POST http://localhost:8020/mcp \
 
 ---
 
-## 🗄️ Database MCP (Port 8004)
+## 🗄️ Database MCP (Port 7004)
 
 ### `db_query`
 Execute database query
 ```bash
-curl -X POST http://localhost:8020/mcp \
+curl -X POST http://localhost:7000/mcp \
   -H "Content-Type: application/json" \
   -d '{
     "tool": "db_query",
@@ -167,7 +167,7 @@ curl -X POST http://localhost:8020/mcp \
 ### `db_schema`
 Get database schema
 ```bash
-curl -X POST http://localhost:8020/mcp \
+curl -X POST http://localhost:7000/mcp \
   -H "Content-Type: application/json" \
   -d '{
     "tool": "db_schema",
@@ -179,12 +179,12 @@ curl -X POST http://localhost:8020/mcp \
 
 ---
 
-## 🧠 Memory MCP (Port 8005)
+## 🧠 Memory MCP (Port 7005)
 
 ### `store_memory`
 Store key-value memory
 ```bash
-curl -X POST http://localhost:8020/mcp \
+curl -X POST http://localhost:7000/mcp \
   -H "Content-Type: application/json" \
   -d '{
     "tool": "store_memory",
@@ -198,7 +198,7 @@ curl -X POST http://localhost:8020/mcp \
 ### `search_memories`
 Search stored memories
 ```bash
-curl -X POST http://localhost:8020/mcp \
+curl -X POST http://localhost:7000/mcp \
   -H "Content-Type: application/json" \
   -d '{
     "tool": "search_memories",
@@ -211,7 +211,7 @@ curl -X POST http://localhost:8020/mcp \
 ### `list_memories`
 List all stored memories
 ```bash
-curl -X POST http://localhost:8020/mcp \
+curl -X POST http://localhost:7000/mcp \
   -H "Content-Type: application/json" \
   -d '{
     "tool": "list_memories",
@@ -222,7 +222,7 @@ curl -X POST http://localhost:8020/mcp \
 ### `memory_stats`
 Get memory usage statistics
 ```bash
-curl -X POST http://localhost:8020/mcp \
+curl -X POST http://localhost:7000/mcp \
   -H "Content-Type: application/json" \
   -d '{
     "tool": "memory_stats",
@@ -232,12 +232,12 @@ curl -X POST http://localhost:8020/mcp \
 
 ---
 
-## 🎧 WebM Transcriber MCP (Port 8008)
+## 🎧 WebM Transcriber MCP (Port 7013)
 
 ### `transcribe_audio`
 Transcribe audio file
 ```bash
-curl -X POST http://localhost:8020/mcp \
+curl -X POST http://localhost:7000/mcp \
   -H "Content-Type: application/json" \
   -d '{
     "tool": "transcribe_audio",
@@ -250,7 +250,7 @@ curl -X POST http://localhost:8020/mcp \
 ### `transcribe_url`
 Transcribe audio from URL
 ```bash
-curl -X POST http://localhost:8020/mcp \
+curl -X POST http://localhost:7000/mcp \
   -H "Content-Type: application/json" \
   -d '{
     "tool": "transcribe_url",
@@ -262,12 +262,12 @@ curl -X POST http://localhost:8020/mcp \
 
 ---
 
-## 🔍 Research MCP (Port 8011)
+## 🔍 Research MCP (Port 7011)
 
 ### `research_query`
 Perform research using Perplexity API
 ```bash
-curl -X POST http://localhost:8020/mcp \
+curl -X POST http://localhost:7000/mcp \
   -H "Content-Type: application/json" \
   -d '{
     "tool": "research_query",
@@ -280,14 +280,14 @@ curl -X POST http://localhost:8020/mcp \
 
 ---
 
-## 📊 Advanced Memory (Port 8006)
+## 📊 Advanced Memory (Port 7012)
 
 ### Direct FastAPI Interface
 Access advanced memory features directly:
 
 ```bash
 # Store with vector embedding
-curl -X POST http://localhost:8006/memories \
+curl -X POST http://localhost:7012/memories \
   -H "Content-Type: application/json" \
   -d '{
     "content": "Machine learning project notes",
@@ -295,7 +295,7 @@ curl -X POST http://localhost:8006/memories \
   }'
 
 # Semantic search
-curl -X POST http://localhost:8006/search \
+curl -X POST http://localhost:7012/search \
   -H "Content-Type: application/json" \
   -d '{
     "query": "AI project information",
@@ -306,17 +306,17 @@ curl -X POST http://localhost:8006/search \
 
 ---
 
-## 🗂️ Qdrant Vector Database (Port 8007)
+## 🗂️ Qdrant Vector Database (Port 7023)
 
 ### Direct Qdrant API
 Access vector database directly:
 
 ```bash
 # Get collection info
-curl http://localhost:8007/collections/memories
+curl http://localhost:7023/collections/memories
 
 # Search vectors
-curl -X POST http://localhost:8007/collections/memories/points/search \
+curl -X POST http://localhost:7023/collections/memories/points/search \
   -H "Content-Type: application/json" \
   -d '{
     "vector": [0.1, 0.2, 0.3, ...],
@@ -330,16 +330,16 @@ curl -X POST http://localhost:8007/collections/memories/points/search \
 
 ### Zen Coordinator Health
 ```bash
-curl http://localhost:8020/health
+curl http://localhost:7000/health
 ```
 
 ### Individual Service Health
 ```bash
-curl http://localhost:8001/health  # Filesystem
-curl http://localhost:8002/health  # Git
-curl http://localhost:8003/health  # Terminal
-curl http://localhost:8004/health  # Database
-curl http://localhost:8005/health  # Memory
+curl http://localhost:7001/health  # Filesystem
+curl http://localhost:7002/health  # Git
+curl http://localhost:7003/health  # Terminal
+curl http://localhost:7004/health  # Database
+curl http://localhost:7005/health  # Memory
 ```
 
 ---
@@ -348,12 +348,12 @@ curl http://localhost:8005/health  # Memory
 
 ### Service Status
 ```bash
-curl http://localhost:8020/status
+curl http://localhost:7000/status
 ```
 
 ### Metrics
 ```bash
-curl http://localhost:8020/metrics
+curl http://localhost:7000/metrics
 ```
 
 ---

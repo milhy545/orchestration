@@ -1,7 +1,7 @@
 # Security Scan Report - Qdrant MCP Service
 
 **Service:** Qdrant MCP
-**Port:** 8023
+**Port:** 7023
 **Scan Date:** 2025-11-17
 **Status:** ✅ SECURE (Minor improvements recommended)
 

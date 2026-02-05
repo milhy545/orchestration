@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Security MCP Service - Authentication, encryption, security validation
-Port: 8008
+Port: 7008
 """
 import base64
 import hashlib
@@ -105,7 +105,7 @@ async def health_check():
     return {
         "status": "healthy",
         "service": "Security MCP",
-        "port": 8008,
+        "port": 7008,
         "timestamp": datetime.now().isoformat(),
         "features": ["jwt_token", "password_hash", "encryption", "ssl_check"],
         "security": {

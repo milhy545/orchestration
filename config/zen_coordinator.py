@@ -19,49 +19,49 @@ MCP_SERVICES = {
     "filesystem": {
         "description": "Enhanced Filesystem MCP Server",
         "tools": ["file_read", "file_write", "file_list", "file_search", "file_analyze"],
-        "internal_port": 8001,
+        "internal_port": 7001,
         "status": "unknown",
         "container": "mcp-filesystem"
     },
     "git": {
         "description": "Git Operations MCP Server",
         "tools": ["git_status", "git_commit", "git_push", "git_log", "git_diff"],
-        "internal_port": 8002,
+        "internal_port": 7002,
         "status": "unknown", 
         "container": "mcp-git"
     },
     "terminal": {
         "description": "Terminal Operations MCP Server",
         "tools": ["execute_command", "terminal_exec", "shell_command", "system_info"],
-        "internal_port": 8003,
+        "internal_port": 7003,
         "status": "unknown",
         "container": "mcp-terminal"
     },
     "database": {
         "description": "Database Operations MCP Server",
         "tools": ["db_query", "db_connect", "db_schema", "db_backup"],
-        "internal_port": 8004,
+        "internal_port": 7004,
         "status": "unknown",
         "container": "mcp-database"
     },
     "memory": {
         "description": "Memory & Context MCP Server", 
         "tools": ["store_memory", "search_memories", "get_context", "memory_stats", "list_memories"],
-        "internal_port": 8005,
+        "internal_port": 7005,
         "status": "unknown",
         "container": "mcp-memory"
     },
     "transcriber": {
         "description": "WebM Transcriber MCP Server",
         "tools": ["transcribe_webm", "transcribe_url", "audio_convert"],
-        "internal_port": 8008,
+        "internal_port": 7013,
         "status": "unknown",
         "container": "mcp-transcriber"
     },
     "research": {
         "description": "Research & Perplexity MCP Server",
         "tools": ["research_query", "perplexity_search", "web_search"],
-        "internal_port": 8011,
+        "internal_port": 7011,
         "status": "unknown",
         "container": "mcp-research"
     }
@@ -260,8 +260,8 @@ def adapt_to_native_api(port, method, params=None, container_name=None):
     tool_name = params.get("name", "")
     tool_args = params.get("arguments", {})
 
-    # --- Memory MCP (port 8005) Adaptation ---
-    if port == 8005:
+    # --- Memory MCP (port 7005) Adaptation ---
+    if port == 7005:
         if tool_name == "search_memories":
             hostname = container_name if container_name else "localhost"
             service_port = 8000 if container_name else port
@@ -290,8 +290,8 @@ def adapt_to_native_api(port, method, params=None, container_name=None):
             url = f"http://{hostname}:{service_port}/memory/store"
             return _execute_http_request(url, method="POST", data=tool_args)
 
-    # --- Terminal MCP (port 8003) Adaptation ---
-    if port == 8003:
+    # --- Terminal MCP (port 7003) Adaptation ---
+    if port == 7003:
         if tool_name in ["execute_command", "terminal_exec", "shell_command"]:
             hostname = container_name if container_name else "localhost"
             service_port = 8000 if container_name else port
@@ -308,8 +308,8 @@ def adapt_to_native_api(port, method, params=None, container_name=None):
             url = f"http://{hostname}:{service_port}/system/info"
             return _execute_http_request(url, method="GET")
 
-    # --- Filesystem MCP (port 8001) Adaptation ---
-    if port == 8001:
+    # --- Filesystem MCP (port 7001) Adaptation ---
+    if port == 7001:
         if tool_name == "file_list":
             hostname = container_name if container_name else "localhost"
             service_port = 8000 if container_name else port
@@ -330,8 +330,8 @@ def adapt_to_native_api(port, method, params=None, container_name=None):
             payload = {"content": tool_args.get("content", "")}
             return _execute_http_request(url, method="PUT", data=payload)
 
-    # --- Git MCP (port 8002) Adaptation ---
-    if port == 8002:
+    # --- Git MCP (port 7002) Adaptation ---
+    if port == 7002:
         if tool_name == "git_status":
             hostname = container_name if container_name else "localhost"
             service_port = 8000 if container_name else port
@@ -345,8 +345,8 @@ def adapt_to_native_api(port, method, params=None, container_name=None):
             payload = {"repo_path": tool_args.get("repo_path", "/app")}
             return _execute_http_request(url, method="POST", data=payload)
 
-    # --- Database MCP (port 8004) Adaptation ---
-    if port == 8004:
+    # --- Database MCP (port 7004) Adaptation ---
+    if port == 7004:
         if tool_name == "db_query":
             hostname = container_name if container_name else "localhost"
             service_port = 8000 if container_name else port
@@ -357,8 +357,8 @@ def adapt_to_native_api(port, method, params=None, container_name=None):
             }
             return _execute_http_request(url, method="POST", data=payload)
 
-    # --- Transcriber MCP (port 8008) Adaptation ---
-    if port == 8008:
+    # --- Transcriber MCP (port 7013) Adaptation ---
+    if port == 7013:
         if tool_name == "transcribe_webm":
             hostname = container_name if container_name else "localhost"
             service_port = 8000 if container_name else port
@@ -366,8 +366,8 @@ def adapt_to_native_api(port, method, params=None, container_name=None):
             payload = {"file_path": tool_args.get("file_path", "")}
             return _execute_http_request(url, method="POST", data=payload)
 
-    # --- Research MCP (port 8011) Adaptation ---
-    if port == 8011:
+    # --- Research MCP (port 7011) Adaptation ---
+    if port == 7011:
         if tool_name == "web_search":
             hostname = container_name if container_name else "localhost"
             service_port = 8000 if container_name else port
@@ -427,7 +427,7 @@ class ZENCoordinator(BaseHTTPRequestHandler):
         response_data = {
             "zen_coordinator": {
                 "status": "running",
-                "port": 8020,
+                "port": 7000,
                 "protocol": "MCP over HTTP",
                 "architecture": "organized",
                 "security": "Services accessible only through coordinator",
@@ -480,7 +480,7 @@ class ZENCoordinator(BaseHTTPRequestHandler):
         self.wfile.write(json.dumps({
             "status": health_status,
             "service": "ZEN Coordinator",
-            "port": 8020,
+            "port": 7000,
             "services_running": running_services,
             "services_total": total_services,
             "database_healthy": db_healthy,

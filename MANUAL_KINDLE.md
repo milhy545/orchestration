@@ -58,7 +58,7 @@ Tento projekt demonstruje production-ready patterns pro:
 ```
 ┌─────────────────┐    ┌──────────────────────────────────────┐
 │   HTTP Client   │────│           ZEN Coordinator            │
-└─────────────────┘    │         (Port 8020)                 │
+└─────────────────┘    │         (Port 7000)                 │
                        │    HTTP ↔ MCP Protocol Bridge        │
                        └──────────────────────────────────────┘
                                           │
@@ -66,7 +66,7 @@ Tento projekt demonstruje production-ready patterns pro:
                        │                  │                  │
             ┌──────────▼────┐  ┌─────────▼────┐  ┌─────────▼────┐
             │ Filesystem MCP │  │ Memory MCP   │  │ Terminal MCP │
-            │   (8001)       │  │   (8005)     │  │   (8003)     │
+            │   (7001)       │  │   (7005)     │  │   (7003)     │
             └───────────────┘  └──────────────┘  └──────────────┘
                        │                  │                  │
                        └──────────────────┼──────────────────┘
@@ -84,42 +84,43 @@ Tento projekt demonstruje production-ready patterns pro:
 
 Platforma implementuje Zero Trust security model:
 
-1. **Single Entry Point**: Pouze ZEN Coordinator (port 8020) je exposed externally
-2. **Internal Isolation**: MCP služby (8001-8013) nejsou přímo dostupné
+1. **Single Entry Point**: Pouze ZEN Coordinator (port 7000) je exposed externally
+2. **Internal Isolation**: MCP služby (7001-7017) nejsou přímo dostupné
 3. **Service Mesh**: Všechna internal komunikace je kontrolována a monitorována
 4. **Authentication**: JWT-based authentication pro API access
 5. **Authorization**: Role-based access control pro MCP tools
 
 ### Service Categories
 
-#### Core MCP Services (8001-8010)
-- **Filesystem MCP** (8001) - File operations
-- **Git MCP** (8002) - Version control
-- **Terminal MCP** (8003) - Command execution
-- **Database MCP** (8004) - Data operations
-- **Memory MCP** (8005) - Simple storage
-- **Network MCP** (8006) - Network operations
-- **System MCP** (8007) - System info
-- **Security MCP** (8008) - Security operations
-- **Config MCP** (8009) - Configuration management
-- **Log MCP** (8010) - Logging operations
+#### Core MCP Services (7001-7010)
+- **Filesystem MCP** (7001) - File operations
+- **Git MCP** (7002) - Version control
+- **Terminal MCP** (7003) - Command execution
+- **Database MCP** (7004) - Data operations
+- **Memory MCP** (7005) - Simple storage
+- **Network MCP** (7006) - Network operations
+- **System MCP** (7007) - System info
+- **Security MCP** (7008) - Security operations
+- **Config MCP** (7009) - Configuration management
+- **Log MCP** (7010) - Logging operations
 
-#### Extended Services (8011-8020)
-- **Research MCP** (8011) - AI research
-- **Advanced Memory MCP** (8012) - AI memory
-- **Transcriber MCP** (8013) - Audio processing
-- **Vision MCP** (8014) - Image processing
-- **PostgreSQL MCP Wrapper** (8024) - Database operations API
-- **Redis MCP Wrapper** (8025) - Cache management API
-- **Qdrant MCP Wrapper** (8026) - Vector database API
+#### Extended Services (7011-7017, 7024-7026)
+- **Research MCP** (7011) - AI research
+- **Advanced Memory MCP** (7012) - AI memory
+- **Transcriber MCP** (7013) - Audio processing
+- **Vision MCP** (7014) - Image processing
+- **ZEN MCP Server** (7017) - MCP tool orchestration gateway
+- **PostgreSQL MCP Wrapper** (7024) - Database operations API
+- **Redis MCP Wrapper** (7025) - Cache management API
+- **Qdrant MCP Wrapper** (7026) - Vector database API
 
 #### Infrastructure Services
-- **PostgreSQL** (8021) - Primary database
-- **Redis** (8022) - Cache/sessions
-- **Qdrant Vector DB** (8023) - Vector storage
-- **Monitoring** (8028) - Health checks & metrics
-- **Backup Service** (8029) - Automated backups
-- **Message Queue** (8030) - Task queuing
+- **PostgreSQL** (7021) - Primary database
+- **Redis** (7022) - Cache/sessions
+- **Qdrant Vector DB** (7023) - Vector storage
+- **Monitoring** (7028) - Health checks & metrics
+- **Backup Service** (7029) - Automated backups
+- **Message Queue** (7030) - Task queuing
 
 ---
 
@@ -170,10 +171,10 @@ docker-compose up -d
 
 ### 4. Access the System
 
-- **ZEN Coordinator**: http://localhost:8020
-- **Health Check**: http://localhost:8020/health
-- **Services List**: http://localhost:8020/services
-- **Tools List**: http://localhost:8020/tools/list
+- **ZEN Coordinator**: http://localhost:7000
+- **Health Check**: http://localhost:7000/health
+- **Services List**: http://localhost:7000/services
+- **Tools List**: http://localhost:7000/tools/list
 
 ---
 
@@ -238,7 +239,7 @@ services:
 
 ### Core Services
 
-#### Filesystem MCP (Port 8001)
+#### Filesystem MCP (Port 7001)
 **Účel**: File operations a filesystem management
 
 **Nástroje**:
@@ -250,7 +251,7 @@ services:
 
 **Použití**:
 ```bash
-curl -X POST http://localhost:8020/mcp \
+curl -X POST http://localhost:7000/mcp \
   -H "Content-Type: application/json" \
   -d '{
     "tool": "file_read",
@@ -258,7 +259,7 @@ curl -X POST http://localhost:8020/mcp \
   }'
 ```
 
-#### Git MCP (Port 8002)
+#### Git MCP (Port 7002)
 **Účel**: Version control operations
 
 **Nástroje**:
@@ -268,7 +269,7 @@ curl -X POST http://localhost:8020/mcp \
 - git_pull - Git pull
 - git_log - Git log
 
-#### Terminal MCP (Port 8003)
+#### Terminal MCP (Port 7003)
 **Účel**: Command execution a system operations
 
 **Nástroje**:
@@ -277,7 +278,7 @@ curl -X POST http://localhost:8020/mcp \
 - process_list - Seznam procesů
 - disk_usage - Disk usage
 
-#### Memory MCP (Port 8005)
+#### Memory MCP (Port 7005)
 **Účel**: Simple key-value storage
 
 **Nástroje**:
@@ -286,7 +287,7 @@ curl -X POST http://localhost:8020/mcp \
 - retrieve_memory - Načtení paměti
 - delete_memory - Smazání paměti
 
-#### Advanced Memory MCP (Port 8012)
+#### Advanced Memory MCP (Port 7012)
 **Účel**: AI-enhanced memory s vector search
 
 **Nástroje**:
@@ -297,7 +298,7 @@ curl -X POST http://localhost:8020/mcp \
 
 ### Extended Services
 
-#### Research MCP (Port 8011)
+#### Research MCP (Port 7011)
 **Účel**: AI research a data gathering
 
 **Nástroje**:
@@ -305,7 +306,7 @@ curl -X POST http://localhost:8020/mcp \
 - perplexity_query - Perplexity AI queries
 - research_compile - Research compilation
 
-#### Transcriber MCP (Port 8013)
+#### Transcriber MCP (Port 7013)
 **Účel**: Audio processing a transcription
 
 **Nástroje**:
@@ -348,7 +349,7 @@ GET /services
   "services": [
     {
       "name": "filesystem-mcp",
-      "port": 8001,
+      "port": 7001,
       "status": "healthy",
       "tools": ["file_read", "file_write", "file_list"]
     }
@@ -537,8 +538,8 @@ anthropic:
   model: claude-3-5-sonnet-20241022
   
 mcp_services:
-  zen_coordinator: "http://localhost:8020"
-  direct_bridge: "http://localhost:8001"
+  zen_coordinator: "http://localhost:7000"
+  direct_bridge: "http://localhost:7001"
 ```
 
 #### Spuštění
@@ -620,7 +621,7 @@ Pro GUI deployment použijte Portainer:
 docker logs [service-name]
 
 # Check health
-curl http://localhost:8020/health
+curl http://localhost:7000/health
 
 # Restart service
 docker-compose restart [service-name]
@@ -687,10 +688,10 @@ CREATE INDEX idx_importance ON memories(importance);
 # Multiple ZEN Coordinator instances
 zen-coordinator-1:
   ports:
-    - "8020:8020"
+    - "7000:8020"
 zen-coordinator-2:
   ports:
-    - "8021:8020"
+    - "7051:8020"
 ```
 
 ### Scaling Guidelines

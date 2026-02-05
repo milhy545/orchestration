@@ -8,8 +8,8 @@ echo "Start time: $(date)"
 echo
 
 # Test configuration
-ZEN_URL='http://localhost:8020/mcp'
-MEMORY_URL='http://localhost:8007'
+ZEN_URL='http://localhost:7000/mcp'
+MEMORY_URL='http://localhost:7005'
 TEST_ID=$(date +%s)
 PASS_COUNT=0
 FAIL_COUNT=0

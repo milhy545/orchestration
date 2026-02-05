@@ -2,7 +2,7 @@
 
 **Date:** 2025-11-17
 **Auditor:** Claude
-**Service:** Config MCP (Port 8009)
+**Service:** Config MCP (Port 7009)
 
 ## Executive Summary
 

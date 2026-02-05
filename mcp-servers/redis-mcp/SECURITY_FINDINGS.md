@@ -1,7 +1,7 @@
 # Security Scan Report - Redis MCP Service
 
 **Service:** Redis MCP
-**Port:** 8022
+**Port:** 7022
 **Scan Date:** 2025-11-17
 **Status:** ⚠️ CRITICAL + MEDIUM ISSUES FOUND
 
@@ -38,12 +38,12 @@ elif request.operation == "list":
 ```bash
 # Create many sessions to trigger slow KEYS operation
 for i in {1..10000}; do
-  curl -X POST http://localhost:8022/tools/session \
+  curl -X POST http://localhost:7022/tools/session \
     -d '{"operation":"create","session_data":{"user":"test"}}'
 done
 
 # Trigger DoS
-curl -X POST http://localhost:8022/tools/session \
+curl -X POST http://localhost:7022/tools/session \
   -d '{"operation":"list"}'
 ```
 
@@ -104,7 +104,7 @@ session_key = f"{session_prefix}{request.session_id}"  # ❌ No validation
 **Attack Vector:**
 ```bash
 # Access other user's session
-curl -X POST http://localhost:8022/tools/session \
+curl -X POST http://localhost:7022/tools/session \
   -d '{
     "operation":"get",
     "session_id":"../other_user_session"

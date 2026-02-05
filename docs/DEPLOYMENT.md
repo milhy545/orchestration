@@ -121,7 +121,7 @@ server {
     server_name your-domain.com;
     
     location / {
-        proxy_pass http://localhost:8020;
+        proxy_pass http://localhost:7000;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -196,7 +196,7 @@ tar -czf "$BACKUP_DIR/qdrant.tar.gz" -C /opt/orchestration/data qdrant/
 ufw allow 22/tcp
 ufw allow 80/tcp
 ufw allow 443/tcp
-ufw deny 8020/tcp  # Only allow via reverse proxy
+ufw deny 7000/tcp  # Only allow via reverse proxy
 ufw enable
 ```
 
@@ -250,16 +250,16 @@ services:
     deploy:
       replicas: 3
     ports:
-      - "8020-8022:8020"
+      - "7050-7052:8020"
 ```
 
 #### Load Balancer (HAProxy)
 ```
 backend orchestration
     balance roundrobin
-    server coord1 localhost:8020 check
-    server coord2 localhost:8021 check
-    server coord3 localhost:8022 check
+    server coord1 localhost:7050 check
+    server coord2 localhost:7051 check
+    server coord3 localhost:7052 check
 ```
 
 ### Troubleshooting
@@ -295,13 +295,13 @@ docker-compose down && docker-compose up -d
 
 ```bash
 # Service health
-curl http://localhost:8020/health
+curl http://localhost:7000/health
 
 # System metrics
-curl http://localhost:8020/metrics
+curl http://localhost:7000/metrics
 
 # Database status
-curl http://localhost:8020/status/database
+curl http://localhost:7000/status/database
 
 # All services status
 ./scripts/monitor-services.sh

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Qdrant MCP Service - Vector database operations, embeddings, similarity search
-Port: 8023
+Port: 7023
 """
 import json
 import logging
@@ -130,7 +130,7 @@ async def health_check():
     return {
         "status": "healthy",
         "service": "Qdrant MCP",
-        "port": 8023,
+        "port": 7023,
         "timestamp": datetime.now().isoformat(),
         "features": ["collections", "vectors", "search", "similarity"],
         "qdrant": {"status": qdrant_status, "info": info},

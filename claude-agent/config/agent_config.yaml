@@ -12,7 +12,7 @@ resource_limits:
   cpu_critical_percent: 85
 
 mcp:
-  base_url: "http://localhost:8020"
+  base_url: "http://localhost:7000"
   direct_bridge_path: "/home/orchestration/direct_mcp_bridge.py"
   tools:
     # Filesystem operations
@@ -78,7 +78,7 @@ environment:
   
 # Service discovery
 services:
-  zen_coordinator: "http://localhost:8020"
+  zen_coordinator: "http://localhost:7000"
   postgresql: "localhost:5432"
   redis: "localhost:6379"
   qdrant: "localhost:6333"

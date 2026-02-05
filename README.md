@@ -37,55 +37,56 @@ The `docker-compose.yml` file defines the following services, which are organize
 
 ### Master Controller
 
--   **`zen-coordinator` (Port 8020):** The master controller that acts as an HTTP to MCP (Master Control Program) bridge.
+-   **`zen-coordinator` (Port 7000):** The master controller that acts as an HTTP to MCP (Master Control Program) bridge.
 
 ### Core MCP Services
 
--   **`filesystem-mcp` (Port 8001):** Handles file operations.
--   **`git-mcp` (Port 8002):** Provides version control functionalities.
--   **`terminal-mcp` (Port 8003):** Allows for command execution.
--   **`database-mcp` (Port 8004):** Manages data operations.
--   **`memory-mcp` (Port 8005):** Offers simple storage capabilities.
--   **`network-mcp` (Port 8006):** (Placeholder) Intended for network operations.
--   **`system-mcp` (Port 8007):** (Placeholder) Intended for system information.
--   **`security-mcp` (Port 8008):** (Placeholder) Intended for security operations.
--   **`config-mcp` (Port 8009):** (Placeholder) Intended for configuration management.
--   **`log-mcp` (Port 8010):** (Placeholder) Intended for logging operations.
+-   **`filesystem-mcp` (Port 7001):** Handles file operations.
+-   **`git-mcp` (Port 7002):** Provides version control functionalities.
+-   **`terminal-mcp` (Port 7003):** Allows for command execution.
+-   **`database-mcp` (Port 7004):** Manages data operations.
+-   **`memory-mcp` (Port 7005):** Offers simple storage capabilities.
+-   **`network-mcp` (Port 7006):** (Placeholder) Intended for network operations.
+-   **`system-mcp` (Port 7007):** (Placeholder) Intended for system information.
+-   **`security-mcp` (Port 7008):** (Placeholder) Intended for security operations.
+-   **`config-mcp` (Port 7009):** (Placeholder) Intended for configuration management.
+-   **`log-mcp` (Port 7010):** (Placeholder) Intended for logging operations.
 
 ### AI/Enhanced Services
 
--   **`research-mcp` (Port 8011):** Facilitates AI research tasks.
--   **`advanced-memory-mcp` (Port 8012):** Provides AI-powered memory with vector search and semantic similarity.
--   **`transcriber-mcp` (Port 8013):** Handles audio processing and transcription.
--   **`vision-mcp` (Port 8014):** (Placeholder) Intended for vision-related tasks.
+-   **`research-mcp` (Port 7011):** Facilitates AI research tasks.
+-   **`advanced-memory-mcp` (Port 7012):** Provides AI-powered memory with vector search and semantic similarity.
+-   **`transcriber-mcp` (Port 7013):** Handles audio processing and transcription.
+-   **`vision-mcp` (Port 7014):** (Placeholder) Intended for vision-related tasks.
+-   **`zen-mcp-server` (Port 7017):** MCP tool orchestration gateway for multi-model usage.
 
 ### Service Wrappers
 
--   **`postgresql-mcp-wrapper` (Port 8024):** A wrapper for database operations.
--   **`redis-mcp-wrapper` (Port 8025):** A wrapper for cache and session management.
--   **`qdrant-mcp-wrapper` (Port 8026):** A wrapper for vector database operations.
+-   **`postgresql-mcp-wrapper` (Port 7024):** A wrapper for database operations.
+-   **`redis-mcp-wrapper` (Port 7025):** A wrapper for cache and session management.
+-   **`qdrant-mcp-wrapper` (Port 7026):** A wrapper for vector database operations.
 
 ### Support Services
 
--   **`postgresql` (Port 8021):** The primary database for the system.
--   **`redis` (Port 8022):** Used for caching and session management.
--   **`qdrant-vector` (Port 8023):** A vector database for AI-related tasks.
+-   **`postgresql` (Port 7021):** The primary database for the system.
+-   **`redis` (Port 7022):** Used for caching and session management.
+-   **`qdrant-vector` (Port 7023):** A vector database for AI-related tasks.
 
 ### Management & Monitoring Services
 
--   **`prometheus` (Port 8028):** Metrics collection and storage for all MCP services.
--   **`grafana` (Port 8031):** Dashboards and visualization platform with pre-configured MCP overview dashboard.
--   **`loki` (Port 8032):** Log aggregation system collecting logs from all Docker containers.
+-   **`prometheus` (Port 7028):** Metrics collection and storage for all MCP services.
+-   **`grafana` (Port 7031):** Dashboards and visualization platform with pre-configured MCP overview dashboard.
+-   **`loki` (Port 7032):** Log aggregation system collecting logs from all Docker containers.
 -   **`promtail`:** Log collection agent (no external port, internal service).
--   **`backup-service` (Port 8029):** Performs automated backups.
--   **`message-queue` (Port 8030):** A Redis-based message queue for task queuing.
+-   **`backup-service` (Port 7029):** Performs automated backups.
+-   **`message-queue` (Port 7030):** A Redis-based message queue for task queuing.
 
 **📊 Full observability stack** - See [MONITORING.md](docs/MONITORING.md) for complete monitoring documentation.
 
 ### MQTT Services
 
--   **`mqtt-broker` (Port 8018):** A Mosquitto message broker for IoT communication.
--   **`mqtt-mcp` (Port 8019):** Handles MQTT operations via the MCP protocol.
+-   **`mqtt-broker` (Port 7018):** A Mosquitto message broker for IoT communication.
+-   **`mqtt-mcp` (Port 7019):** Handles MQTT operations via the MCP protocol.
 
 ## API Endpoints
 
@@ -126,13 +127,13 @@ The platform includes a comprehensive monitoring stack for full visibility into 
 
 ```bash
 # Access Grafana dashboards
-http://localhost:8031  (admin/admin)
+http://localhost:7031  (admin/admin)
 
 # View Prometheus metrics
-http://localhost:8028
+http://localhost:7028
 
 # Query logs via Loki
-http://localhost:8032
+http://localhost:7032
 ```
 
 ### Available Dashboards

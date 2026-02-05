@@ -99,9 +99,9 @@ echo ""
 echo "Test 5: Checking port mappings..."
 
 declare -A PORT_MAP=(
-    ["prometheus"]="8028:9090"
-    ["grafana"]="8031:3000"
-    ["loki"]="8032:3100"
+    ["prometheus"]="7028:9090"
+    ["grafana"]="7031:3000"
+    ["loki"]="7032:3100"
 )
 
 for service in "${!PORT_MAP[@]}"; do

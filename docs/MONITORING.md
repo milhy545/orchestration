@@ -14,14 +14,14 @@ The monitoring stack provides:
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│                   Grafana (8031)                        │
+│                   Grafana (7031)                        │
 │              Dashboards & Visualization                 │
 └────────────┬──────────────────────────┬─────────────────┘
              │                          │
              ▼                          ▼
     ┌────────────────┐         ┌──────────────┐
     │  Prometheus    │         │     Loki     │
-    │    (8028)      │         │    (8032)    │
+    │    (7028)      │         │    (7032)    │
     │   Metrics DB   │         │   Logs DB    │
     └────────┬───────┘         └──────┬───────┘
              │                         │
@@ -33,7 +33,7 @@ The monitoring stack provides:
              │
              ▼
     ┌────────────────────────────────────────────┐
-    │     16 MCP Services (8001-8026)            │
+    │     16 MCP Services (7001-7026)            │
     │  - /metrics endpoints (Prometheus)         │
     │  - Docker logs (Promtail → Loki)           │
     │                                             │
@@ -62,13 +62,13 @@ docker-compose up -d
 
 | Service | URL | Default Credentials |
 |---------|-----|---------------------|
-| **Grafana** | http://localhost:8031 | admin / admin |
-| **Prometheus** | http://localhost:8028 | - |
-| **Loki API** | http://localhost:8032 | - |
+| **Grafana** | http://localhost:7031 | admin / admin |
+| **Prometheus** | http://localhost:7028 | - |
+| **Loki API** | http://localhost:7032 | - |
 
 ### 3. View Metrics
 
-1. Open Grafana: http://localhost:8031
+1. Open Grafana: http://localhost:7031
 2. Login with `admin/admin` (you'll be prompted to change password)
 3. Navigate to **Dashboards** → **MCP** → **MCP Orchestration - Overview**
 
@@ -256,7 +256,7 @@ docker logs mcp-promtail -f
 
 ```bash
 # Reload Prometheus config without restart
-curl -X POST http://localhost:8028/-/reload
+curl -X POST http://localhost:7028/-/reload
 
 # Restart individual service
 docker-compose restart prometheus
@@ -295,7 +295,7 @@ docker run --rm -v orchestration_prometheus-data:/data \
 ```bash
 # Export existing dashboard
 curl -H "Authorization: Bearer <api-key>" \
-  http://localhost:8031/api/dashboards/uid/mcp-overview \
+  http://localhost:7031/api/dashboards/uid/mcp-overview \
   > my-dashboard.json
 
 # Place in provisioning directory
@@ -313,7 +313,7 @@ alertmanager:
   image: prom/alertmanager:latest
   container_name: mcp-alertmanager
   ports:
-    - "8033:9093"
+    - "7033:9093"
   volumes:
     - ./monitoring/alertmanager/config.yml:/etc/alertmanager/config.yml
     - alertmanager-data:/alertmanager
@@ -399,7 +399,7 @@ environment:
 **Problem:** Targets show as "down" in Prometheus
 **Solution:**
 1. Check service is running: `docker ps | grep mcp-`
-2. Verify /metrics endpoint: `curl http://localhost:8001/metrics`
+2. Verify /metrics endpoint: `curl http://localhost:7001/metrics`
 3. Check network connectivity: `docker exec mcp-prometheus ping filesystem-mcp`
 
 ### Grafana shows "No data"
@@ -409,7 +409,7 @@ environment:
 1. Verify datasource configuration: Settings → Data Sources
 2. Test Prometheus connection: Click "Test" button
 3. Check time range in dashboard (top right)
-4. Verify Prometheus has scraped data: http://localhost:8028/targets
+4. Verify Prometheus has scraped data: http://localhost:7028/targets
 
 ### Loki logs not appearing
 
@@ -418,7 +418,7 @@ environment:
 1. Check Promtail is running: `docker ps | grep promtail`
 2. Verify Promtail config: `docker logs mcp-promtail`
 3. Check label filters in LogQL query
-4. Test Loki API: `curl http://localhost:8032/ready`
+4. Test Loki API: `curl http://localhost:7032/ready`
 
 ### High disk usage
 

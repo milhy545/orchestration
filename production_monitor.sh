@@ -2,7 +2,7 @@
 echo "=== PRODUCTION MONITORING Sun Aug 17 09:59:31 BST 2025 ==="
 
 # Health status
-curl -s http://127.0.0.1:8020/health
+curl -s http://127.0.0.1:7000/health
 
 # Service count
 echo "Services running: 0"

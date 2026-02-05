@@ -21,7 +21,7 @@ All services now have comprehensive test suites and security documentation.
 
 ## Services Analyzed & Fixed
 
-### ✅ 1. Terminal MCP (Port 8003)
+### ✅ 1. Terminal MCP (Port 7003)
 **Status:** COMPLETE
 **Files Modified:**
 - `mcp-servers/terminal-mcp/main.py` - Security refactor
@@ -47,7 +47,7 @@ All services now have comprehensive test suites and security documentation.
 
 ---
 
-### ✅ 2. Filesystem MCP (Port 8001)
+### ✅ 2. Filesystem MCP (Port 7001)
 **Status:** COMPLETE
 **Files Modified:**
 - `mcp-servers/filesystem-mcp/main.py` - Security refactor
@@ -73,7 +73,7 @@ All services now have comprehensive test suites and security documentation.
 
 ---
 
-### ✅ 3. Database MCP (Port 8004)
+### ✅ 3. Database MCP (Port 7004)
 **Status:** COMPLETE
 **Files Modified:**
 - `mcp-servers/database-mcp/main.py` - CRITICAL security refactor
@@ -101,7 +101,7 @@ All services now have comprehensive test suites and security documentation.
 
 ---
 
-### ✅ 4. Git MCP (Port 8002)
+### ✅ 4. Git MCP (Port 7002)
 **Status:** COMPLETE
 **Files Modified:**
 - `mcp-servers/git-mcp/main.py` - Security enhancements
@@ -171,22 +171,22 @@ All services now have comprehensive test suites and security documentation.
 ## Remaining Services to Audit
 
 ### High Priority (Core Infrastructure)
-- **Memory MCP** (Port 8005) - PostgreSQL operations
-- **PostgreSQL MCP** (Port 8021) - Direct database access
-- **Redis MCP** (Port 8022) - Cache operations
-- **System MCP** (Port 8007) - System information
+- **Memory MCP** (Port 7005) - PostgreSQL operations
+- **PostgreSQL MCP** (Port 7021) - Direct database access
+- **Redis MCP** (Port 7022) - Cache operations
+- **System MCP** (Port 7007) - System information
 
 ### Medium Priority (Specialized Services)
-- **Network MCP** (Port 8006) - ✅ Already has tests
-- **Security MCP** (Port 8008) - ✅ Already has tests
-- **Qdrant MCP** (Port 8023) - Vector database
-- **MQTT MCP** (Port 8015) - Message queue
-- **Research MCP** (Port 8011) - AI research
-- **Transcriber MCP** (Port 8014) - WebM transcription
+- **Network MCP** (Port 7006) - ✅ Already has tests
+- **Security MCP** (Port 7008) - ✅ Already has tests
+- **Qdrant MCP** (Port 7023) - Vector database
+- **MQTT MCP** (Port 7019) - Message queue
+- **Research MCP** (Port 7011) - AI research
+- **Transcriber MCP** (Port 7013) - WebM transcription
 
 ### Lower Priority
-- **Config MCP** (Port 8009)
-- **Log MCP** (Port 8010)
+- **Config MCP** (Port 7009)
+- **Log MCP** (Port 7010)
 
 ---
 

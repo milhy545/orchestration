@@ -16,48 +16,48 @@ class UniversalMCPWrapper:
     def __init__(self):
         # MCP Service routing map
         self.service_map = {
-            # Memory tools (port 8006)
-            'search_memories': 'http://localhost:8006',
-            'store_memory': 'http://localhost:8006', 
-            'memory_stats': 'http://localhost:8006',
-            'list_memories': 'http://localhost:8006',
+            # Memory tools (port 7005)
+            'search_memories': 'http://localhost:7005',
+            'store_memory': 'http://localhost:7005', 
+            'memory_stats': 'http://localhost:7005',
+            'list_memories': 'http://localhost:7005',
             
-            # File tools (port 8001) 
-            'file_read': 'http://localhost:8001',
-            'file_write': 'http://localhost:8001',
-            'file_list': 'http://localhost:8001',
-            'file_search': 'http://localhost:8001',
-            'file_analyze': 'http://localhost:8001',
+            # File tools (port 7001) 
+            'file_read': 'http://localhost:7001',
+            'file_write': 'http://localhost:7001',
+            'file_list': 'http://localhost:7001',
+            'file_search': 'http://localhost:7001',
+            'file_analyze': 'http://localhost:7001',
             
-            # Git tools (port 8002)
-            'git_status': 'http://localhost:8002',
-            'git_commit': 'http://localhost:8002', 
-            'git_push': 'http://localhost:8002',
-            'git_log': 'http://localhost:8002',
-            'git_diff': 'http://localhost:8002',
+            # Git tools (port 7002)
+            'git_status': 'http://localhost:7002',
+            'git_commit': 'http://localhost:7002', 
+            'git_push': 'http://localhost:7002',
+            'git_log': 'http://localhost:7002',
+            'git_diff': 'http://localhost:7002',
             
-            # Terminal tools (port 8003)
-            'terminal_exec': 'http://localhost:8003',
-            'shell_command': 'http://localhost:8003',
-            'system_info': 'http://localhost:8003',
-            'execute_command': 'http://localhost:8003',
+            # Terminal tools (port 7003)
+            'terminal_exec': 'http://localhost:7003',
+            'shell_command': 'http://localhost:7003',
+            'system_info': 'http://localhost:7003',
+            'execute_command': 'http://localhost:7003',
             
-            # Database tools (port 8004)
-            'db_query': 'http://localhost:8004',
-            'db_connect': 'http://localhost:8004',
-            'db_schema': 'http://localhost:8004', 
-            'db_backup': 'http://localhost:8004',
+            # Database tools (port 7004)
+            'db_query': 'http://localhost:7004',
+            'db_connect': 'http://localhost:7004',
+            'db_schema': 'http://localhost:7004', 
+            'db_backup': 'http://localhost:7004',
             
-            # Transcription tools (port 8010)
-            'transcribe_webm': 'http://localhost:8010',
-            'transcribe_url': 'http://localhost:8010',
-            'audio_convert': 'http://localhost:8010',
+            # Transcription tools (port 7013)
+            'transcribe_webm': 'http://localhost:7013',
+            'transcribe_url': 'http://localhost:7013',
+            'audio_convert': 'http://localhost:7013',
             
-            # Research tools (port 8011)
-            'research_query': 'http://localhost:8011',
-            'web_search': 'http://localhost:8011',
-            'search_web': 'http://localhost:8011',
-            'perplexity_search': 'http://localhost:8011'
+            # Research tools (port 7011)
+            'research_query': 'http://localhost:7011',
+            'web_search': 'http://localhost:7011',
+            'search_web': 'http://localhost:7011',
+            'perplexity_search': 'http://localhost:7011'
         }
     
     async def call_tool(self, tool_name: str, arguments: Dict[str, Any] = None) -> Dict[str, Any]:
@@ -181,13 +181,13 @@ print(json.dumps({{'success': True, 'data': 'Direct MCP call', 'method': 'direct
         
         # Determine service category
         service_categories = {
-            '8001': 'filesystem',
-            '8002': 'git', 
-            '8003': 'terminal',
-            '8004': 'database',
-            '8006': 'memory',
-            '8010': 'transcription', 
-            '8011': 'research'
+            '7001': 'filesystem',
+            '7002': 'git', 
+            '7003': 'terminal',
+            '7004': 'database',
+            '7005': 'memory',
+            '7013': 'transcription', 
+            '7011': 'research'
         }
         
         return {
