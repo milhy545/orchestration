@@ -24,7 +24,52 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
+    - name: Check HAS availability
+      id: has_check
+      env:
+        HAS_SSH_HOST: ${{ secrets.HAS_SSH_HOST }}
+        HAS_SSH_USER: ${{ secrets.HAS_SSH_USER }}
+        HAS_SSH_PRIVATE_KEY: ${{ secrets.HAS_SSH_PRIVATE_KEY }}
+      run: |
+        python - <<'PY'
+        import os
+        import socket
+
+        output_path = os.environ.get("GITHUB_OUTPUT")
+
+        def set_output(key: str, value: str) -> None:
+            if not output_path:
+                return
+            with open(output_path, "a", encoding="utf-8") as handle:
+                handle.write(f"{key}={value}\n")
+
+        host = (os.environ.get("HAS_SSH_HOST") or "").strip()
+        user = (os.environ.get("HAS_SSH_USER") or "").strip()
+        key = (os.environ.get("HAS_SSH_PRIVATE_KEY") or "").strip()
+
+        missing = [name for name, val in (("HAS_SSH_HOST", host), ("HAS_SSH_USER", user), ("HAS_SSH_PRIVATE_KEY", key)) if not val]
+        if missing:
+            set_output("reachable", "false")
+            set_output("reason", "missing_secrets")
+            print("Skipping deploy: required secrets are not set.")
+            raise SystemExit(0)
+
+        sock = socket.socket()
+        sock.settimeout(5)
+        try:
+            sock.connect((host, 2222))
+        except Exception as exc:
+            set_output("reachable", "false")
+            set_output("reason", "unreachable")
+            print(f"Skipping deploy: host not reachable ({exc}).")
+        else:
+            set_output("reachable", "true")
+        finally:
+            sock.close()
+        PY
+
     - name: Deploy to HAS via SSH
+      if: steps.has_check.outputs.reachable == 'true'
       uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1.2.5
       env:
         HAS_SSH_PRIVATE_KEY: ${{ secrets.HAS_SSH_PRIVATE_KEY }}
