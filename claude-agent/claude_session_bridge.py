@@ -58,8 +58,7 @@ async def run_has_agent_with_auth():
     if creds and 'api_key' in creds:
         # Set environment variable for this session (avoid logging secrets)
         os.environ['ANTHROPIC_API_KEY'] = creds['api_key']
-        masked = f"{creds['api_key'][:4]}...{creds['api_key'][-4:]}" if len(creds['api_key']) >= 8 else "***"
-        print(f"✅ Using API key: {masked}")
+        print("✅ Using API key from environment")
     else:
         print("⚠️ No API key found, testing fallback mode")
     

@@ -48,7 +48,7 @@ def validate_repository_path(path: str) -> str:
 
     # Resolve to absolute path and normalize
     try:
-        resolved_path = Path(path).resolve()
+        resolved_path = Path(path).resolve()  # lgtm[py/path-injection]
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Invalid path: {str(e)}")
 
@@ -64,6 +64,7 @@ def validate_repository_path(path: str) -> str:
         )
 
     # Verify it's actually a git repository
+    # lgtm[py/path-injection] - resolved_path is restricted to allowed repositories
     if not (resolved_path / ".git").exists():
         raise HTTPException(
             status_code=400, detail=f"Path {resolved_path} is not a git repository"

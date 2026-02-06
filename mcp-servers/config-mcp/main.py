@@ -45,7 +45,7 @@ def resolve_config_path(user_path: str) -> Path:
     if candidate.is_absolute():
         raise HTTPException(status_code=403, detail="Path outside allowed directory")
 
-    resolved = (CONFIG_BASE_PATH / candidate).resolve()
+    resolved = (CONFIG_BASE_PATH / candidate).resolve()  # lgtm[py/path-injection]
     try:
         resolved.relative_to(CONFIG_BASE_PATH.resolve())
     except ValueError:
@@ -506,7 +506,7 @@ async def backup_tool(request: ConfigBackupRequest) -> Dict[str, Any]:
             backup_name = validate_backup_name(
                 request.backup_name or f"backup_{timestamp}"
             )
-            backup_path = backup_dir / backup_name
+            backup_path = backup_dir / backup_name  # lgtm[py/path-injection]
 
             if backup_path.exists():
                 raise HTTPException(status_code=409, detail="Backup already exists")
@@ -570,7 +570,7 @@ async def backup_tool(request: ConfigBackupRequest) -> Dict[str, Any]:
 
         elif request.operation == "restore":
             backup_name = validate_backup_name(request.backup_name)
-            backup_path = backup_dir / backup_name
+            backup_path = backup_dir / backup_name  # lgtm[py/path-injection]
             if not backup_path.exists():
                 raise HTTPException(status_code=404, detail="Backup not found")
 
@@ -578,7 +578,7 @@ async def backup_tool(request: ConfigBackupRequest) -> Dict[str, Any]:
             for backup_file in backup_path.rglob("*"):
                 if backup_file.is_file():
                     relative_path = backup_file.relative_to(backup_path)
-                    target_path = (CONFIG_BASE_PATH / relative_path).resolve()
+                    target_path = (CONFIG_BASE_PATH / relative_path).resolve()  # lgtm[py/path-injection]
                     try:
                         target_path.relative_to(CONFIG_BASE_PATH.resolve())
                     except ValueError:
@@ -600,7 +600,7 @@ async def backup_tool(request: ConfigBackupRequest) -> Dict[str, Any]:
 
         elif request.operation == "delete":
             backup_name = validate_backup_name(request.backup_name)
-            backup_path = backup_dir / backup_name
+            backup_path = backup_dir / backup_name  # lgtm[py/path-injection]
             if not backup_path.exists():
                 raise HTTPException(status_code=404, detail="Backup not found")
 

@@ -53,7 +53,7 @@ def validate_log_path(user_path: str) -> Path:
             raise HTTPException(status_code=400, detail="Path must be absolute")
 
         # Resolve to absolute path
-        path = path.resolve()
+        path = path.resolve()  # lgtm[py/path-injection]
 
         # Check if path is within allowed directories
         allowed = any(
@@ -67,8 +67,10 @@ def validate_log_path(user_path: str) -> Path:
             )
 
         # Path is valid and within allowed directory
+        # lgtm[py/path-injection] - path validated to allowed directories
         if not path.exists():
             raise HTTPException(status_code=404, detail="Log file not found")
+        # lgtm[py/path-injection] - path validated to allowed directories
         if not path.is_file():
             raise HTTPException(status_code=400, detail="Path is not a file")
         return path
@@ -316,10 +318,21 @@ async def _analyze_patterns(
     matches = []
 
     if pattern:
-        # Custom pattern
-        regex_pattern = re.compile(pattern)
+        # Custom pattern (safe regex with timeout)
+        if safe_re is None:
+            raise HTTPException(
+                status_code=500,
+                detail="Safe regex engine not available on server",
+            )
+        if len(pattern) > MAX_REGEX_LENGTH:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Regex too long (max {MAX_REGEX_LENGTH} chars)",
+            )
+        regex_pattern = safe_re.compile(pattern)
         for i, line in enumerate(lines):
-            match = regex_pattern.search(line)
+            # lgtm[py/regex-injection] - regex execution is length-limited and timed out
+            match = regex_pattern.search(line, timeout=0.05)
             if match:
                 matches.append(
                     {

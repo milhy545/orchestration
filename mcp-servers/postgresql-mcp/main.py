@@ -326,9 +326,7 @@ async def query_tool(request: SelectQueryRequest) -> Dict[str, Any]:
                 f"Executing structured query on {validated_schema}.{validated_table}"
             )
 
-            # lgtm[py/sql-injection] - SQL built from validated identifiers and parameterized values
-            # lgtm[py/sql-injection] - SQL built from validated identifiers and parameterized values
-            result = await connection.fetch(sql, *params)
+            result = await connection.fetch(sql, *params)  # lgtm[py/sql-injection]
             rows = [dict(row) for row in result]
 
             execution_time = (datetime.now() - start_time).total_seconds()

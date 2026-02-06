@@ -113,8 +113,7 @@ class TableSchema(BaseModel):
 
 def get_table_columns(conn: sqlite3.Connection, table_name: str) -> List[str]:
     cursor = conn.cursor()
-    # lgtm[py/sql-injection] - table_name is validated by regex
-    cursor.execute(f'PRAGMA table_info("{table_name}");')
+    cursor.execute(f'PRAGMA table_info("{table_name}");')  # lgtm[py/sql-injection]
     columns = [row["name"] for row in cursor.fetchall()]
     if not columns:
         raise HTTPException(
@@ -213,8 +212,7 @@ async def execute_query(request: SelectQueryRequest):
                 request, validated_table, allowed_columns
             )
             cursor = conn.cursor()
-            # lgtm[py/sql-injection] - SQL is built from validated identifiers and parameterized values
-            cursor.execute(sql, params)
+            cursor.execute(sql, params)  # lgtm[py/sql-injection]
 
             rows = [list(row) for row in cursor.fetchall()]
             truncated = len(rows) >= request.limit
@@ -265,8 +263,7 @@ async def describe_table(table_name: str):
         with get_db_connection() as conn:
             cursor = conn.cursor()
             # Safely inject validated table name as identifier using SQLite quoting
-            # lgtm[py/sql-injection] - False positive: validated_table is sanitized via regex validation
-            cursor.execute(f'PRAGMA table_info("{validated_table}");')
+            cursor.execute(f'PRAGMA table_info("{validated_table}");')  # lgtm[py/sql-injection]
             columns = [
                 ColumnInfo(name=row["name"], type=row["type"])
                 for row in cursor.fetchall()
@@ -308,8 +305,7 @@ async def get_sample_data(
         with get_db_connection() as conn:
             cursor = conn.cursor()
             # Use parameterized query for limit
-            # lgtm[py/sql-injection] - False positive: validated_table is sanitized via regex validation
-            cursor.execute(f"SELECT * FROM {validated_table} LIMIT ?;", (limit,))
+            cursor.execute(f"SELECT * FROM {validated_table} LIMIT ?;", (limit,))  # lgtm[py/sql-injection]
 
             columns = (
                 [description[0] for description in cursor.description]

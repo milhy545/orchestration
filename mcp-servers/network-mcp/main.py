@@ -368,8 +368,7 @@ async def api_test_tool(config: ApiTestConfig) -> Dict[str, Any]:
                 validate_public_url(full_url)
 
                 # Make request
-                # lgtm[py/full-ssrf] - URL is validated to be public and http/https
-                response = await client.get(
+                response = await client.get(  # lgtm[py/full-ssrf]
                     full_url, headers=config.headers or {}, timeout=30
                 )
 

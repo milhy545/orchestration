@@ -70,7 +70,7 @@ def validate_path(path: str, operation: str = "read") -> str:
 
     # Resolve to absolute path and normalize (removes .., ., etc.)
     try:
-        resolved_path = Path(path).resolve()
+        resolved_path = Path(path).resolve()  # lgtm[py/path-injection]
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Invalid path: {str(e)}")
 
@@ -116,11 +116,13 @@ async def list_files(
         # Validate path for security
         full_path = validate_path(path, operation="list")
 
+        # lgtm[py/path-injection] - full_path is validated to allowed directories
         if not os.path.exists(full_path):
             raise HTTPException(
                 status_code=404, detail=f"Directory not found: {full_path}"
             )
 
+        # lgtm[py/path-injection] - full_path is validated to allowed directories
         if not os.path.isdir(full_path):
             raise HTTPException(
                 status_code=400, detail=f"Path is not a directory: {full_path}"
@@ -133,12 +135,17 @@ async def list_files(
             for item in os.listdir(full_path):
                 item_path = os.path.join(full_path, item)
                 try:
+                    # lgtm[py/path-injection] - item_path derived from validated base
                     stat = os.stat(item_path)
+                    # lgtm[py/path-injection] - item_path derived from validated base
+                    is_dir = os.path.isdir(item_path)
+                    # lgtm[py/path-injection] - item_path derived from validated base
+                    is_file = os.path.isfile(item_path)
                     file_info = FileInfo(
                         name=item,
                         path=item_path,
-                        type="directory" if os.path.isdir(item_path) else "file",
-                        size=stat.st_size if os.path.isfile(item_path) else None,
+                        type="directory" if is_dir else "file",
+                        size=stat.st_size if is_file else None,
                         modified=datetime.fromtimestamp(stat.st_mtime).isoformat(),
                     )
                     all_files.append(file_info)
@@ -185,15 +192,18 @@ async def read_file(
         # Validate path for security
         full_path = validate_path(path, operation="read")
 
+        # lgtm[py/path-injection] - full_path is validated to allowed directories
         if not os.path.exists(full_path):
             raise HTTPException(status_code=404, detail=f"File not found: {full_path}")
 
+        # lgtm[py/path-injection] - full_path is validated to allowed directories
         if not os.path.isfile(full_path):
             raise HTTPException(
                 status_code=400, detail=f"Path is not a file: {full_path}"
             )
 
         # Check file size before reading
+        # lgtm[py/path-injection] - full_path is validated to allowed directories
         file_size = os.path.getsize(full_path)
         if file_size > MAX_FILE_SIZE:
             raise HTTPException(
