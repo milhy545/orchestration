@@ -106,7 +106,11 @@ def _validate_public_host(hostname: str) -> None:
     if not hostname:
         raise HTTPException(status_code=400, detail="Invalid hostname")
     lowered = hostname.lower()
-    if lowered in {"localhost"} or lowered.endswith(".localhost") or lowered.endswith(".local"):
+    if (
+        lowered in {"localhost"}
+        or lowered.endswith(".localhost")
+        or lowered.endswith(".local")
+    ):
         raise HTTPException(status_code=403, detail="Localhost is not allowed")
 
     try:
@@ -356,15 +360,21 @@ async def api_test_tool(config: ApiTestConfig) -> Dict[str, Any]:
 
             try:
                 if not endpoint:
-                    raise HTTPException(status_code=400, detail="Endpoint cannot be empty")
+                    raise HTTPException(
+                        status_code=400, detail="Endpoint cannot be empty"
+                    )
                 if "://" in endpoint or endpoint.startswith("//"):
-                    raise HTTPException(status_code=400, detail="Endpoint must be a relative path")
+                    raise HTTPException(
+                        status_code=400, detail="Endpoint must be a relative path"
+                    )
 
                 # Construct full URL safely
                 full_url = urljoin(base_url.rstrip("/") + "/", endpoint.lstrip("/"))
                 full_parsed = urlparse(full_url)
                 if full_parsed.hostname != base_parsed.hostname:
-                    raise HTTPException(status_code=400, detail="Endpoint host mismatch")
+                    raise HTTPException(
+                        status_code=400, detail="Endpoint host mismatch"
+                    )
                 validate_public_url(full_url)
 
                 # Make request

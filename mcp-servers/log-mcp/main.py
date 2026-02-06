@@ -535,7 +535,9 @@ async def log_search_tool(request: LogSearchRequest) -> Dict[str, Any]:
                     with gzip.open(source_path, "rt") as f:  # lgtm[py/path-injection]
                         lines = f.readlines()
                 else:
-                    lines = source_path.read_text().splitlines()  # lgtm[py/path-injection]
+                    lines = (
+                        source_path.read_text().splitlines()
+                    )  # lgtm[py/path-injection]
             except HTTPException:
                 # Skip files that fail validation
                 continue

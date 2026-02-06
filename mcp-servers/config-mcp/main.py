@@ -32,8 +32,18 @@ Instrumentator().instrument(app).expose(app)
 
 
 # Configuration storage paths
-CONFIG_BASE_PATH = Path("/app/configs")
-CONFIG_BASE_PATH.mkdir(exist_ok=True)
+CONFIG_BASE_PATH = Path(os.environ.get("CONFIG_BASE_PATH", "/app/configs"))
+try:
+    CONFIG_BASE_PATH.mkdir(parents=True, exist_ok=True)
+except OSError as exc:
+    fallback_path = Path(os.environ.get("CONFIG_BASE_PATH_FALLBACK", "/tmp/configs"))
+    fallback_path.mkdir(parents=True, exist_ok=True)
+    logger.warning(
+        "CONFIG_BASE_PATH not writable (%s). Falling back to %s",
+        exc,
+        fallback_path,
+    )
+    CONFIG_BASE_PATH = fallback_path
 
 
 def resolve_config_path(user_path: str) -> Path:
@@ -69,6 +79,7 @@ def validate_backup_patterns(patterns: List[str]) -> List[str]:
             raise HTTPException(status_code=400, detail="Invalid file pattern")
         sanitized.append(pattern)
     return sanitized
+
 
 # Request/Response Models
 
@@ -516,12 +527,18 @@ async def backup_tool(request: ConfigBackupRequest) -> Dict[str, Any]:
 
             # Copy files matching patterns
             for pattern in validate_backup_patterns(request.file_patterns or []):
-                for file_path in CONFIG_BASE_PATH.glob(pattern):  # lgtm[py/path-injection]
+                for file_path in CONFIG_BASE_PATH.glob(
+                    pattern
+                ):  # lgtm[py/path-injection]
                     if file_path.is_file() and not file_path.is_relative_to(backup_dir):
                         relative_path = file_path.relative_to(CONFIG_BASE_PATH)
                         backup_file_path = backup_path / relative_path
-                        backup_file_path.parent.mkdir(parents=True, exist_ok=True)  # lgtm[py/path-injection]
-                        shutil.copy2(file_path, backup_file_path)  # lgtm[py/path-injection]
+                        backup_file_path.parent.mkdir(
+                            parents=True, exist_ok=True
+                        )  # lgtm[py/path-injection]
+                        shutil.copy2(
+                            file_path, backup_file_path
+                        )  # lgtm[py/path-injection]
                         backed_up_files.append(str(relative_path))
 
             return {
@@ -576,14 +593,18 @@ async def backup_tool(request: ConfigBackupRequest) -> Dict[str, Any]:
             for backup_file in backup_path.rglob("*"):  # lgtm[py/path-injection]
                 if backup_file.is_file():
                     relative_path = backup_file.relative_to(backup_path)
-                    target_path = (CONFIG_BASE_PATH / relative_path).resolve()  # lgtm[py/path-injection]
+                    target_path = (
+                        CONFIG_BASE_PATH / relative_path
+                    ).resolve()  # lgtm[py/path-injection]
                     try:
                         target_path.relative_to(CONFIG_BASE_PATH.resolve())
                     except ValueError:
                         raise HTTPException(
                             status_code=403, detail="Path outside allowed directory"
                         )
-                    target_path.parent.mkdir(parents=True, exist_ok=True)  # lgtm[py/path-injection]
+                    target_path.parent.mkdir(
+                        parents=True, exist_ok=True
+                    )  # lgtm[py/path-injection]
                     shutil.copy2(backup_file, target_path)  # lgtm[py/path-injection]
                     restored_files.append(str(relative_path))
 

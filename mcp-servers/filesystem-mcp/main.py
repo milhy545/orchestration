@@ -216,7 +216,9 @@ async def read_file(
         truncated = bytes_to_read < file_size
 
         # lgtm[py/path-injection] - full_path is validated to allowed directories
-        with open(full_path, "r", encoding="utf-8", errors="ignore") as f:  # lgtm[py/path-injection]
+        with open(
+            full_path, "r", encoding="utf-8", errors="ignore"
+        ) as f:  # lgtm[py/path-injection]
             content = f.read(bytes_to_read)
 
         return {
