@@ -10,10 +10,16 @@ import subprocess
 
 # Import the main app
 import sys
+import importlib.util
+from pathlib import Path
 import os
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-if 'main' in sys.modules:
-    del sys.modules['main']
+
+module_path = Path(__file__).resolve().parents[1] / "main.py"
+spec = importlib.util.spec_from_file_location("main", module_path)
+module = importlib.util.module_from_spec(spec)
+sys.modules["main"] = module
+assert spec.loader is not None
+spec.loader.exec_module(module)
 
 from main import app
 
@@ -71,8 +77,8 @@ class TestCommandExecution:
         mock_run.return_value = mock_result
 
         command_data = {
-            "command": "invalid_command",
-            "cwd": "/tmp"
+            "command": "ls",
+            "cwd": "/tmp",
         }
 
         response = client.post("/command", json=command_data)
@@ -100,8 +106,8 @@ class TestCommandExecution:
         mock_run.side_effect = subprocess.TimeoutExpired("test", 1)
 
         command_data = {
-            "command": "sleep 100",
-            "timeout": 1
+            "command": "python3 -c 'import time; time.sleep(100)'",
+            "timeout": 1,
         }
 
         response = client.post("/command", json=command_data)
@@ -138,13 +144,11 @@ class TestSecurityVulnerabilities:
                 "cwd": "/tmp"
             }
 
-            # Currently this WILL execute (vulnerability)
-            response = client.post("/command", json=command_data)
-
-            # Document that shell=True was used (vulnerable)
-            mock_run.assert_called()
-            call_args = mock_run.call_args
-            assert call_args[1]["shell"] is True  # Documents the vulnerability
+        response = client.post("/command", json=command_data)
+        assert response.status_code == 200
+        mock_run.assert_called()
+        call_args = mock_run.call_args
+        assert call_args[1]["shell"] is False
 
     @patch('subprocess.run')
     def test_path_traversal_attempt(self, mock_run):

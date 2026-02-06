@@ -232,6 +232,38 @@ async def config_file_tool(request: ConfigFileRequest) -> Dict[str, Any]:
     Description: Read, write, create, delete, or list configuration files
     """
     try:
+        if request.operation == "list":
+            if not CONFIG_BASE_PATH.exists():
+                return {
+                    "operation": "list",
+                    "files": [],
+                    "count": 0,
+                    "timestamp": datetime.now().isoformat(),
+                }
+
+            files = []
+            for file_path in CONFIG_BASE_PATH.rglob("*"):
+                if file_path.is_file():
+                    relative_path = file_path.relative_to(CONFIG_BASE_PATH)
+                    files.append(
+                        {
+                            "path": str(relative_path),
+                            "size": file_path.stat().st_size,
+                            "modified": datetime.fromtimestamp(
+                                file_path.stat().st_mtime
+                            ).isoformat(),
+                            "extension": file_path.suffix,
+                        }
+                    )
+
+            return {
+                "operation": "list",
+                "files": files,
+                "count": len(files),
+                "base_path": str(CONFIG_BASE_PATH),
+                "timestamp": datetime.now().isoformat(),
+            }
+
         file_path = resolve_config_path(request.file_path)
 
         if request.operation == "read":
@@ -354,38 +386,6 @@ async def config_file_tool(request: ConfigFileRequest) -> Dict[str, Any]:
                 "file_path": request.file_path,
                 "deleted": True,
                 "file_size": file_size,
-                "timestamp": datetime.now().isoformat(),
-            }
-
-        elif request.operation == "list":
-            if not CONFIG_BASE_PATH.exists():
-                return {
-                    "operation": "list",
-                    "files": [],
-                    "count": 0,
-                    "timestamp": datetime.now().isoformat(),
-                }
-
-            files = []
-            for file_path in CONFIG_BASE_PATH.rglob("*"):
-                if file_path.is_file():
-                    relative_path = file_path.relative_to(CONFIG_BASE_PATH)
-                    files.append(
-                        {
-                            "path": str(relative_path),
-                            "size": file_path.stat().st_size,
-                            "modified": datetime.fromtimestamp(
-                                file_path.stat().st_mtime
-                            ).isoformat(),
-                            "extension": file_path.suffix,
-                        }
-                    )
-
-            return {
-                "operation": "list",
-                "files": files,
-                "count": len(files),
-                "base_path": str(CONFIG_BASE_PATH),
                 "timestamp": datetime.now().isoformat(),
             }
 

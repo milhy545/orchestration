@@ -8,16 +8,31 @@ import pytest
 pytest.importorskip("fastapi")
 from fastapi.testclient import TestClient
 import sys
-import os
+import importlib.util
 from pathlib import Path
+import os
 
 # Add parent directory to path
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-if 'main' in sys.modules:
-    del sys.modules['main']
+module_path = Path(__file__).resolve().parents[1] / "main.py"
+spec = importlib.util.spec_from_file_location("main", module_path)
+module = importlib.util.module_from_spec(spec)
+sys.modules["main"] = module
+assert spec.loader is not None
+spec.loader.exec_module(module)
 
 from main import app, validate_log_path, validate_command
+
+
+def _create_test_log(filename: str = "test.log") -> Path:
+    log_dir = Path("/tmp/logs")
+    log_dir.mkdir(parents=True, exist_ok=True)
+    log_file = log_dir / filename
+    log_file.write_text(
+        "2024-01-01 10:00:00 ERROR Test error\n"
+        "2024-01-01 10:00:01 INFO Test info\n"
+    )
+    return log_file
 
 client = TestClient(app)
 
@@ -27,9 +42,10 @@ class TestPathTraversalProtection:
 
     def test_read_log_in_allowed_directory(self):
         """Test that reading logs in allowed directory works"""
+        log_file = _create_test_log()
         response = client.post("/tools/log_analysis", json={
             "log_source": "file_path",
-            "source_value": "/app/logs/test.log",
+            "source_value": str(log_file),
             "analysis_type": "stats"
         })
         assert response.status_code == 200
@@ -88,8 +104,9 @@ class TestPathTraversalProtection:
     def test_validate_log_path_function_directly(self):
         """Test validate_log_path function directly"""
         # Valid path
-        result = validate_log_path("/app/logs/test.log")
-        assert result.name == "test.log"
+        log_file = _create_test_log("validate.log")
+        result = validate_log_path(str(log_file))
+        assert result.name == "validate.log"
 
         # Invalid path should raise HTTPException
         with pytest.raises(Exception):  # HTTPException
@@ -269,9 +286,10 @@ class TestLogAnalysisEndpoint:
 
     def test_pattern_analysis(self):
         """Test pattern-based log analysis"""
+        log_file = _create_test_log()
         response = client.post("/tools/log_analysis", json={
             "log_source": "file_path",
-            "source_value": "/app/logs/test.log",
+            "source_value": str(log_file),
             "analysis_type": "pattern",
             "pattern": "ERROR"
         })
@@ -293,27 +311,30 @@ class TestLogSearchEndpoint:
 
     def test_log_search_valid_file(self):
         """Test searching in valid log file"""
+        log_file = _create_test_log()
         response = client.post("/tools/log_search", json={
             "query": "Test",
-            "sources": ["/app/logs/test.log"],
+            "sources": [str(log_file)],
             "search_type": "text"
         })
         assert response.status_code == 200
 
     def test_log_search_regex(self):
         """Test regex search"""
+        log_file = _create_test_log()
         response = client.post("/tools/log_search", json={
             "query": "ERROR|WARN",
-            "sources": ["/app/logs/test.log"],
+            "sources": [str(log_file)],
             "search_type": "regex"
         })
         assert response.status_code == 200
 
     def test_log_search_invalid_regex(self):
         """Test that invalid regex is rejected"""
+        log_file = _create_test_log()
         response = client.post("/tools/log_search", json={
             "query": "[invalid(regex",
-            "sources": ["/app/logs/test.log"],
+            "sources": [str(log_file)],
             "search_type": "regex"
         })
         # 400 or 500 - both indicate error was caught

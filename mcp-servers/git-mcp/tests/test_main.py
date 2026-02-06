@@ -10,10 +10,16 @@ import subprocess
 
 # Import the main app
 import sys
+import importlib.util
+from pathlib import Path
 import os
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-if 'main' in sys.modules:
-    del sys.modules['main']
+
+module_path = Path(__file__).resolve().parents[1] / "main.py"
+spec = importlib.util.spec_from_file_location("main", module_path)
+module = importlib.util.module_from_spec(spec)
+sys.modules["main"] = module
+assert spec.loader is not None
+spec.loader.exec_module(module)
 
 from main import app
 
@@ -35,8 +41,9 @@ class TestGitMCPHealth:
 class TestGitStatus:
     """Test git status functionality"""
 
+    @patch('main.validate_repository_path', return_value="/tmp/repo")
     @patch('subprocess.run')
-    def test_git_status_success(self, mock_run):
+    def test_git_status_success(self, mock_run, mock_validate_repo):
         """Test successful git status"""
         mock_result = MagicMock()
         mock_result.stdout = "M file1.txt\nA file2.txt\n"
@@ -49,8 +56,9 @@ class TestGitStatus:
         data = response.json()
         assert "status" in data
 
+    @patch('main.validate_repository_path', return_value="/tmp/repo")
     @patch('subprocess.run')
-    def test_git_status_failure(self, mock_run):
+    def test_git_status_failure(self, mock_run, mock_validate_repo):
         """Test git status with error"""
         mock_run.side_effect = subprocess.CalledProcessError(
             128, ["git"], stderr="Not a git repository"
@@ -64,8 +72,9 @@ class TestGitStatus:
 class TestGitLog:
     """Test git log functionality"""
 
+    @patch('main.validate_repository_path', return_value="/tmp/repo")
     @patch('subprocess.run')
-    def test_git_log_success(self, mock_run):
+    def test_git_log_success(self, mock_run, mock_validate_repo):
         """Test successful git log"""
         mock_result = MagicMock()
         mock_result.stdout = "abc123 commit 1\ndef456 commit 2\n"
@@ -79,8 +88,9 @@ class TestGitLog:
         assert "log" in data
         assert isinstance(data["log"], list)
 
+    @patch('main.validate_repository_path', return_value="/tmp/repo")
     @patch('subprocess.run')
-    def test_git_log_with_limit(self, mock_run):
+    def test_git_log_with_limit(self, mock_run, mock_validate_repo):
         """Test git log with custom limit"""
         mock_result = MagicMock()
         mock_result.stdout = "abc123 commit 1\n"
@@ -99,8 +109,9 @@ class TestGitLog:
 class TestGitDiff:
     """Test git diff functionality"""
 
+    @patch('main.validate_repository_path', return_value="/tmp/repo")
     @patch('subprocess.run')
-    def test_git_diff_success(self, mock_run):
+    def test_git_diff_success(self, mock_run, mock_validate_repo):
         """Test successful git diff"""
         mock_result = MagicMock()
         mock_result.stdout = "diff --git a/file.txt b/file.txt\n+added line\n"
@@ -113,8 +124,9 @@ class TestGitDiff:
         data = response.json()
         assert "diff" in data
 
+    @patch('main.validate_repository_path', return_value="/tmp/repo")
     @patch('subprocess.run')
-    def test_git_diff_empty(self, mock_run):
+    def test_git_diff_empty(self, mock_run, mock_validate_repo):
         """Test git diff with no changes"""
         mock_result = MagicMock()
         mock_result.stdout = ""
@@ -147,7 +159,7 @@ class TestSecurityValidation:
 
         for dangerous_path in dangerous_paths:
             response = client.get(f"/git/{dangerous_path}/status")
-            # After fix, should return 403 Forbidden
+            assert response.status_code == 403
 
     @patch('subprocess.run')
     def test_repository_sandbox(self, mock_run):
@@ -171,11 +183,11 @@ class TestPerformance:
 
         # Should limit the maximum number of commits
         response = client.get("/git/tmp/repo/log?limit=100000")
+        assert response.status_code == 422
 
-        # After fix, should enforce maximum limit
-
+    @patch('main.validate_repository_path', return_value="/tmp/repo")
     @patch('subprocess.run')
-    def test_large_diff_output(self, mock_run):
+    def test_large_diff_output(self, mock_run, mock_validate_repo):
         """Test handling of large diff output"""
         # Simulate large diff (10MB)
         large_diff = "+" + ("x" * 10 * 1024 * 1024)
@@ -185,23 +197,27 @@ class TestPerformance:
         mock_run.return_value = mock_result
 
         response = client.get("/git/tmp/repo/diff")
-        # Should handle or truncate large output
+        assert response.status_code == 200
+        data = response.json()
+        assert data["truncated"] is True
 
+    @patch('main.validate_repository_path', return_value="/tmp/repo")
     @patch('subprocess.run')
-    def test_command_timeout(self, mock_run):
+    def test_command_timeout(self, mock_run, mock_validate_repo):
         """Test that git commands have timeout"""
         # After refactoring, should have timeout
         mock_run.side_effect = subprocess.TimeoutExpired("git", 30)
 
         response = client.get("/git/tmp/repo/status")
-        # Should return appropriate error
+        assert response.status_code == 408
 
 
 class TestIntegration:
     """Integration tests"""
 
+    @patch('main.validate_repository_path', return_value="/tmp/repo")
     @patch('subprocess.run')
-    def test_complete_workflow(self, mock_run):
+    def test_complete_workflow(self, mock_run, mock_validate_repo):
         """Test complete git workflow"""
         # Status
         mock_result = MagicMock()

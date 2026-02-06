@@ -10,9 +10,15 @@ import os
 
 # Import the main app
 import sys
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-if 'main' in sys.modules:
-    del sys.modules['main']
+import importlib.util
+from pathlib import Path
+
+module_path = Path(__file__).resolve().parents[1] / "main.py"
+spec = importlib.util.spec_from_file_location("main", module_path)
+module = importlib.util.module_from_spec(spec)
+sys.modules["main"] = module
+assert spec.loader is not None
+spec.loader.exec_module(module)
 
 from main import app
 
@@ -71,7 +77,7 @@ class TestListFiles:
         """Test listing non-existent directory"""
         mock_exists.return_value = False
 
-        response = client.get("/files/nonexistent")
+        response = client.get("/files/tmp/nonexistent")
         assert response.status_code == 404
         assert "not found" in response.json()["detail"].lower()
 
@@ -95,7 +101,7 @@ class TestListFiles:
         mock_isdir.return_value = True
         mock_listdir.side_effect = PermissionError("Permission denied")
 
-        response = client.get("/files/root")
+        response = client.get("/files/tmp")
         assert response.status_code == 403
         assert "permission denied" in response.json()["detail"].lower()
 
@@ -148,7 +154,7 @@ class TestReadFile:
         mock_isfile.return_value = True
         mock_file.side_effect = PermissionError("Permission denied")
 
-        response = client.get("/file/root/secret.txt")
+        response = client.get("/file/tmp/secret.txt")
         assert response.status_code == 403
         assert "permission denied" in response.json()["detail"].lower()
 

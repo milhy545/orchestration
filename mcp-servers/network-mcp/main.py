@@ -200,6 +200,8 @@ async def http_request_tool(request: HttpRequest) -> HttpResponse:
                 redirected=(str(response.url) != str(request.url)),
             )
 
+    except HTTPException:
+        raise
     except httpx.TimeoutException:
         raise HTTPException(status_code=408, detail="Request timeout")
     except Exception as e:
@@ -333,6 +335,13 @@ async def dns_lookup_tool(lookup: DnsLookup) -> Dict[str, Any]:
             raise HTTPException(
                 status_code=501, detail="Advanced DNS lookup requires dnspython package"
             )
+
+    except (
+        dns.resolver.NXDOMAIN,
+        dns.resolver.NoAnswer,
+        dns.resolver.NoNameservers,
+    ):
+        raise HTTPException(status_code=404, detail="DNS resolution failed")
 
     except Exception as e:
         logger.error(f"DNS lookup failed: {str(e)}")

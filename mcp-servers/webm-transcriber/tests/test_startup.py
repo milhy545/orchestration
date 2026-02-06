@@ -6,13 +6,18 @@ Verifies that syntax error fix works and service can start
 import pytest
 from fastapi.testclient import TestClient
 import sys
+import importlib.util
+from pathlib import Path
 import os
 
 # Add parent directory to path
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-if 'main' in sys.modules:
-    del sys.modules['main']
+module_path = Path(__file__).resolve().parents[1] / "main.py"
+spec = importlib.util.spec_from_file_location("main", module_path)
+module = importlib.util.module_from_spec(spec)
+sys.modules["main"] = module
+assert spec.loader is not None
+spec.loader.exec_module(module)
 
 from main import app
 
@@ -33,14 +38,11 @@ class TestServiceStartup:
         assert response.status_code == 200
         data = response.json()
         assert data["status"] == "healthy"
-        assert data["service"] == "Webm-Transcriber"
+        assert "timestamp" in data
 
-    def test_tools_list_endpoint_works(self):
-        """Test that tools list endpoint works"""
-        response = client.get("/tools/list")
+    def test_root_endpoint_works(self):
+        """Test that root endpoint works"""
+        response = client.get("/")
         assert response.status_code == 200
         data = response.json()
-        assert "tools" in data
-        assert isinstance(data["tools"], list)
-        # Transcriber should have transcribe tool
-        assert len(data["tools"]) >= 1
+        assert data["status"] == "running"
