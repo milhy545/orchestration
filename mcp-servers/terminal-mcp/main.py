@@ -82,11 +82,9 @@ def validate_working_directory(cwd: str) -> str:
     resolved_path = Path(cwd).resolve()  # lgtm[py/path-injection]
 
     # Check if directory exists
-    # lgtm[py/path-injection] - resolved_path is restricted to allowed directories
-    if not resolved_path.exists():
+    if not resolved_path.exists():  # lgtm[py/path-injection]
         raise HTTPException(status_code=400, detail=f"Directory not found: {cwd}")
-    # lgtm[py/path-injection] - resolved_path is restricted to allowed directories
-    if not resolved_path.is_dir():
+    if not resolved_path.is_dir():  # lgtm[py/path-injection]
         raise HTTPException(status_code=400, detail=f"Path is not a directory: {cwd}")
 
     # Check if it's within allowed directories

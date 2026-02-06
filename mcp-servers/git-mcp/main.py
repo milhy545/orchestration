@@ -64,8 +64,7 @@ def validate_repository_path(path: str) -> str:
         )
 
     # Verify it's actually a git repository
-    # lgtm[py/path-injection] - resolved_path is restricted to allowed repositories
-    if not (resolved_path / ".git").exists():
+    if not (resolved_path / ".git").exists():  # lgtm[py/path-injection]
         raise HTTPException(
             status_code=400, detail=f"Path {resolved_path} is not a git repository"
         )

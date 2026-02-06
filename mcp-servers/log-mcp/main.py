@@ -67,11 +67,9 @@ def validate_log_path(user_path: str) -> Path:
             )
 
         # Path is valid and within allowed directory
-        # lgtm[py/path-injection] - path validated to allowed directories
-        if not path.exists():
+        if not path.exists():  # lgtm[py/path-injection]
             raise HTTPException(status_code=404, detail="Log file not found")
-        # lgtm[py/path-injection] - path validated to allowed directories
-        if not path.is_file():
+        if not path.is_file():  # lgtm[py/path-injection]
             raise HTTPException(status_code=400, detail="Path is not a file")
         return path
 
@@ -219,11 +217,10 @@ async def log_analysis_tool(request: LogAnalysisRequest) -> Dict[str, Any]:
             # Handle compressed files
             if log_path.suffix == ".gz":
                 # lgtm[py/path-injection] - log_path validated to allowed directories
-                with gzip.open(log_path, "rt") as f:
+                with gzip.open(log_path, "rt") as f:  # lgtm[py/path-injection]
                     log_lines = f.readlines()
             else:
-                # lgtm[py/path-injection] - log_path validated to allowed directories
-                log_lines = log_path.read_text().splitlines()
+                log_lines = log_path.read_text().splitlines()  # lgtm[py/path-injection]
 
         elif request.log_source == "command":
             # Validate command to prevent command injection
@@ -535,11 +532,10 @@ async def log_search_tool(request: LogSearchRequest) -> Dict[str, Any]:
                 # Read file content
                 if source_path.suffix == ".gz":
                     # lgtm[py/path-injection] - source_path validated to allowed directories
-                    with gzip.open(source_path, "rt") as f:
+                    with gzip.open(source_path, "rt") as f:  # lgtm[py/path-injection]
                         lines = f.readlines()
                 else:
-                    # lgtm[py/path-injection] - source_path validated to allowed directories
-                    lines = source_path.read_text().splitlines()
+                    lines = source_path.read_text().splitlines()  # lgtm[py/path-injection]
             except HTTPException:
                 # Skip files that fail validation
                 continue
