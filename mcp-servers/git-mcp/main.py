@@ -48,14 +48,14 @@ def validate_repository_path(path: str) -> str:
 
     # Resolve to absolute path and normalize
     try:
-        abs_path = os.path.abspath(path)
-        resolved_path = str(Path(abs_path).resolve())
+        resolved_path = Path(path).resolve()
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Invalid path: {str(e)}")
 
     # Check if path is within allowed repositories
     allowed = any(
-        resolved_path.startswith(allowed_repo) for allowed_repo in ALLOWED_REPOSITORIES
+        resolved_path.is_relative_to(Path(allowed_repo).resolve())
+        for allowed_repo in ALLOWED_REPOSITORIES
     )
     if not allowed:
         raise HTTPException(
@@ -63,20 +63,13 @@ def validate_repository_path(path: str) -> str:
             detail=f"Access to repository {resolved_path} is not allowed. Allowed locations: {ALLOWED_REPOSITORIES}",
         )
 
-    # Check for path traversal
-    if ".." in path:
-        raise HTTPException(
-            status_code=403,
-            detail="Path traversal detected (..). Please use absolute paths only.",
-        )
-
     # Verify it's actually a git repository
-    if not os.path.exists(os.path.join(resolved_path, ".git")):
+    if not (resolved_path / ".git").exists():
         raise HTTPException(
             status_code=400, detail=f"Path {resolved_path} is not a git repository"
         )
 
-    return resolved_path
+    return str(resolved_path)
 
 
 class GitStatus(BaseModel):
@@ -101,6 +94,7 @@ async def health():
     """Health check endpoint"""
     try:
         # Check git is available
+        # lgtm[py/path-injection] - validated_path is restricted to allowed repositories
         result = subprocess.run(
             ["git", "--version"], capture_output=True, text=True, timeout=5
         )
@@ -123,6 +117,7 @@ async def git_status(path: str):
         # Validate repository path
         validated_path = validate_repository_path(path)
 
+        # lgtm[py/path-injection] - validated_path is restricted to allowed repositories
         result = subprocess.run(
             ["git", "-C", validated_path, "status", "--porcelain"],
             capture_output=True,
@@ -159,6 +154,7 @@ async def git_log(
         # Validate repository path
         validated_path = validate_repository_path(path)
 
+        # lgtm[py/path-injection] - validated_path is restricted to allowed repositories
         result = subprocess.run(
             ["git", "-C", validated_path, "log", f"-n{limit}", "--oneline"],
             capture_output=True,

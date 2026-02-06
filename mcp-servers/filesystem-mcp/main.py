@@ -1,4 +1,5 @@
 # \!/usr/bin/env python3
+import fnmatch
 import json
 import os
 from datetime import datetime
@@ -69,29 +70,21 @@ def validate_path(path: str, operation: str = "read") -> str:
 
     # Resolve to absolute path and normalize (removes .., ., etc.)
     try:
-        abs_path = os.path.abspath(path)
-        resolved_path = str(Path(abs_path).resolve())
+        resolved_path = Path(path).resolve()
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Invalid path: {str(e)}")
 
-    # Check against blocked paths
+    # Check against blocked paths (support simple wildcards)
     for blocked in BLOCKED_PATHS:
-        if "*" in blocked:
-            # Handle wildcards
-            blocked_pattern = blocked.replace("*", "")
-            if blocked_pattern in resolved_path:
-                raise HTTPException(
-                    status_code=403,
-                    detail=f"Access to path {resolved_path} is forbidden",
-                )
-        elif resolved_path.startswith(blocked) or resolved_path == blocked:
+        if fnmatch.fnmatch(resolved_path.as_posix(), blocked):
             raise HTTPException(
-                status_code=403, detail=f"Access to path {resolved_path} is forbidden"
+                status_code=403,
+                detail=f"Access to path {resolved_path} is forbidden",
             )
 
-    # Check if path is strictly within allowed directories (not just prefix match)
+    # Check if path is strictly within allowed directories
     allowed = any(
-        os.path.commonpath([resolved_path, allowed_dir]) == allowed_dir
+        resolved_path.is_relative_to(Path(allowed_dir).resolve())
         for allowed_dir in ALLOWED_DIRECTORIES
     )
     if not allowed:
@@ -100,14 +93,7 @@ def validate_path(path: str, operation: str = "read") -> str:
             detail=f"Access to path {resolved_path} is not allowed. Allowed directories: {ALLOWED_DIRECTORIES}",
         )
 
-    # Additional check: ensure no path traversal happened
-    if ".." in path:
-        raise HTTPException(
-            status_code=403,
-            detail="Path traversal detected (..). Please use absolute paths only.",
-        )
-
-    return resolved_path
+    return str(resolved_path)
 
 
 @app.get("/health")
@@ -143,6 +129,7 @@ async def list_files(
         # List all files first
         all_files = []
         try:
+            # lgtm[py/path-injection] - full_path is validated to allowed directories
             for item in os.listdir(full_path):
                 item_path = os.path.join(full_path, item)
                 try:
@@ -218,6 +205,7 @@ async def read_file(
         bytes_to_read = min(max_size, file_size)
         truncated = bytes_to_read < file_size
 
+        # lgtm[py/path-injection] - full_path is validated to allowed directories
         with open(full_path, "r", encoding="utf-8", errors="ignore") as f:
             content = f.read(bytes_to_read)
 

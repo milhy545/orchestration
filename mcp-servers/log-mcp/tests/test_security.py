@@ -4,9 +4,12 @@ Security tests for Log MCP Service
 Tests for command injection and path traversal vulnerabilities
 """
 import pytest
+
+pytest.importorskip("fastapi")
 from fastapi.testclient import TestClient
 import sys
 import os
+from pathlib import Path
 
 # Add parent directory to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -200,6 +203,36 @@ class TestCommandInjectionProtection:
             "analysis_type": "stats"
         })
         assert response.status_code == 403
+
+
+class TestRegexSafety:
+    """Test safe regex handling"""
+
+    def test_regex_search_blocks_long_pattern(self):
+        log_dir = Path("/tmp/logs")
+        log_dir.mkdir(parents=True, exist_ok=True)
+        log_file = log_dir / "regex_test.log"
+        log_file.write_text("hello\nworld\n")
+
+        response = client.post("/tools/log_search", json={
+            "query": "a" * 500,
+            "sources": [str(log_file)],
+            "search_type": "regex"
+        })
+        assert response.status_code == 400
+
+    def test_regex_search_allows_simple_pattern(self):
+        log_dir = Path("/tmp/logs")
+        log_dir.mkdir(parents=True, exist_ok=True)
+        log_file = log_dir / "regex_ok.log"
+        log_file.write_text("hello\nworld\n")
+
+        response = client.post("/tools/log_search", json={
+            "query": "hello",
+            "sources": [str(log_file)],
+            "search_type": "regex"
+        })
+        assert response.status_code == 200
         assert "argument" in response.json()["detail"].lower()
 
     def test_validate_command_function_directly(self):

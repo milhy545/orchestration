@@ -2,17 +2,11 @@
 """
 Minimální OAuth setup pro Anthropic na HAS
 """
-import json
 import os
-from pathlib import Path
 
 def setup_oauth():
     print("🔐 Anthropic OAuth Setup pro HAS")
     print("=" * 40)
-    
-    # Create .anthropic directory
-    anthropic_dir = Path.home() / ".anthropic"
-    anthropic_dir.mkdir(exist_ok=True)
     
     print("Otevři v browseru: https://console.anthropic.com/settings/keys")
     print("Vytvoř nový API klíč a zkopíruj ho sem.")
@@ -24,26 +18,25 @@ def setup_oauth():
         print("❌ Nesprávný formát API key")
         return False
     
-    # Save to config file
-    config = {
-        "api_key": api_key
-    }
-    
-    config_file = anthropic_dir / "config.json"
-    with open(config_file, 'w') as f:
-        json.dump(config, f, indent=2)
-    
-    # Also set environment variable
+    # Prefer OS keyring for secure storage
+    stored_in_keyring = False
+    try:
+        import keyring  # type: ignore
+
+        keyring.set_password("anthropic", "api_key", api_key)
+        stored_in_keyring = True
+    except Exception:
+        stored_in_keyring = False
+
+    # Set environment variable for current process
     os.environ["ANTHROPIC_API_KEY"] = api_key
-    
-    # Add to profile
-    profile_line = f'export ANTHROPIC_API_KEY="{api_key}"'
-    with open(Path.home() / ".profile", "a") as f:
-        f.write(f"\n# Anthropic API Key\n{profile_line}\n")
-    
+
     print("✅ API key nastaven!")
-    print(f"   Config: {config_file}")
-    print(f"   Profile: ~/.profile")
+    if stored_in_keyring:
+        print("   Uloženo bezpečně do OS keyring.")
+    else:
+        print("   Keyring není dostupný. API key je nastaven pouze pro tuto session.")
+        print("   Pro trvalé použití nastav ANTHROPIC_API_KEY ručně ve svém shellu.")
     
     # Test the API key
     print("\n🧪 Testování API key...")

@@ -18,6 +18,16 @@ def find_claude_credentials():
     api_key = os.getenv('ANTHROPIC_API_KEY')
     if api_key:
         return {'api_key': api_key}
+
+    # Check OS keyring if available
+    try:
+        import keyring  # type: ignore
+
+        keyring_key = keyring.get_password("anthropic", "api_key")
+        if keyring_key:
+            return {'api_key': keyring_key}
+    except Exception:
+        pass
     
     # Check various config locations
     possible_paths = [
@@ -46,9 +56,10 @@ async def run_has_agent_with_auth():
     creds = find_claude_credentials()
     
     if creds and 'api_key' in creds:
-        # Set environment variable for this session
+        # Set environment variable for this session (avoid logging secrets)
         os.environ['ANTHROPIC_API_KEY'] = creds['api_key']
-        print(f"✅ Using API key: {creds['api_key'][:20]}...")
+        masked = f"{creds['api_key'][:4]}...{creds['api_key'][-4:]}" if len(creds['api_key']) >= 8 else "***"
+        print(f"✅ Using API key: {masked}")
     else:
         print("⚠️ No API key found, testing fallback mode")
     

@@ -4,9 +4,12 @@ Network MCP Service Tests
 """
 import pytest
 import asyncio
+
+pytest.importorskip("fastapi")
 from fastapi.testclient import TestClient
 from unittest.mock import patch, AsyncMock
 import json
+import socket
 
 # Import the main app
 import sys
@@ -49,9 +52,13 @@ class TestNetworkMCPHealth:
 class TestHttpRequestTool:
     """Test HTTP request functionality"""
     
+    @patch('socket.getaddrinfo')
     @patch('httpx.AsyncClient')
-    def test_http_request_get(self, mock_client):
+    def test_http_request_get(self, mock_client, mock_getaddrinfo):
         """Test basic GET request"""
+        mock_getaddrinfo.return_value = [
+            (socket.AF_INET, None, None, None, ("93.184.216.34", 0))
+        ]
         # Mock httpx response
         mock_response = AsyncMock()
         mock_response.status_code = 200
@@ -77,9 +84,13 @@ class TestHttpRequestTool:
         assert data["body"] == '{"message": "success"}'
         assert "response_time" in data
 
+    @patch('socket.getaddrinfo')
     @patch('httpx.AsyncClient')
-    def test_http_request_post_with_json(self, mock_client):
+    def test_http_request_post_with_json(self, mock_client, mock_getaddrinfo):
         """Test POST request with JSON body"""
+        mock_getaddrinfo.return_value = [
+            (socket.AF_INET, None, None, None, ("93.184.216.34", 0))
+        ]
         mock_response = AsyncMock()
         mock_response.status_code = 201
         mock_response.headers = {"content-type": "application/json"}
@@ -188,9 +199,13 @@ class TestDnsLookupTool:
 class TestApiTestTool:
     """Test API testing functionality"""
     
+    @patch('socket.getaddrinfo')
     @patch('httpx.AsyncClient')
-    def test_api_test_success(self, mock_client):
+    def test_api_test_success(self, mock_client, mock_getaddrinfo):
         """Test successful API endpoint testing"""
+        mock_getaddrinfo.return_value = [
+            (socket.AF_INET, None, None, None, ("93.184.216.34", 0))
+        ]
         mock_response = AsyncMock()
         mock_response.status_code = 200
         mock_response.headers = {"content-type": "application/json"}
@@ -214,6 +229,17 @@ class TestApiTestTool:
         assert data["successful_endpoints"] >= 0
         assert "results" in data
         assert len(data["results"]) == 3
+
+
+class TestSSRFProtection:
+    """Test SSRF protections"""
+
+    def test_http_request_blocks_localhost(self):
+        response = client.post("/tools/http_request", json={
+            "url": "http://127.0.0.1",
+            "method": "GET"
+        })
+        assert response.status_code == 403
 
 class TestIntegration:
     """Integration tests"""

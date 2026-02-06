@@ -4,6 +4,7 @@ Network MCP Service - HTTP requests, API calls, webhooks
 Port: 7006
 """
 import asyncio
+import ipaddress
 import json
 import logging
 import socket
@@ -12,7 +13,7 @@ import time
 import uuid
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Union
-from urllib.parse import urlparse
+from urllib.parse import urljoin, urlparse
 
 import httpx
 from fastapi import BackgroundTasks, FastAPI, HTTPException
@@ -86,6 +87,56 @@ active_webhooks: Dict[str, WebhookConfig] = {}
 webhook_logs: List[Dict] = []
 
 
+def _is_public_ip(ip: str) -> bool:
+    try:
+        addr = ipaddress.ip_address(ip)
+        return not (
+            addr.is_private
+            or addr.is_loopback
+            or addr.is_link_local
+            or addr.is_multicast
+            or addr.is_reserved
+            or addr.is_unspecified
+        )
+    except ValueError:
+        return False
+
+
+def _validate_public_host(hostname: str) -> None:
+    if not hostname:
+        raise HTTPException(status_code=400, detail="Invalid hostname")
+    lowered = hostname.lower()
+    if lowered in {"localhost"} or lowered.endswith(".localhost") or lowered.endswith(".local"):
+        raise HTTPException(status_code=403, detail="Localhost is not allowed")
+
+    try:
+        infos = socket.getaddrinfo(hostname, None)
+    except socket.gaierror:
+        raise HTTPException(status_code=400, detail="Hostname could not be resolved")
+
+    for info in infos:
+        ip = info[4][0]
+        if not _is_public_ip(ip):
+            raise HTTPException(
+                status_code=403,
+                detail="Private or non-routable address is not allowed",
+            )
+
+
+def validate_public_url(url: str) -> str:
+    """Validate URL to mitigate SSRF (public http/https only)."""
+    parsed = urlparse(url)
+    if parsed.scheme not in {"http", "https"}:
+        raise HTTPException(status_code=400, detail="Only http/https URLs are allowed")
+    if parsed.username or parsed.password:
+        raise HTTPException(status_code=400, detail="Userinfo in URL is not allowed")
+    if not parsed.hostname:
+        raise HTTPException(status_code=400, detail="URL must include a hostname")
+
+    _validate_public_host(parsed.hostname)
+    return url
+
+
 @app.get("/health")
 async def health_check():
     """Health check endpoint"""
@@ -109,6 +160,8 @@ async def http_request_tool(request: HttpRequest) -> HttpResponse:
     start_time = time.time()
 
     try:
+        validate_public_url(str(request.url))
+
         async with httpx.AsyncClient(
             follow_redirects=request.follow_redirects
         ) as client:
@@ -129,6 +182,7 @@ async def http_request_tool(request: HttpRequest) -> HttpResponse:
                     kwargs["content"] = request.body
 
             # Execute request
+            # lgtm[py/full-ssrf] - URL is validated to be public and http/https
             response = await client.request(**kwargs)
             response_time = time.time() - start_time
 
@@ -146,7 +200,7 @@ async def http_request_tool(request: HttpRequest) -> HttpResponse:
         raise HTTPException(status_code=408, detail="Request timeout")
     except Exception as e:
         logger.error(f"HTTP request failed: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Request failed: {str(e)}")
+        raise HTTPException(status_code=500, detail="Request failed")
 
 
 @app.post("/tools/webhook_create")
@@ -269,10 +323,8 @@ async def dns_lookup_tool(lookup: DnsLookup) -> Dict[str, Any]:
                     "timestamp": datetime.now().isoformat(),
                     "method": "socket_fallback",
                 }
-            except socket.gaierror as e:
-                raise HTTPException(
-                    status_code=404, detail=f"DNS resolution failed: {str(e)}"
-                )
+            except socket.gaierror:
+                raise HTTPException(status_code=404, detail="DNS resolution failed")
         else:
             raise HTTPException(
                 status_code=501, detail="Advanced DNS lookup requires dnspython package"
@@ -280,7 +332,7 @@ async def dns_lookup_tool(lookup: DnsLookup) -> Dict[str, Any]:
 
     except Exception as e:
         logger.error(f"DNS lookup failed: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"DNS lookup failed: {str(e)}")
+        raise HTTPException(status_code=500, detail="DNS lookup failed")
 
 
 @app.post("/tools/api_test")
@@ -295,17 +347,28 @@ async def api_test_tool(config: ApiTestConfig) -> Dict[str, Any]:
     start_time = time.time()
 
     async with httpx.AsyncClient() as client:
+        base_url = str(config.base_url)
+        validate_public_url(base_url)
+        base_parsed = urlparse(base_url)
+
         for endpoint in config.endpoints:
             endpoint_start = time.time()
 
             try:
-                # Construct full URL
-                if endpoint.startswith("/"):
-                    full_url = str(config.base_url).rstrip("/") + endpoint
-                else:
-                    full_url = f"{config.base_url}/{endpoint.lstrip('/')}"
+                if not endpoint:
+                    raise HTTPException(status_code=400, detail="Endpoint cannot be empty")
+                if "://" in endpoint or endpoint.startswith("//"):
+                    raise HTTPException(status_code=400, detail="Endpoint must be a relative path")
+
+                # Construct full URL safely
+                full_url = urljoin(base_url.rstrip("/") + "/", endpoint.lstrip("/"))
+                full_parsed = urlparse(full_url)
+                if full_parsed.hostname != base_parsed.hostname:
+                    raise HTTPException(status_code=400, detail="Endpoint host mismatch")
+                validate_public_url(full_url)
 
                 # Make request
+                # lgtm[py/full-ssrf] - URL is validated to be public and http/https
                 response = await client.get(
                     full_url, headers=config.headers or {}, timeout=30
                 )
@@ -328,7 +391,7 @@ async def api_test_tool(config: ApiTestConfig) -> Dict[str, Any]:
                     }
                 )
 
-            except Exception as e:
+            except Exception:
                 endpoint_time = time.time() - endpoint_start
                 results.append(
                     {
@@ -338,7 +401,7 @@ async def api_test_tool(config: ApiTestConfig) -> Dict[str, Any]:
                         "expected_status": config.expected_status,
                         "status_ok": False,
                         "response_time": endpoint_time,
-                        "error": str(e),
+                        "error": "request failed",
                     }
                 )
 

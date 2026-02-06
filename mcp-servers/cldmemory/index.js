@@ -1,4 +1,5 @@
 const fastify = require("fastify")({ logger: true });
+const rateLimit = require("@fastify/rate-limit");
 const { Client } = require("pg");
 const Redis = require("ioredis");
 
@@ -12,6 +13,12 @@ const config = {
     url: process.env.REDIS_URL || "redis://redis:6379"
   }
 };
+
+// Global rate limiting
+fastify.register(rateLimit, {
+  max: 60,
+  timeWindow: "1 minute"
+});
 
 // Initialize clients
 let pgClient, redisClient;

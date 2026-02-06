@@ -128,7 +128,7 @@ class BackupCoordinator:
                 })
                 logger.info(f"Recovery step completed: {step}")
             except Exception as e:
-                results.append({'step': step, 'success': False, 'error': str(e)})
+                results.append({'step': step, 'success': False, 'error': 'failed'})
                 logger.error(f"Recovery step failed: {step} - {e}")
         
         # Publish recovery results
@@ -238,9 +238,10 @@ def wake_workstation():
         }), 408
         
     except Exception as e:
+        logger.error(f"Wake-on-LAN failed: {e}")
         return jsonify({
             'status': 'error',
-            'message': str(e),
+            'message': 'wake-on-lan failed',
             'timestamp': time.time()
         }), 500
 

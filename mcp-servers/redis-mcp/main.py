@@ -145,7 +145,8 @@ async def health_check():
                 "uptime_in_seconds": redis_info.get("uptime_in_seconds"),
             }
         except Exception as e:
-            redis_status = f"error: {str(e)}"
+            logger.error(f"Redis health check failed: {str(e)}")
+            redis_status = "error"
 
     return {
         "status": "healthy",
@@ -256,7 +257,7 @@ async def cache_tool(request: CacheRequest) -> Dict[str, Any]:
 
     except Exception as e:
         logger.error(f"Cache operation failed: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Cache operation failed: {str(e)}")
+        raise HTTPException(status_code=500, detail="Cache operation failed")
 
 
 @app.post("/tools/session")
@@ -432,9 +433,7 @@ async def session_tool(request: SessionRequest) -> Dict[str, Any]:
 
     except Exception as e:
         logger.error(f"Session operation failed: {str(e)}")
-        raise HTTPException(
-            status_code=500, detail=f"Session operation failed: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail="Session operation failed")
 
 
 @app.get("/tools/list")

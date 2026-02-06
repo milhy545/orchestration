@@ -10,29 +10,25 @@ SECURITY: This service implements strict SQL injection prevention:
 - Query complexity limits
 - Comprehensive logging of operations
 """
-import json
 import logging
 import os
 import re
 from contextlib import asynccontextmanager
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Tuple, Literal
 
 import asyncpg
 from fastapi import FastAPI, HTTPException
 from prometheus_fastapi_instrumentator import Instrumentator
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Security configuration
-ALLOWED_QUERY_OPERATIONS = {"SELECT"}  # Only SELECT queries allowed for query endpoint
-BLOCKED_KEYWORDS = {"DROP", "TRUNCATE", "ALTER", "CREATE", "GRANT", "REVOKE"}
-MAX_QUERY_LENGTH = 10000  # 10KB max query size
 MAX_RESULT_ROWS = 10000  # Maximum rows to return
-MAX_TRANSACTION_QUERIES = 50  # Maximum queries in transaction
+DEFAULT_SELECT_LIMIT = 100
 
 # Identifier validation (table names, schema names, column names)
 IDENTIFIER_PATTERN = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_]*$")
@@ -80,40 +76,15 @@ def validate_identifier(identifier: str, identifier_type: str = "identifier") ->
     return identifier
 
 
-def validate_query_safety(query: str) -> None:
-    """
-    Validate that query doesn't contain dangerous operations.
+class FilterCondition(BaseModel):
+    column: str
+    op: Literal["=", "!=", ">", ">=", "<", "<=", "like", "ilike", "in"]
+    value: Any
 
-    Args:
-        query: SQL query to validate
 
-    Raises:
-        HTTPException: If query contains blocked keywords
-    """
-    query_upper = query.upper()
-
-    # Check query length
-    if len(query) > MAX_QUERY_LENGTH:
-        raise HTTPException(
-            status_code=400, detail=f"Query too long (max {MAX_QUERY_LENGTH} chars)"
-        )
-
-    # Check for blocked keywords
-    for keyword in BLOCKED_KEYWORDS:
-        if keyword in query_upper:
-            raise HTTPException(
-                status_code=403, detail=f"Query contains forbidden keyword: {keyword}"
-            )
-
-    # Ensure query starts with allowed operation
-    query_stripped = query_upper.strip()
-    allowed = any(query_stripped.startswith(op) for op in ALLOWED_QUERY_OPERATIONS)
-
-    if not allowed:
-        raise HTTPException(
-            status_code=403,
-            detail=f"Query must start with one of: {', '.join(ALLOWED_QUERY_OPERATIONS)}",
-        )
+class OrderBy(BaseModel):
+    column: str
+    direction: Literal["asc", "desc"] = "asc"
 
 
 def validate_schema_name(schema_name: str) -> str:
@@ -128,6 +99,92 @@ def validate_schema_name(schema_name: str) -> str:
         )
 
     return validated
+
+
+async def get_table_columns(
+    connection: asyncpg.Connection, schema_name: str, table_name: str
+) -> List[str]:
+    query = """
+    SELECT column_name
+    FROM information_schema.columns
+    WHERE table_schema = $1 AND table_name = $2
+    ORDER BY ordinal_position
+    """
+    rows = await connection.fetch(query, schema_name, table_name)
+    columns = [row["column_name"] for row in rows]
+    if not columns:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Table {schema_name}.{table_name} not found or has no columns.",
+        )
+    return columns
+
+
+def build_select_query(
+    request: "SelectQueryRequest",
+    schema_name: str,
+    table_name: str,
+    allowed_columns: List[str],
+) -> Tuple[str, List[Any], List[str]]:
+    selected_columns = request.columns or allowed_columns
+    for col in selected_columns:
+        if col not in allowed_columns:
+            raise HTTPException(status_code=400, detail=f"Unknown column: {col}")
+
+    columns_sql = ", ".join(f'"{col}"' for col in selected_columns)
+    sql = f'SELECT {columns_sql} FROM "{schema_name}"."{table_name}"'
+    params: List[Any] = []
+
+    def add_param(value: Any) -> str:
+        params.append(value)
+        return f"${len(params)}"
+
+    if request.filters:
+        filter_clauses = []
+        for condition in request.filters:
+            if condition.column not in allowed_columns:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Unknown filter column: {condition.column}",
+                )
+            if condition.op == "in":
+                if not isinstance(condition.value, list) or not condition.value:
+                    raise HTTPException(
+                        status_code=400,
+                        detail="IN operator requires a non-empty list",
+                    )
+                placeholder = add_param(condition.value)
+                filter_clauses.append(f'"{condition.column}" = ANY({placeholder})')
+            elif condition.op in {"like", "ilike"}:
+                if not isinstance(condition.value, str):
+                    raise HTTPException(
+                        status_code=400,
+                        detail="LIKE/ILIKE operator requires string value",
+                    )
+                placeholder = add_param(condition.value)
+                op = "LIKE" if condition.op == "like" else "ILIKE"
+                filter_clauses.append(f'"{condition.column}" {op} {placeholder}')
+            else:
+                placeholder = add_param(condition.value)
+                filter_clauses.append(
+                    f'"{condition.column}" {condition.op} {placeholder}'
+                )
+        if filter_clauses:
+            sql += " WHERE " + " AND ".join(filter_clauses)
+
+    if request.order_by:
+        order_clauses = []
+        for order in request.order_by:
+            if order.column not in allowed_columns:
+                raise HTTPException(
+                    status_code=400, detail=f"Unknown order column: {order.column}"
+                )
+            order_clauses.append(f'"{order.column}" {order.direction.upper()}')
+        if order_clauses:
+            sql += " ORDER BY " + ", ".join(order_clauses)
+
+    sql += f" LIMIT {add_param(request.limit)} OFFSET {add_param(request.offset)}"
+    return sql, params, selected_columns
 
 
 # Database connection pool
@@ -172,30 +229,22 @@ Instrumentator().instrument(app).expose(app)
 
 
 # Request/Response Models
-class QueryRequest(BaseModel):
-    """SQL query execution request"""
+class SelectQueryRequest(BaseModel):
+    """Structured SELECT query request (safe, read-only)"""
 
-    query: str
-    parameters: Optional[List[Any]] = []
-    fetch_mode: str = "all"  # all, one, many
-    limit: Optional[int] = None
-    timeout: Optional[int] = 30
-
-
-class TransactionRequest(BaseModel):
-    """Transaction execution request"""
-
-    queries: List[Dict[str, Any]]
-    rollback_on_error: bool = True
-    timeout: Optional[int] = 60
+    schema_name: Optional[str] = "public"
+    table: str
+    columns: Optional[List[str]] = None
+    filters: Optional[List[FilterCondition]] = None
+    order_by: Optional[List[OrderBy]] = None
+    limit: int = Field(DEFAULT_SELECT_LIMIT, ge=1, le=MAX_RESULT_ROWS)
+    offset: int = Field(0, ge=0, le=MAX_RESULT_ROWS)
 
 
 class SchemaRequest(BaseModel):
-    """Database schema operations"""
+    """Database schema operations (read-only)"""
 
-    operation: str = Field(
-        ..., description="describe, create_table, drop_table, alter_table"
-    )
+    operation: Literal["describe", "list"] = "describe"
     table_name: Optional[str] = None
     schema_name: Optional[str] = "public"
     table_definition: Optional[Dict[str, Any]] = None
@@ -239,67 +288,48 @@ async def health_check():
         "timestamp": datetime.now().isoformat(),
         "features": [
             "query_execution",
-            "transactions",
             "schema_management",
             "connection_management",
-            "backup_operations",
         ],
         "database": {"status": db_status, "pool_info": pool_info},
     }
 
 
 @app.post("/tools/query")
-async def query_tool(request: QueryRequest) -> Dict[str, Any]:
+async def query_tool(request: SelectQueryRequest) -> Dict[str, Any]:
     """
-    Execute SQL queries (SELECT only for security)
+    Execute structured SELECT queries (safe, read-only operations)
 
     Tool: query
-    Description: Execute SELECT queries with parameters (safe, read-only operations)
-
-    SECURITY: Only SELECT queries allowed. All queries validated for:
-    - Allowed operations (SELECT only)
-    - Forbidden keywords (DROP, TRUNCATE, ALTER, etc.)
-    - Query length limits
-    - Result row limits
+    Description: Execute SELECT queries built from validated table/columns/filters
     """
-    # SECURITY: Validate query safety BEFORE checking db_pool
-    validate_query_safety(request.query)
+    validated_schema = validate_schema_name(request.schema_name or "public")
+    validated_table = validate_identifier(request.table, "table_name")
 
     if not db_pool:
         raise HTTPException(status_code=503, detail="Database connection not available")
 
-    # SECURITY: Enforce result row limits
-    max_limit = min(request.limit or MAX_RESULT_ROWS, MAX_RESULT_ROWS)
+    # Enforce result row limits
+    request.limit = min(request.limit, MAX_RESULT_ROWS)
 
     try:
         async with db_pool.acquire() as connection:
             start_time = datetime.now()
-
-            # Log query execution for auditing
-            logger.info(
-                f"Executing query: {request.query[:100]}... (fetch_mode: {request.fetch_mode}, limit: {max_limit})"
+            allowed_columns = await get_table_columns(
+                connection, validated_schema, validated_table
+            )
+            sql, params, selected_columns = build_select_query(
+                request, validated_schema, validated_table, allowed_columns
             )
 
-            # Execute query based on fetch mode
-            if request.fetch_mode == "one":
-                result = await connection.fetchrow(request.query, *request.parameters)
-                rows = [dict(result)] if result else []
-            elif request.fetch_mode == "many":
-                limit = request.limit or 100
-                limit = min(limit, MAX_RESULT_ROWS)  # Enforce limit
-                result = await connection.fetch(request.query, *request.parameters)
-                rows = [dict(row) for row in result[:limit]]
-            else:  # "all"
-                result = await connection.fetch(request.query, *request.parameters)
-                # Enforce maximum result rows for safety
-                if len(result) > MAX_RESULT_ROWS:
-                    logger.warning(
-                        f"Query returned {len(result)} rows, truncating to {MAX_RESULT_ROWS}"
-                    )
-                    result = result[:MAX_RESULT_ROWS]
-                if request.limit:
-                    result = result[: min(request.limit, MAX_RESULT_ROWS)]
-                rows = [dict(row) for row in result]
+            logger.info(
+                f"Executing structured query on {validated_schema}.{validated_table}"
+            )
+
+            # lgtm[py/sql-injection] - SQL built from validated identifiers and parameterized values
+            # lgtm[py/sql-injection] - SQL built from validated identifiers and parameterized values
+            result = await connection.fetch(sql, *params)
+            rows = [dict(row) for row in result]
 
             execution_time = (datetime.now() - start_time).total_seconds()
 
@@ -308,130 +338,18 @@ async def query_tool(request: QueryRequest) -> Dict[str, Any]:
                 "rows": rows,
                 "row_count": len(rows),
                 "execution_time_seconds": execution_time,
-                "fetch_mode": request.fetch_mode,
-                "query": request.query,
                 "timestamp": datetime.now().isoformat(),
-                "truncated": len(rows) >= MAX_RESULT_ROWS,
-            }
-
-    except HTTPException:
-        raise  # Re-raise validation errors
-    except Exception as e:
-        logger.error(f"Query execution failed: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Query execution failed: {str(e)}")
-
-
-@app.post("/tools/transaction")
-async def transaction_tool(request: TransactionRequest) -> Dict[str, Any]:
-    """
-    Execute multiple queries in transaction (DISABLED for security)
-
-    Tool: transaction
-    Description: DISABLED - This endpoint is disabled for security reasons.
-                Use /tools/query for read operations instead.
-
-    SECURITY NOTE: Transaction endpoints allowing arbitrary SQL are too dangerous
-    for production use. This endpoint has been disabled to prevent SQL injection
-    and unauthorized data modifications.
-
-    To re-enable with proper security controls:
-    1. Implement strict query validation per query
-    2. Add operation whitelisting
-    3. Require explicit authorization
-    4. Add audit logging
-    """
-    raise HTTPException(
-        status_code=403,
-        detail="Transaction endpoint is disabled for security. Use /tools/query for SELECT operations only.",
-    )
-
-    # Original implementation kept for reference but unreachable
-    if not db_pool:
-        raise HTTPException(status_code=503, detail="Database connection not available")
-
-    # SECURITY: Validate transaction size
-    if len(request.queries) > MAX_TRANSACTION_QUERIES:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Too many queries in transaction (max {MAX_TRANSACTION_QUERIES})",
-        )
-
-    try:
-        async with db_pool.acquire() as connection:
-            start_time = datetime.now()
-            results = []
-
-            # SECURITY: Validate all queries before executing transaction
-            for i, query_data in enumerate(request.queries):
-                query = query_data.get("query", "")
-                validate_query_safety(query)  # Will raise HTTPException if invalid
-
-            async with connection.transaction():
-                for i, query_data in enumerate(request.queries):
-                    query = query_data.get("query", "")
-                    parameters = query_data.get("parameters", [])
-
-                    # Log for audit
-                    logger.info(f"Transaction query {i}: {query[:50]}...")
-
-                    try:
-                        if query.strip().upper().startswith("SELECT"):
-                            result = await connection.fetch(query, *parameters)
-                            rows = [dict(row) for row in result]
-                        else:
-                            # This path should never execute due to validate_query_safety
-                            result = await connection.execute(query, *parameters)
-                            rows = result
-
-                        results.append(
-                            {
-                                "query_index": i,
-                                "query": query,
-                                "success": True,
-                                "result": rows,
-                                "affected_rows": (
-                                    len(rows) if isinstance(rows, list) else None
-                                ),
-                            }
-                        )
-
-                    except Exception as e:
-                        error_result = {
-                            "query_index": i,
-                            "query": query,
-                            "success": False,
-                            "error": str(e),
-                        }
-
-                        if request.rollback_on_error:
-                            logger.warning(
-                                f"Transaction rolled back due to query {i} failure"
-                            )
-                            raise Exception(f"Query {i} failed: {str(e)}")
-                        else:
-                            results.append(error_result)
-
-            execution_time = (datetime.now() - start_time).total_seconds()
-
-            return {
-                "success": True,
-                "results": results,
-                "query_count": len(request.queries),
-                "successful_queries": len(
-                    [r for r in results if r.get("success", False)]
-                ),
-                "execution_time_seconds": execution_time,
-                "rollback_on_error": request.rollback_on_error,
-                "timestamp": datetime.now().isoformat(),
+                "truncated": len(rows) >= request.limit,
+                "columns": selected_columns,
+                "schema": validated_schema,
+                "table": validated_table,
             }
 
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Transaction execution failed: {str(e)}")
-        raise HTTPException(
-            status_code=500, detail=f"Transaction execution failed: {str(e)}"
-        )
+        logger.error(f"Query execution failed: {str(e)}")
+        raise HTTPException(status_code=500, detail="Query execution failed")
 
 
 @app.post("/tools/schema")
@@ -452,23 +370,6 @@ async def schema_tool(request: SchemaRequest) -> Dict[str, Any]:
     validated_table = None
     if request.table_name:
         validated_table = validate_identifier(request.table_name, "table_name")
-
-    # SECURITY: Check for disabled operations BEFORE db_pool check
-    if request.operation == "create_table":
-        raise HTTPException(
-            status_code=403,
-            detail="CREATE TABLE operation is disabled for security. Use database admin tools for schema changes.",
-        )
-    elif request.operation == "drop_table":
-        raise HTTPException(
-            status_code=403,
-            detail="DROP TABLE operation is disabled for security. Use database admin tools for schema changes.",
-        )
-    elif request.operation == "alter_table":
-        raise HTTPException(
-            status_code=403,
-            detail="ALTER TABLE operation is disabled for security. Use database admin tools for schema changes.",
-        )
 
     if not db_pool:
         raise HTTPException(status_code=503, detail="Database connection not available")
@@ -536,8 +437,27 @@ async def schema_tool(request: SchemaRequest) -> Dict[str, Any]:
                         "table_count": len(tables),
                     }
 
+            elif request.operation == "list":
+                query = """
+                SELECT table_name, table_type
+                FROM information_schema.tables
+                WHERE table_schema = $1
+                ORDER BY table_name
+                """
+                result = await connection.fetch(query, validated_schema)
+                tables = [dict(row) for row in result]
+
+                logger.info(
+                    f"Listed {len(tables)} tables in schema: {validated_schema}"
+                )
+
+                return {
+                    "operation": "list",
+                    "schema_name": validated_schema,
+                    "tables": tables,
+                    "table_count": len(tables),
+                }
             else:
-                # Unknown operation (create/drop/alter already blocked earlier)
                 raise HTTPException(
                     status_code=400, detail=f"Unknown operation: {request.operation}"
                 )
@@ -546,9 +466,7 @@ async def schema_tool(request: SchemaRequest) -> Dict[str, Any]:
         raise
     except Exception as e:
         logger.error(f"Schema operation failed: {str(e)}")
-        raise HTTPException(
-            status_code=500, detail=f"Schema operation failed: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail="Schema operation failed")
 
 
 @app.post("/tools/connection")
@@ -633,9 +551,7 @@ async def connection_tool(request: ConnectionRequest) -> Dict[str, Any]:
 
     except Exception as e:
         logger.error(f"Connection operation failed: {str(e)}")
-        raise HTTPException(
-            status_code=500, detail=f"Connection operation failed: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail="Connection operation failed")
 
 
 @app.get("/tools/list")
@@ -645,34 +561,32 @@ async def list_tools():
         "tools": [
             {
                 "name": "query",
-                "description": "Execute SELECT queries with parameters (read-only, safe operations)",
-                "security": "Only SELECT queries allowed. Forbidden: DROP, TRUNCATE, ALTER, CREATE, etc.",
+                "description": "Execute structured SELECT queries (read-only, safe operations)",
+                "security": "Only SELECT queries via validated table/columns/filters.",
                 "parameters": {
-                    "query": "string (required, SELECT SQL query to execute)",
-                    "parameters": "array (optional, query parameters for safe parameterized queries)",
-                    "fetch_mode": "string (optional: all|one|many, default all)",
+                    "schema_name": "string (optional, allowed: public|information_schema, default 'public')",
+                    "table": "string (required, table name)",
+                    "columns": "array (optional, list of columns to select)",
+                    "filters": "array (optional, objects: {column, op, value})",
+                    "order_by": "array (optional, objects: {column, direction})",
                     "limit": "integer (optional, max rows to return, capped at 10000)",
-                    "timeout": "integer (optional, query timeout in seconds)",
+                    "offset": "integer (optional, start offset)",
                 },
                 "example": {
-                    "query": "SELECT * FROM users WHERE id = $1",
-                    "parameters": [123],
-                    "fetch_mode": "one",
+                    "schema_name": "public",
+                    "table": "users",
+                    "columns": ["id", "email"],
+                    "filters": [{"column": "id", "op": "=", "value": 123}],
+                    "order_by": [{"column": "id", "direction": "desc"}],
                     "limit": 100,
                 },
             },
             {
-                "name": "transaction",
-                "description": "DISABLED - Transaction endpoint disabled for security",
-                "security": "This endpoint is disabled. Use /tools/query for SELECT operations.",
-                "status": "disabled",
-            },
-            {
                 "name": "schema",
                 "description": "View database schema information (read-only)",
-                "security": "Only DESCRIBE operation allowed. CREATE/DROP/ALTER disabled for security.",
+                "security": "Only describe/list operations allowed.",
                 "parameters": {
-                    "operation": "string (required: describe only)",
+                    "operation": "string (required: describe|list)",
                     "table_name": "string (optional, specific table to describe)",
                     "schema_name": "string (optional, allowed: public|information_schema, default 'public')",
                 },

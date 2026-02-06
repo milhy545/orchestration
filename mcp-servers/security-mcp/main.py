@@ -337,8 +337,9 @@ async def ssl_check_tool(request: SSLCheckRequest) -> Dict[str, Any]:
     Description: Validate SSL certificates and get certificate details
     """
     try:
-        # Create SSL context
+        # Create SSL context with modern TLS minimum
         context = ssl.create_default_context()
+        context.minimum_version = ssl.TLSVersion.TLSv1_2
 
         # Connect and get certificate
         with socket.create_connection(

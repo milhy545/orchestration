@@ -26,6 +26,13 @@ logger = logging.getLogger(__name__)
 
 # Security configuration
 ALLOWED_LOG_DIRS = ["/var/log", "/app/logs", "/tmp/logs"]
+MAX_REGEX_LENGTH = 200
+
+# Use safe regex engine with timeouts to prevent ReDoS
+try:
+    import regex as safe_re  # type: ignore
+except Exception:
+    safe_re = None
 
 # Whitelist of allowed commands
 ALLOWED_COMMANDS = {
@@ -38,28 +45,34 @@ ALLOWED_COMMANDS = {
 def validate_log_path(user_path: str) -> Path:
     """Validate and sanitize log file path to prevent path traversal"""
     try:
+        if not user_path:
+            raise HTTPException(status_code=400, detail="Path cannot be empty")
+
+        path = Path(user_path)
+        if not path.is_absolute():
+            raise HTTPException(status_code=400, detail="Path must be absolute")
+
         # Resolve to absolute path
-        path = Path(user_path).resolve()
+        path = path.resolve()
 
         # Check if path is within allowed directories
-        for allowed_dir in ALLOWED_LOG_DIRS:
-            allowed_path = Path(allowed_dir).resolve()
-            try:
-                path.relative_to(allowed_path)
-                # Path is valid and within allowed directory
-                if not path.exists():
-                    raise HTTPException(status_code=404, detail="Log file not found")
-                if not path.is_file():
-                    raise HTTPException(status_code=400, detail="Path is not a file")
-                return path
-            except ValueError:
-                continue
-
-        # Path not in any allowed directory
-        raise HTTPException(
-            status_code=403,
-            detail=f"Access denied: Path not in allowed directories {ALLOWED_LOG_DIRS}",
+        allowed = any(
+            path.is_relative_to(Path(allowed_dir).resolve())
+            for allowed_dir in ALLOWED_LOG_DIRS
         )
+        if not allowed:
+            raise HTTPException(
+                status_code=403,
+                detail=f"Access denied: Path not in allowed directories {ALLOWED_LOG_DIRS}",
+            )
+
+        # Path is valid and within allowed directory
+        if not path.exists():
+            raise HTTPException(status_code=404, detail="Log file not found")
+        if not path.is_file():
+            raise HTTPException(status_code=400, detail="Path is not a file")
+        return path
+
     except Exception as e:
         logger.error(f"Path validation failed: {str(e)}")
         raise HTTPException(status_code=400, detail="Invalid path")
@@ -203,9 +216,11 @@ async def log_analysis_tool(request: LogAnalysisRequest) -> Dict[str, Any]:
 
             # Handle compressed files
             if log_path.suffix == ".gz":
+                # lgtm[py/path-injection] - log_path validated to allowed directories
                 with gzip.open(log_path, "rt") as f:
                     log_lines = f.readlines()
             else:
+                # lgtm[py/path-injection] - log_path validated to allowed directories
                 log_lines = log_path.read_text().splitlines()
 
         elif request.log_source == "command":
@@ -291,7 +306,7 @@ async def log_analysis_tool(request: LogAnalysisRequest) -> Dict[str, Any]:
         raise
     except Exception as e:
         logger.error(f"Log analysis failed: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Log analysis failed: {str(e)}")
+        raise HTTPException(status_code=500, detail="Log analysis failed")
 
 
 async def _analyze_patterns(
@@ -506,9 +521,11 @@ async def log_search_tool(request: LogSearchRequest) -> Dict[str, Any]:
 
                 # Read file content
                 if source_path.suffix == ".gz":
+                    # lgtm[py/path-injection] - source_path validated to allowed directories
                     with gzip.open(source_path, "rt") as f:
                         lines = f.readlines()
                 else:
+                    # lgtm[py/path-injection] - source_path validated to allowed directories
                     lines = source_path.read_text().splitlines()
             except HTTPException:
                 # Skip files that fail validation
@@ -517,13 +534,24 @@ async def log_search_tool(request: LogSearchRequest) -> Dict[str, Any]:
             # Search based on type
             source_matches = []
             if request.search_type == "regex":
+                if safe_re is None:
+                    raise HTTPException(
+                        status_code=500,
+                        detail="Safe regex engine not available on server",
+                    )
+                if len(request.query) > MAX_REGEX_LENGTH:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"Regex too long (max {MAX_REGEX_LENGTH} chars)",
+                    )
                 try:
-                    pattern = re.compile(
+                    pattern = safe_re.compile(
                         request.query,
-                        re.IGNORECASE if not request.case_sensitive else 0,
+                        safe_re.IGNORECASE if not request.case_sensitive else 0,
                     )
                     for i, line in enumerate(lines):
-                        if pattern.search(line):
+                        # lgtm[py/regex-injection] - regex execution is length-limited and timed out
+                        if pattern.search(line, timeout=0.05):
                             context_start = max(0, i - request.context_lines)
                             context_end = min(len(lines), i + request.context_lines + 1)
                             source_matches.append(
@@ -533,7 +561,7 @@ async def log_search_tool(request: LogSearchRequest) -> Dict[str, Any]:
                                     "context": lines[context_start:context_end],
                                 }
                             )
-                except re.error as e:
+                except Exception as e:
                     raise HTTPException(
                         status_code=400, detail=f"Invalid regex: {str(e)}"
                     )
@@ -587,7 +615,7 @@ async def log_search_tool(request: LogSearchRequest) -> Dict[str, Any]:
 
     except Exception as e:
         logger.error(f"Log search failed: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Log search failed: {str(e)}")
+        raise HTTPException(status_code=500, detail="Log search failed")
 
 
 @app.get("/tools/list")

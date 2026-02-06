@@ -35,6 +35,41 @@ Instrumentator().instrument(app).expose(app)
 CONFIG_BASE_PATH = Path("/app/configs")
 CONFIG_BASE_PATH.mkdir(exist_ok=True)
 
+
+def resolve_config_path(user_path: str) -> Path:
+    """Resolve a user-provided path safely within CONFIG_BASE_PATH."""
+    if not user_path:
+        raise HTTPException(status_code=400, detail="file_path is required")
+
+    candidate = Path(user_path)
+    if candidate.is_absolute():
+        raise HTTPException(status_code=403, detail="Path outside allowed directory")
+
+    resolved = (CONFIG_BASE_PATH / candidate).resolve()
+    try:
+        resolved.relative_to(CONFIG_BASE_PATH.resolve())
+    except ValueError:
+        raise HTTPException(status_code=403, detail="Path outside allowed directory")
+
+    return resolved
+
+
+def validate_backup_name(backup_name: str) -> str:
+    if not backup_name:
+        raise HTTPException(status_code=400, detail="Backup name required")
+    if ".." in backup_name or "/" in backup_name or "\\" in backup_name:
+        raise HTTPException(status_code=400, detail="Invalid backup name")
+    return backup_name
+
+
+def validate_backup_patterns(patterns: List[str]) -> List[str]:
+    sanitized = []
+    for pattern in patterns:
+        if ".." in pattern or "/" in pattern or "\\" in pattern:
+            raise HTTPException(status_code=400, detail="Invalid file pattern")
+        sanitized.append(pattern)
+    return sanitized
+
 # Request/Response Models
 
 
@@ -174,9 +209,7 @@ async def env_vars_tool(request: EnvVarRequest) -> Dict[str, Any]:
         raise
     except Exception as e:
         logger.error(f"Environment variable operation failed: {str(e)}")
-        raise HTTPException(
-            status_code=500, detail=f"Env var operation failed: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail="Env var operation failed")
 
 
 @app.post("/tools/config_file")
@@ -188,21 +221,13 @@ async def config_file_tool(request: ConfigFileRequest) -> Dict[str, Any]:
     Description: Read, write, create, delete, or list configuration files
     """
     try:
-        file_path = CONFIG_BASE_PATH / request.file_path
-
-        # SECURITY: Ensure path is within CONFIG_BASE_PATH (prevent path traversal)
-        try:
-            file_path = file_path.resolve()
-            file_path.relative_to(CONFIG_BASE_PATH.resolve())
-        except ValueError:
-            raise HTTPException(
-                status_code=403, detail="Path outside allowed directory"
-            )
+        file_path = resolve_config_path(request.file_path)
 
         if request.operation == "read":
             if not file_path.exists():
                 raise HTTPException(status_code=404, detail="File not found")
 
+            # lgtm[py/path-injection] - file_path is resolved within CONFIG_BASE_PATH
             content = file_path.read_text()
 
             # Parse based on format
@@ -265,6 +290,7 @@ async def config_file_tool(request: ConfigFileRequest) -> Dict[str, Any]:
             else:
                 content = str(request.content)
 
+            # lgtm[py/path-injection] - file_path is resolved within CONFIG_BASE_PATH
             file_path.write_text(content)
 
             return {
@@ -293,6 +319,7 @@ async def config_file_tool(request: ConfigFileRequest) -> Dict[str, Any]:
             else:
                 initial_content = ""
 
+            # lgtm[py/path-injection] - file_path is resolved within CONFIG_BASE_PATH
             file_path.write_text(initial_content)
 
             return {
@@ -308,6 +335,7 @@ async def config_file_tool(request: ConfigFileRequest) -> Dict[str, Any]:
                 raise HTTPException(status_code=404, detail="File not found")
 
             file_size = file_path.stat().st_size
+            # lgtm[py/path-injection] - file_path is resolved within CONFIG_BASE_PATH
             file_path.unlink()
 
             return {
@@ -359,9 +387,7 @@ async def config_file_tool(request: ConfigFileRequest) -> Dict[str, Any]:
         raise
     except Exception as e:
         logger.error(f"Config file operation failed: {str(e)}")
-        raise HTTPException(
-            status_code=500, detail=f"Config file operation failed: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail="Config file operation failed")
 
 
 @app.post("/tools/validate")
@@ -460,7 +486,7 @@ async def validate_tool(request: ConfigValidateRequest) -> Dict[str, Any]:
 
     except Exception as e:
         logger.error(f"Config validation failed: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Validation failed: {str(e)}")
+        raise HTTPException(status_code=500, detail="Validation failed")
 
 
 @app.post("/tools/backup")
@@ -477,7 +503,9 @@ async def backup_tool(request: ConfigBackupRequest) -> Dict[str, Any]:
 
         if request.operation == "create":
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            backup_name = request.backup_name or f"backup_{timestamp}"
+            backup_name = validate_backup_name(
+                request.backup_name or f"backup_{timestamp}"
+            )
             backup_path = backup_dir / backup_name
 
             if backup_path.exists():
@@ -487,12 +515,14 @@ async def backup_tool(request: ConfigBackupRequest) -> Dict[str, Any]:
             backed_up_files = []
 
             # Copy files matching patterns
-            for pattern in request.file_patterns:
+            for pattern in validate_backup_patterns(request.file_patterns or []):
+                # lgtm[py/path-injection] - pattern is validated to be a simple filename glob
                 for file_path in CONFIG_BASE_PATH.glob(pattern):
                     if file_path.is_file() and not file_path.is_relative_to(backup_dir):
                         relative_path = file_path.relative_to(CONFIG_BASE_PATH)
                         backup_file_path = backup_path / relative_path
                         backup_file_path.parent.mkdir(parents=True, exist_ok=True)
+                        # lgtm[py/path-injection] - file_path is under CONFIG_BASE_PATH
                         shutil.copy2(file_path, backup_file_path)
                         backed_up_files.append(str(relative_path))
 
@@ -539,12 +569,8 @@ async def backup_tool(request: ConfigBackupRequest) -> Dict[str, Any]:
             }
 
         elif request.operation == "restore":
-            if not request.backup_name:
-                raise HTTPException(
-                    status_code=400, detail="Backup name required for restore"
-                )
-
-            backup_path = backup_dir / request.backup_name
+            backup_name = validate_backup_name(request.backup_name)
+            backup_path = backup_dir / backup_name
             if not backup_path.exists():
                 raise HTTPException(status_code=404, detail="Backup not found")
 
@@ -552,8 +578,15 @@ async def backup_tool(request: ConfigBackupRequest) -> Dict[str, Any]:
             for backup_file in backup_path.rglob("*"):
                 if backup_file.is_file():
                     relative_path = backup_file.relative_to(backup_path)
-                    target_path = CONFIG_BASE_PATH / relative_path
+                    target_path = (CONFIG_BASE_PATH / relative_path).resolve()
+                    try:
+                        target_path.relative_to(CONFIG_BASE_PATH.resolve())
+                    except ValueError:
+                        raise HTTPException(
+                            status_code=403, detail="Path outside allowed directory"
+                        )
                     target_path.parent.mkdir(parents=True, exist_ok=True)
+                    # lgtm[py/path-injection] - target_path is under CONFIG_BASE_PATH
                     shutil.copy2(backup_file, target_path)
                     restored_files.append(str(relative_path))
 
@@ -566,12 +599,8 @@ async def backup_tool(request: ConfigBackupRequest) -> Dict[str, Any]:
             }
 
         elif request.operation == "delete":
-            if not request.backup_name:
-                raise HTTPException(
-                    status_code=400, detail="Backup name required for delete"
-                )
-
-            backup_path = backup_dir / request.backup_name
+            backup_name = validate_backup_name(request.backup_name)
+            backup_path = backup_dir / backup_name
             if not backup_path.exists():
                 raise HTTPException(status_code=404, detail="Backup not found")
 
@@ -595,9 +624,7 @@ async def backup_tool(request: ConfigBackupRequest) -> Dict[str, Any]:
         raise
     except Exception as e:
         logger.error(f"Backup operation failed: {str(e)}")
-        raise HTTPException(
-            status_code=500, detail=f"Backup operation failed: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail="Backup operation failed")
 
 
 @app.get("/tools/list")

@@ -2,6 +2,7 @@
 import asyncio
 import json
 import os
+from pathlib import Path
 import shlex
 import subprocess
 from datetime import datetime
@@ -78,23 +79,26 @@ def validate_working_directory(cwd: str) -> str:
         return "/tmp"
 
     # Resolve to absolute path
-    abs_path = os.path.abspath(cwd)
+    resolved_path = Path(cwd).resolve()
 
     # Check if directory exists
-    if not os.path.exists(abs_path):
+    if not resolved_path.exists():
         raise HTTPException(status_code=400, detail=f"Directory not found: {cwd}")
+    if not resolved_path.is_dir():
+        raise HTTPException(status_code=400, detail=f"Path is not a directory: {cwd}")
 
     # Check if it's within allowed directories
     allowed = any(
-        abs_path.startswith(allowed_dir) for allowed_dir in ALLOWED_WORKING_DIRS
+        resolved_path.is_relative_to(Path(allowed_dir).resolve())
+        for allowed_dir in ALLOWED_WORKING_DIRS
     )
     if not allowed:
         raise HTTPException(
             status_code=403,
-            detail=f"Access to directory {abs_path} is not allowed. Allowed directories: {ALLOWED_WORKING_DIRS}",
+            detail=f"Access to directory {resolved_path} is not allowed. Allowed directories: {ALLOWED_WORKING_DIRS}",
         )
 
-    return abs_path
+    return str(resolved_path)
 
 
 def validate_command(command: str) -> str:
@@ -169,6 +173,7 @@ async def execute_command(request: CommandRequest):
 
         # Execute command with security measures
         # Using list of arguments instead of shell=True to prevent command injection
+        # lgtm[py/path-injection] - cwd validated to allowed directories
         result = subprocess.run(
             cmd_parts,
             shell=False,  # Security: Prevent command injection

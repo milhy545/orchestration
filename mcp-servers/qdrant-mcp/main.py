@@ -125,7 +125,8 @@ async def health_check():
                 "collections": [col.name for col in collections.collections],
             }
         except Exception as e:
-            qdrant_status = f"error: {str(e)}"
+            logger.error(f"Qdrant health check failed: {str(e)}")
+            qdrant_status = "error"
 
     return {
         "status": "healthy",
@@ -243,9 +244,7 @@ async def collection_tool(request: CollectionRequest) -> Dict[str, Any]:
 
     except Exception as e:
         logger.error(f"Collection operation failed: {str(e)}")
-        raise HTTPException(
-            status_code=500, detail=f"Collection operation failed: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail="Collection operation failed")
 
 
 @app.post("/tools/vector")
@@ -374,9 +373,7 @@ async def vector_tool(request: VectorRequest) -> Dict[str, Any]:
 
     except Exception as e:
         logger.error(f"Vector operation failed: {str(e)}")
-        raise HTTPException(
-            status_code=500, detail=f"Vector operation failed: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail="Vector operation failed")
 
 
 @app.post("/tools/search")
@@ -436,9 +433,7 @@ async def search_tool(request: SearchRequest) -> Dict[str, Any]:
 
     except Exception as e:
         logger.error(f"Search operation failed: {str(e)}")
-        raise HTTPException(
-            status_code=500, detail=f"Search operation failed: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail="Search operation failed")
 
 
 @app.get("/tools/list")

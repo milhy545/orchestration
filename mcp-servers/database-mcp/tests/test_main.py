@@ -4,8 +4,10 @@ Database MCP Service Tests
 Tests for SQL injection, security vulnerabilities, performance, and functionality
 """
 import pytest
+
+pytest.importorskip("fastapi")
 from fastapi.testclient import TestClient
-from unittest.mock import patch, MagicMock, Mock
+from unittest.mock import patch, MagicMock
 import sqlite3
 
 # Import the main app
@@ -21,58 +23,80 @@ class TestDatabaseMCPHealth:
     """Test basic functionality"""
 
     def test_health_check(self):
-        """Test if service has health endpoint (should add one)"""
-        # This service doesn't have health endpoint yet
-        # After refactoring, this should pass
-        pass
+        """Test health endpoint"""
+        response = client.get("/health")
+        assert response.status_code == 200
 
 
 class TestQueryExecution:
     """Test query execution functionality"""
 
+    @patch('main.get_table_columns')
     @patch('main.get_db_connection')
-    def test_execute_select_query(self, mock_get_conn):
+    def test_execute_select_query(self, mock_get_conn, mock_get_columns):
         """Test successful SELECT query"""
+        mock_get_columns.return_value = ["id", "name"]
         mock_cursor = MagicMock()
-        mock_cursor.description = [("id",), ("name",)]
         mock_cursor.fetchall.return_value = [(1, "test"), (2, "test2")]
 
         mock_conn = MagicMock()
         mock_conn.cursor.return_value = mock_cursor
-        mock_get_conn.return_value = mock_conn
+        mock_get_conn.return_value.__enter__.return_value = mock_conn
 
-        response = client.post("/db/execute", params={"query": "SELECT * FROM users"})
+        response = client.post(
+            "/db/execute",
+            json={
+                "table": "users",
+                "columns": ["id", "name"],
+                "limit": 100,
+                "offset": 0,
+            },
+        )
         assert response.status_code == 200
 
         data = response.json()
         assert data["columns"] == ["id", "name"]
         assert len(data["rows"]) == 2
 
+    @patch('main.get_table_columns')
     @patch('main.get_db_connection')
-    def test_execute_query_with_params(self, mock_get_conn):
-        """Test parameterized query"""
+    def test_execute_query_with_params(self, mock_get_conn, mock_get_columns):
+        """Test filtered query"""
+        mock_get_columns.return_value = ["id", "name"]
         mock_cursor = MagicMock()
-        mock_cursor.description = [("id",), ("name",)]
         mock_cursor.fetchall.return_value = [(1, "test")]
 
         mock_conn = MagicMock()
         mock_conn.cursor.return_value = mock_cursor
-        mock_get_conn.return_value = mock_conn
+        mock_get_conn.return_value.__enter__.return_value = mock_conn
 
         response = client.post(
             "/db/execute",
-            params={"query": "SELECT * FROM users WHERE id = ?", "params": [1]}
+            json={
+                "table": "users",
+                "columns": ["id", "name"],
+                "filters": [{"column": "id", "op": "=", "value": 1}],
+                "limit": 10,
+                "offset": 0,
+            },
         )
         assert response.status_code == 200
 
+    @patch('main.get_table_columns')
     @patch('main.get_db_connection')
-    def test_execute_query_database_error(self, mock_get_conn):
+    def test_execute_query_database_error(self, mock_get_conn, mock_get_columns):
         """Test database error handling"""
+        mock_get_columns.return_value = ["id", "name"]
         mock_conn = MagicMock()
-        mock_conn.cursor.side_effect = sqlite3.Error("Database error")
-        mock_get_conn.return_value = mock_conn
+        mock_cursor = MagicMock()
+        mock_cursor.execute.side_effect = sqlite3.Error("Database error")
+        mock_conn.cursor.return_value = mock_cursor
+        mock_get_conn.return_value.__enter__.return_value = mock_conn
 
-        response = client.post("/db/execute", params={"query": "INVALID SQL"})
+        response = client.post(
+            "/db/execute",
+            json={"table": "users", "columns": ["id"], "limit": 10, "offset": 0},
+        )
         assert response.status_code == 500
         assert "database error" in response.json()["detail"].lower()
 
@@ -88,7 +112,7 @@ class TestListTables:
 
         mock_conn = MagicMock()
         mock_conn.cursor.return_value = mock_cursor
-        mock_get_conn.return_value = mock_conn
+        mock_get_conn.return_value.__enter__.return_value = mock_conn
 
         response = client.get("/db/tables")
         assert response.status_code == 200
@@ -105,7 +129,7 @@ class TestListTables:
 
         mock_conn = MagicMock()
         mock_conn.cursor.return_value = mock_cursor
-        mock_get_conn.return_value = mock_conn
+        mock_get_conn.return_value.__enter__.return_value = mock_conn
 
         response = client.get("/db/tables")
         assert response.status_code == 200
@@ -126,7 +150,7 @@ class TestTableSchema:
 
         mock_conn = MagicMock()
         mock_conn.cursor.return_value = mock_cursor
-        mock_get_conn.return_value = mock_conn
+        mock_get_conn.return_value.__enter__.return_value = mock_conn
 
         response = client.get("/db/schema/users")
         assert response.status_code == 200
@@ -143,7 +167,7 @@ class TestTableSchema:
 
         mock_conn = MagicMock()
         mock_conn.cursor.return_value = mock_cursor
-        mock_get_conn.return_value = mock_conn
+        mock_get_conn.return_value.__enter__.return_value = mock_conn
 
         response = client.get("/db/schema/nonexistent")
         assert response.status_code == 404
@@ -161,7 +185,7 @@ class TestSampleData:
 
         mock_conn = MagicMock()
         mock_conn.cursor.return_value = mock_cursor
-        mock_get_conn.return_value = mock_conn
+        mock_get_conn.return_value.__enter__.return_value = mock_conn
 
         response = client.get("/db/sample/users")
         assert response.status_code == 200
@@ -178,7 +202,7 @@ class TestSampleData:
 
         mock_conn = MagicMock()
         mock_conn.cursor.return_value = mock_cursor
-        mock_get_conn.return_value = mock_conn
+        mock_get_conn.return_value.__enter__.return_value = mock_conn
 
         response = client.get("/db/sample/users?limit=5")
         assert response.status_code == 200
@@ -187,18 +211,14 @@ class TestSampleData:
 class TestSecurityVulnerabilities:
     """Test SQL injection and other security vulnerabilities"""
 
+    @patch('main.get_table_columns')
     @patch('main.get_db_connection')
-    def test_sql_injection_in_table_name(self, mock_get_conn):
-        """Test SQL injection attempt in table name"""
-        # This test documents the CURRENT vulnerability
-        # After refactoring, this should be blocked
-
-        mock_cursor = MagicMock()
-        mock_cursor.fetchall.return_value = []
-
+    def test_sql_injection_in_table_name(self, mock_get_conn, mock_get_columns):
+        """Test SQL injection attempt in table name is blocked"""
+        mock_get_columns.return_value = ["id"]
         mock_conn = MagicMock()
-        mock_conn.cursor.return_value = mock_cursor
-        mock_get_conn.return_value = mock_conn
+        mock_conn.cursor.return_value = MagicMock()
+        mock_get_conn.return_value.__enter__.return_value = mock_conn
 
         # SQL injection attempts
         injection_attempts = [
@@ -210,8 +230,7 @@ class TestSecurityVulnerabilities:
 
         for injection in injection_attempts:
             response = client.get(f"/db/schema/{injection}")
-            # Currently this might execute malicious SQL (vulnerability)
-            # After fix, should return 400 or 403
+            assert response.status_code in [400, 403]
 
     @patch('main.get_db_connection')
     def test_sql_injection_in_sample_limit(self, mock_get_conn):
@@ -222,11 +241,11 @@ class TestSecurityVulnerabilities:
 
         mock_conn = MagicMock()
         mock_conn.cursor.return_value = mock_cursor
-        mock_get_conn.return_value = mock_conn
+        mock_get_conn.return_value.__enter__.return_value = mock_conn
 
         # SQL injection through limit
         response = client.get("/db/sample/users?limit=10; DROP TABLE users")
-        # Should handle or reject malicious input
+        assert response.status_code == 422
 
     @patch('main.get_db_connection')
     def test_dangerous_query_execution(self, mock_get_conn):
@@ -237,7 +256,7 @@ class TestSecurityVulnerabilities:
 
         mock_conn = MagicMock()
         mock_conn.cursor.return_value = mock_cursor
-        mock_get_conn.return_value = mock_conn
+        mock_get_conn.return_value.__enter__.return_value = mock_conn
 
         dangerous_queries = [
             "DROP TABLE users",
@@ -247,9 +266,8 @@ class TestSecurityVulnerabilities:
         ]
 
         for dangerous_query in dangerous_queries:
-            response = client.post("/db/execute", params={"query": dangerous_query})
-            # Currently these will execute (CRITICAL vulnerability)
-            # After fix, should be blocked or require authentication
+            response = client.post("/db/execute", json={"query": dangerous_query})
+            assert response.status_code == 422
 
 
 class TestPerformance:
@@ -267,9 +285,12 @@ class TestPerformance:
 
         mock_conn = MagicMock()
         mock_conn.cursor.return_value = mock_cursor
-        mock_get_conn.return_value = mock_conn
+        mock_get_conn.return_value.__enter__.return_value = mock_conn
 
-        response = client.post("/db/execute", params={"query": "SELECT * FROM users"})
+        response = client.post(
+            "/db/execute",
+            json={"table": "users", "columns": ["id", "name"], "limit": 10000, "offset": 0},
+        )
         assert response.status_code == 200
 
         # Should handle large result set
@@ -282,7 +303,7 @@ class TestPerformance:
         mock_cursor = MagicMock()
         mock_cursor.fetchall.return_value = []
         mock_conn.cursor.return_value = mock_cursor
-        mock_get_conn.return_value = mock_conn
+        mock_get_conn.return_value.__enter__.return_value = mock_conn
 
         response = client.get("/db/tables")
         assert response.status_code == 200
@@ -300,7 +321,7 @@ class TestIntegration:
         mock_cursor = MagicMock()
         mock_conn = MagicMock()
         mock_conn.cursor.return_value = mock_cursor
-        mock_get_conn.return_value = mock_conn
+        mock_get_conn.return_value.__enter__.return_value = mock_conn
 
         # List tables
         mock_cursor.fetchall.return_value = [{"name": "users"}]

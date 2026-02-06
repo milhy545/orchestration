@@ -5,6 +5,8 @@ PostgreSQL MCP Security Tests
 Tests for SQL injection prevention and security controls.
 """
 import pytest
+
+pytest.importorskip("fastapi")
 from fastapi.testclient import TestClient
 import sys
 import os
@@ -12,7 +14,7 @@ import os
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from main import app, validate_identifier, validate_query_safety, validate_schema_name
+from main import app, validate_identifier, validate_schema_name
 
 client = TestClient(app)
 
@@ -63,75 +65,6 @@ class TestIdentifierValidation:
             validate_identifier("123table")
 
 
-class TestQueryValidation:
-    """Test SQL query validation"""
-
-    def test_valid_select_query(self):
-        """Test that valid SELECT queries pass validation"""
-        validate_query_safety("SELECT * FROM users")
-        validate_query_safety("SELECT id, name FROM users WHERE id = 1")
-        validate_query_safety("  SELECT count(*) FROM orders  ")
-
-    def test_query_too_long(self):
-        """Test that queries over max length are rejected"""
-        long_query = "SELECT " + ("a," * 5000) + "1"
-        with pytest.raises(Exception) as exc_info:
-            validate_query_safety(long_query)
-        assert "too long" in str(exc_info.value.detail)
-
-    def test_blocked_keywords(self):
-        """Test that queries with blocked keywords are rejected"""
-        # DROP
-        with pytest.raises(Exception) as exc_info:
-            validate_query_safety("DROP TABLE users")
-        assert "forbidden keyword" in str(exc_info.value.detail).lower()
-
-        # TRUNCATE
-        with pytest.raises(Exception):
-            validate_query_safety("TRUNCATE TABLE users")
-
-        # ALTER
-        with pytest.raises(Exception):
-            validate_query_safety("ALTER TABLE users ADD COLUMN email VARCHAR(255)")
-
-        # CREATE
-        with pytest.raises(Exception):
-            validate_query_safety("CREATE TABLE new_table (id INT)")
-
-        # GRANT
-        with pytest.raises(Exception):
-            validate_query_safety("GRANT ALL ON users TO public")
-
-        # REVOKE
-        with pytest.raises(Exception):
-            validate_query_safety("REVOKE ALL ON users FROM public")
-
-    def test_non_select_operations(self):
-        """Test that non-SELECT operations are rejected"""
-        with pytest.raises(Exception):
-            validate_query_safety("INSERT INTO users VALUES (1, 'test')")
-
-        with pytest.raises(Exception):
-            validate_query_safety("UPDATE users SET name = 'hacked'")
-
-        with pytest.raises(Exception):
-            validate_query_safety("DELETE FROM users")
-
-    def test_sql_injection_attempts(self):
-        """Test that SQL injection attempts are blocked"""
-        # Classic SQL injection
-        with pytest.raises(Exception):
-            validate_query_safety("SELECT * FROM users WHERE id = 1; DROP TABLE users--")
-
-        # Comment-based injection
-        with pytest.raises(Exception):
-            validate_query_safety("SELECT * FROM users -- DROP TABLE sensitive")
-
-        # UNION-based injection (should fail on DROP keyword)
-        with pytest.raises(Exception):
-            validate_query_safety("SELECT * FROM users UNION SELECT * FROM admin; DROP TABLE users--")
-
-
 class TestSchemaNameValidation:
     """Test schema name validation"""
 
@@ -154,50 +87,38 @@ class TestQueryEndpointSecurity:
     """Test /tools/query endpoint security"""
 
     def test_select_query_allowed(self):
-        """Test that SELECT queries are allowed"""
+        """Test that structured SELECT queries are allowed"""
         response = client.post("/tools/query", json={
-            "query": "SELECT 1 as test",
-            "parameters": [],
-            "fetch_mode": "all"
+            "schema_name": "public",
+            "table": "users",
+            "columns": ["id"],
+            "limit": 1,
+            "offset": 0
         })
         # Note: Will fail with 503 if no DB, but should not fail with 403 (forbidden)
-        assert response.status_code in [200, 503]
+        assert response.status_code in [200, 503, 404]
 
-    def test_drop_query_blocked(self):
-        """Test that DROP queries are blocked"""
+    def test_invalid_table_blocked(self):
+        """Test that invalid table names are blocked"""
         response = client.post("/tools/query", json={
-            "query": "DROP TABLE users",
-            "parameters": []
+            "schema_name": "public",
+            "table": "users; DROP TABLE users",
+            "columns": ["id"],
+            "limit": 1,
+            "offset": 0
+        })
+        assert response.status_code in [400, 403]
+
+    def test_invalid_schema_blocked(self):
+        """Test that invalid schema names are blocked"""
+        response = client.post("/tools/query", json={
+            "schema_name": "pg_catalog",
+            "table": "users",
+            "columns": ["id"],
+            "limit": 1,
+            "offset": 0
         })
         assert response.status_code == 403
-        assert "forbidden keyword" in response.json()["detail"].lower()
-
-    def test_update_query_blocked(self):
-        """Test that UPDATE queries are blocked"""
-        response = client.post("/tools/query", json={
-            "query": "UPDATE users SET admin = true",
-            "parameters": []
-        })
-        assert response.status_code == 403
-
-    def test_delete_query_blocked(self):
-        """Test that DELETE queries are blocked"""
-        response = client.post("/tools/query", json={
-            "query": "DELETE FROM users",
-            "parameters": []
-        })
-        assert response.status_code == 403
-
-    def test_create_query_blocked(self):
-        """Test that CREATE queries are blocked"""
-        response = client.post("/tools/query", json={
-            "query": "CREATE TABLE hack (id INT)",
-            "parameters": []
-        })
-        assert response.status_code == 403
-
-    def test_result_limit_enforced(self):
-        """Test that result limits are enforced"""
         response = client.post("/tools/query", json={
             "query": "SELECT 1",
             "parameters": [],
@@ -306,10 +227,8 @@ class TestToolsList:
         # Check that security information is included
         assert "security_note" in data
 
-        # Check that transaction is marked as disabled
         tools = {tool["name"]: tool for tool in data["tools"]}
-        assert "transaction" in tools
-        assert tools["transaction"]["status"] == "disabled"
+        assert "transaction" not in tools
 
         # Check that query tool has security info
         assert "security" in tools["query"]

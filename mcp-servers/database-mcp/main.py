@@ -2,11 +2,11 @@ import re
 import sqlite3
 from contextlib import contextmanager
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple, Literal
 
 from fastapi import FastAPI, HTTPException, Query
 from prometheus_fastapi_instrumentator import Instrumentator
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 app = FastAPI(
     title="Database MCP API",
@@ -26,17 +26,8 @@ MAX_QUERY_RESULTS = 10000  # Maximum rows to return
 DEFAULT_SAMPLE_LIMIT = 10
 MAX_SAMPLE_LIMIT = 1000
 
-# SQL operation whitelist (allowed keywords in queries)
-ALLOWED_OPERATIONS = {"SELECT", "PRAGMA"}
-DANGEROUS_OPERATIONS = {
-    "DROP",
-    "DELETE",
-    "UPDATE",
-    "INSERT",
-    "ALTER",
-    "CREATE",
-    "TRUNCATE",
-}
+# SQL operation whitelist removed in favor of structured SELECT builder
+DEFAULT_SELECT_LIMIT = 100
 
 
 @contextmanager
@@ -79,33 +70,24 @@ def validate_table_name(table_name: str) -> str:
     return table_name
 
 
-def validate_query(query: str) -> None:
-    """
-    Validate SQL query to prevent dangerous operations
+class FilterCondition(BaseModel):
+    column: str
+    op: Literal["=", "!=", ">", ">=", "<", "<=", "like", "in"]
+    value: Any
 
-    Args:
-        query: SQL query to validate
 
-    Raises:
-        HTTPException: If query contains dangerous operations
-    """
-    query_upper = query.upper().strip()
+class OrderBy(BaseModel):
+    column: str
+    direction: Literal["asc", "desc"] = "asc"
 
-    # Check for dangerous operations
-    for dangerous_op in DANGEROUS_OPERATIONS:
-        if dangerous_op in query_upper:
-            raise HTTPException(
-                status_code=403,
-                detail=f"Operation {dangerous_op} is not allowed. Only SELECT queries are permitted.",
-            )
 
-    # Ensure query starts with allowed operation
-    starts_with_allowed = any(query_upper.startswith(op) for op in ALLOWED_OPERATIONS)
-    if not starts_with_allowed:
-        raise HTTPException(
-            status_code=403,
-            detail=f"Query must start with one of: {', '.join(ALLOWED_OPERATIONS)}",
-        )
+class SelectQueryRequest(BaseModel):
+    table: str
+    columns: Optional[List[str]] = None
+    filters: Optional[List[FilterCondition]] = None
+    order_by: Optional[List[OrderBy]] = None
+    limit: int = Field(DEFAULT_SELECT_LIMIT, ge=1, le=MAX_QUERY_RESULTS)
+    offset: int = Field(0, ge=0, le=MAX_QUERY_RESULTS)
 
 
 class QueryResult(BaseModel):
@@ -129,6 +111,77 @@ class TableSchema(BaseModel):
     columns: List[ColumnInfo]
 
 
+def get_table_columns(conn: sqlite3.Connection, table_name: str) -> List[str]:
+    cursor = conn.cursor()
+    # lgtm[py/sql-injection] - table_name is validated by regex
+    cursor.execute(f'PRAGMA table_info("{table_name}");')
+    columns = [row["name"] for row in cursor.fetchall()]
+    if not columns:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Table {table_name} not found or has no columns.",
+        )
+    return columns
+
+
+def build_select_query(
+    request: SelectQueryRequest, table_name: str, allowed_columns: List[str]
+) -> Tuple[str, List[Any], List[str]]:
+    selected_columns = request.columns or allowed_columns
+    for col in selected_columns:
+        if col not in allowed_columns:
+            raise HTTPException(status_code=400, detail=f"Unknown column: {col}")
+
+    columns_sql = ", ".join(f'"{col}"' for col in selected_columns)
+    sql = f'SELECT {columns_sql} FROM "{table_name}"'
+    params: List[Any] = []
+
+    if request.filters:
+        filter_clauses = []
+        for condition in request.filters:
+            if condition.column not in allowed_columns:
+                raise HTTPException(
+                    status_code=400, detail=f"Unknown filter column: {condition.column}"
+                )
+            if condition.op == "in":
+                if not isinstance(condition.value, list) or not condition.value:
+                    raise HTTPException(
+                        status_code=400, detail="IN operator requires a non-empty list"
+                    )
+                placeholders = ", ".join(["?"] * len(condition.value))
+                filter_clauses.append(f'"{condition.column}" IN ({placeholders})')
+                params.extend(condition.value)
+            elif condition.op == "like":
+                if not isinstance(condition.value, str):
+                    raise HTTPException(
+                        status_code=400, detail="LIKE operator requires string value"
+                    )
+                filter_clauses.append(f'"{condition.column}" LIKE ?')
+                params.append(condition.value)
+            else:
+                filter_clauses.append(f'"{condition.column}" {condition.op} ?')
+                params.append(condition.value)
+        if filter_clauses:
+            sql += " WHERE " + " AND ".join(filter_clauses)
+
+    if request.order_by:
+        order_clauses = []
+        for order in request.order_by:
+            if order.column not in allowed_columns:
+                raise HTTPException(
+                    status_code=400, detail=f"Unknown order column: {order.column}"
+                )
+            order_clauses.append(f'"{order.column}" {order.direction.upper()}')
+        if order_clauses:
+            sql += " ORDER BY " + ", ".join(order_clauses)
+
+    sql += " LIMIT ? OFFSET ?"
+    params.append(request.limit)
+    params.append(request.offset)
+
+    return sql, params, selected_columns
+
+
 @app.get("/health")
 async def health():
     """Health check endpoint"""
@@ -143,54 +196,42 @@ async def health():
                 "timestamp": datetime.now().isoformat(),
             }
     except Exception as e:
-        raise HTTPException(status_code=503, detail=f"Database unavailable: {str(e)}")
+        raise HTTPException(status_code=503, detail="Database unavailable")
 
 
 @app.post("/db/execute", response_model=QueryResult)
-async def execute_query(
-    query: str,
-    params: Optional[List[Any]] = None,
-    max_rows: int = Query(
-        1000, ge=1, le=MAX_QUERY_RESULTS, description="Maximum rows to return"
-    ),
-):
+async def execute_query(request: SelectQueryRequest):
     """
-    Execute SQL SELECT query on database with security validation.
-    Only SELECT and PRAGMA queries are allowed.
+    Execute structured SELECT query on database with strict validation.
     """
-    if params is None:
-        params = []
-
     try:
-        # Validate query for dangerous operations
-        validate_query(query)
+        validated_table = validate_table_name(request.table)
 
         with get_db_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute(query, params)
-
-            columns = (
-                [description[0] for description in cursor.description]
-                if cursor.description
-                else []
+            allowed_columns = get_table_columns(conn, validated_table)
+            sql, params, selected_columns = build_select_query(
+                request, validated_table, allowed_columns
             )
+            cursor = conn.cursor()
+            # lgtm[py/sql-injection] - SQL is built from validated identifiers and parameterized values
+            cursor.execute(sql, params)
 
-            # Fetch with limit to prevent memory issues
-            all_rows = cursor.fetchall()
-            total_rows = len(all_rows)
-            truncated = total_rows > max_rows
-            rows = [list(row) for row in all_rows[:max_rows]]
+            rows = [list(row) for row in cursor.fetchall()]
+            truncated = len(rows) >= request.limit
 
             return QueryResult(
-                columns=columns, rows=rows, row_count=total_rows, truncated=truncated
+                columns=selected_columns,
+                rows=rows,
+                row_count=len(rows),
+                truncated=truncated,
             )
 
     except HTTPException:
         raise
     except sqlite3.Error as e:
-        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+        raise HTTPException(status_code=500, detail="Database error")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Query execution failed: {str(e)}")
+        raise HTTPException(status_code=500, detail="Query execution failed")
 
 
 @app.get("/db/tables", response_model=List[TableInfo])
@@ -207,9 +248,9 @@ async def list_tables():
             tables = [TableInfo(name=row["name"]) for row in cursor.fetchall()]
             return tables
     except sqlite3.Error as e:
-        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+        raise HTTPException(status_code=500, detail="Database error")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to list tables: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to list tables")
 
 
 @app.get("/db/schema/{table_name}", response_model=TableSchema)
@@ -242,11 +283,9 @@ async def describe_table(table_name: str):
     except HTTPException:
         raise
     except sqlite3.Error as e:
-        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+        raise HTTPException(status_code=500, detail="Database error")
     except Exception as e:
-        raise HTTPException(
-            status_code=500, detail=f"Failed to get table schema: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail="Failed to get table schema")
 
 
 @app.get("/db/sample/{table_name}", response_model=QueryResult)
@@ -289,8 +328,6 @@ async def get_sample_data(
     except HTTPException:
         raise
     except sqlite3.Error as e:
-        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+        raise HTTPException(status_code=500, detail="Database error")
     except Exception as e:
-        raise HTTPException(
-            status_code=500, detail=f"Failed to get sample data: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail="Failed to get sample data")

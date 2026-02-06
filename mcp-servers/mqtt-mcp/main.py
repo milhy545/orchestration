@@ -130,7 +130,7 @@ class MQTTMCPServer:
 
         except Exception as e:
             logger.error(f"Error publishing message: {e}")
-            return {"success": False, "error": str(e)}
+            return {"success": False, "error": "publish failed"}
 
     async def subscribe_topic(self, topic: str, qos: int = 0) -> Dict[str, Any]:
         """Subscribe to MQTT topic"""
@@ -155,7 +155,7 @@ class MQTTMCPServer:
 
         except Exception as e:
             logger.error(f"Error subscribing to topic: {e}")
-            return {"success": False, "error": str(e)}
+            return {"success": False, "error": "subscribe failed"}
 
     async def get_mqtt_status(self) -> Dict[str, Any]:
         """Get MQTT broker connection status"""
@@ -182,7 +182,8 @@ class MQTTMCPServer:
                 return {"all_topics": all_messages, "total_topics": len(all_messages)}
 
         except Exception as e:
-            return {"success": False, "error": str(e)}
+            logger.error(f"Error listing messages: {e}")
+            return {"success": False, "error": "list failed"}
 
 
 # Create FastAPI app

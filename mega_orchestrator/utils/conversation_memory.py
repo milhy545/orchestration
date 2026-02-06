@@ -14,6 +14,7 @@ Features:
 import asyncio
 import logging
 import hashlib
+import secrets
 import json
 import time
 from typing import Dict, List, Optional, Any, Tuple
@@ -345,12 +346,11 @@ class ConversationMemory:
     def _generate_context_id(self, tool: str, args: Dict[str, Any], 
                            session_id: Optional[str] = None) -> str:
         """Generate unique context ID"""
-        content = f"{tool}:{json.dumps(args, sort_keys=True)}:{session_id}:{time.time()}"
-        return hashlib.md5(content.encode()).hexdigest()
+        return secrets.token_hex(16)
         
     def _generate_session_id(self) -> str:
         """Generate unique session ID"""
-        return hashlib.md5(f"{time.time()}:{asyncio.current_task()}".encode()).hexdigest()[:16]
+        return secrets.token_hex(8)
         
     async def _persist_context(self, context: ConversationContext):
         """Persist context to database"""
