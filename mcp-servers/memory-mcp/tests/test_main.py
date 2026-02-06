@@ -15,13 +15,14 @@ from pathlib import Path
 import os
 
 module_path = Path(__file__).resolve().parents[1] / "main.py"
-spec = importlib.util.spec_from_file_location("main", module_path)
+MODULE_NAME = "memory_mcp_main"
+spec = importlib.util.spec_from_file_location(MODULE_NAME, module_path)
 module = importlib.util.module_from_spec(spec)
-sys.modules["main"] = module
+sys.modules[MODULE_NAME] = module
 assert spec.loader is not None
 spec.loader.exec_module(module)
 
-from main import app
+app = module.app
 
 client = TestClient(app)
 
@@ -29,7 +30,7 @@ client = TestClient(app)
 class TestMemoryMCPHealth:
     """Test health check functionality"""
 
-    @patch('main.get_memory_connection')
+    @patch(f"{MODULE_NAME}.get_memory_connection")
     def test_health_check_success(self, mock_get_conn):
         """Test successful health check"""
         mock_conn = MagicMock()
@@ -42,7 +43,7 @@ class TestMemoryMCPHealth:
         assert data["status"] == "healthy"
         assert data["service"] == "memory-mcp"
 
-    @patch('main.get_memory_connection')
+    @patch(f"{MODULE_NAME}.get_memory_connection")
     def test_health_check_failure(self, mock_get_conn):
         """Test health check with database failure"""
         mock_get_conn.side_effect = Exception("Database connection failed")
@@ -54,7 +55,7 @@ class TestMemoryMCPHealth:
 class TestStoreMemory:
     """Test memory storage functionality"""
 
-    @patch('main.get_memory_connection')
+    @patch(f"{MODULE_NAME}.get_memory_connection")
     def test_store_memory_success(self, mock_get_conn):
         """Test successful memory storage"""
         mock_cursor = MagicMock()
@@ -81,7 +82,7 @@ class TestStoreMemory:
         assert data["success"] is True
         assert "memory_id" in data
 
-    @patch('main.get_memory_connection')
+    @patch(f"{MODULE_NAME}.get_memory_connection")
     def test_store_memory_with_metadata(self, mock_get_conn):
         """Test storing memory with metadata"""
         mock_cursor = MagicMock()
@@ -102,7 +103,7 @@ class TestStoreMemory:
         response = client.post("/memory/store", json=memory_data)
         assert response.status_code == 200
 
-    @patch('main.get_memory_connection')
+    @patch(f"{MODULE_NAME}.get_memory_connection")
     def test_store_memory_database_error(self, mock_get_conn):
         """Test memory storage with database error"""
         mock_cursor = MagicMock()
@@ -121,7 +122,7 @@ class TestStoreMemory:
 class TestListMemories:
     """Test memory listing functionality"""
 
-    @patch('main.get_memory_connection')
+    @patch(f"{MODULE_NAME}.get_memory_connection")
     def test_list_memories_success(self, mock_get_conn):
         """Test successful memory listing"""
         mock_cursor = MagicMock()
@@ -157,7 +158,7 @@ class TestListMemories:
         assert len(data) == 2
         assert data[0]["content"] == "Memory 1"
 
-    @patch('main.get_memory_connection')
+    @patch(f"{MODULE_NAME}.get_memory_connection")
     def test_list_memories_with_pagination(self, mock_get_conn):
         """Test memory listing with pagination"""
         mock_cursor = MagicMock()
@@ -179,7 +180,7 @@ class TestListMemories:
 class TestSearchMemories:
     """Test memory search functionality"""
 
-    @patch('main.get_memory_connection')
+    @patch(f"{MODULE_NAME}.get_memory_connection")
     def test_search_memories_success(self, mock_get_conn):
         """Test successful memory search"""
         mock_cursor = MagicMock()
@@ -206,7 +207,7 @@ class TestSearchMemories:
         assert len(data) == 1
         assert "search term" in data[0]["content"]
 
-    @patch('main.get_memory_connection')
+    @patch(f"{MODULE_NAME}.get_memory_connection")
     def test_search_memories_empty_result(self, mock_get_conn):
         """Test memory search with no results"""
         mock_cursor = MagicMock()
@@ -226,7 +227,7 @@ class TestSearchMemories:
 class TestDeleteMemory:
     """Test memory deletion functionality"""
 
-    @patch('main.get_memory_connection')
+    @patch(f"{MODULE_NAME}.get_memory_connection")
     def test_delete_memory_success(self, mock_get_conn):
         """Test successful memory deletion"""
         mock_cursor = MagicMock()
@@ -242,7 +243,7 @@ class TestDeleteMemory:
         data = response.json()
         assert data["success"] is True
 
-    @patch('main.get_memory_connection')
+    @patch(f"{MODULE_NAME}.get_memory_connection")
     def test_delete_memory_not_found(self, mock_get_conn):
         """Test deleting non-existent memory"""
         mock_cursor = MagicMock()
@@ -259,7 +260,7 @@ class TestDeleteMemory:
 class TestMemoryStats:
     """Test memory statistics functionality"""
 
-    @patch('main.get_memory_connection')
+    @patch(f"{MODULE_NAME}.get_memory_connection")
     def test_memory_stats_success(self, mock_get_conn):
         """Test getting memory statistics"""
         mock_cursor = MagicMock()
@@ -286,7 +287,7 @@ class TestMemoryStats:
 class TestSecurity:
     """Test security validations"""
 
-    @patch('main.get_memory_connection')
+    @patch(f"{MODULE_NAME}.get_memory_connection")
     def test_sql_injection_protection_in_search(self, mock_get_conn):
         """Test that search uses parameterized queries"""
         mock_cursor = MagicMock()
@@ -310,7 +311,7 @@ class TestSecurity:
 class TestPerformance:
     """Test performance and resource limits"""
 
-    @patch('main.get_memory_connection')
+    @patch(f"{MODULE_NAME}.get_memory_connection")
     def test_large_limit_parameter(self, mock_get_conn):
         """Test handling of very large limit parameter"""
         mock_cursor = MagicMock()
@@ -328,7 +329,7 @@ class TestPerformance:
 class TestConnectionManagement:
     """Test database connection management"""
 
-    @patch('main.get_memory_connection')
+    @patch(f"{MODULE_NAME}.get_memory_connection")
     def test_connection_closed_on_success(self, mock_get_conn):
         """Test that connection is closed after successful operation"""
         mock_cursor = MagicMock()
@@ -344,7 +345,7 @@ class TestConnectionManagement:
         # Verify connection was closed
         mock_conn.close.assert_called_once()
 
-    @patch('main.get_memory_connection')
+    @patch(f"{MODULE_NAME}.get_memory_connection")
     def test_connection_closed_on_error(self, mock_get_conn):
         """Test that connection is closed even on error"""
         mock_cursor = MagicMock()

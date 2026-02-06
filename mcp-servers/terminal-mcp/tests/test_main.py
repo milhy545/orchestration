@@ -15,13 +15,14 @@ from pathlib import Path
 import os
 
 module_path = Path(__file__).resolve().parents[1] / "main.py"
-spec = importlib.util.spec_from_file_location("main", module_path)
+MODULE_NAME = "terminal_mcp_main"
+spec = importlib.util.spec_from_file_location(MODULE_NAME, module_path)
 module = importlib.util.module_from_spec(spec)
-sys.modules["main"] = module
+sys.modules[MODULE_NAME] = module
 assert spec.loader is not None
 spec.loader.exec_module(module)
 
-from main import app
+app = module.app
 
 client = TestClient(app)
 
@@ -139,16 +140,18 @@ class TestSecurityVulnerabilities:
         ]
 
         for dangerous_cmd in dangerous_commands:
+            mock_run.reset_mock()
             command_data = {
                 "command": dangerous_cmd,
                 "cwd": "/tmp"
             }
 
-        response = client.post("/command", json=command_data)
-        assert response.status_code == 200
-        mock_run.assert_called()
-        call_args = mock_run.call_args
-        assert call_args[1]["shell"] is False
+            response = client.post("/command", json=command_data)
+            assert response.status_code in [200, 403]
+            if response.status_code == 200:
+                mock_run.assert_called()
+                call_args = mock_run.call_args
+                assert call_args[1]["shell"] is False
 
     @patch('subprocess.run')
     def test_path_traversal_attempt(self, mock_run):

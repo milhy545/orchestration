@@ -13,13 +13,14 @@ import os
 # Add parent directory to path
 
 module_path = Path(__file__).resolve().parents[1] / "main.py"
-spec = importlib.util.spec_from_file_location("main", module_path)
+MODULE_NAME = "webm_transcriber_main"
+spec = importlib.util.spec_from_file_location(MODULE_NAME, module_path)
 module = importlib.util.module_from_spec(spec)
-sys.modules["main"] = module
+sys.modules[MODULE_NAME] = module
 assert spec.loader is not None
 spec.loader.exec_module(module)
 
-from main import app
+app = module.app
 
 client = TestClient(app)
 

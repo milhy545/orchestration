@@ -17,13 +17,14 @@ from pathlib import Path
 import os
 
 module_path = Path(__file__).resolve().parents[1] / "main.py"
-spec = importlib.util.spec_from_file_location("main", module_path)
+MODULE_NAME = "database_mcp_main"
+spec = importlib.util.spec_from_file_location(MODULE_NAME, module_path)
 module = importlib.util.module_from_spec(spec)
-sys.modules["main"] = module
+sys.modules[MODULE_NAME] = module
 assert spec.loader is not None
 spec.loader.exec_module(module)
 
-from main import app
+app = module.app
 
 client = TestClient(app)
 
@@ -40,8 +41,8 @@ class TestDatabaseMCPHealth:
 class TestQueryExecution:
     """Test query execution functionality"""
 
-    @patch('main.get_table_columns')
-    @patch('main.get_db_connection')
+    @patch(f"{MODULE_NAME}.get_table_columns")
+    @patch(f"{MODULE_NAME}.get_db_connection")
     def test_execute_select_query(self, mock_get_conn, mock_get_columns):
         """Test successful SELECT query"""
         mock_get_columns.return_value = ["id", "name"]
@@ -67,8 +68,8 @@ class TestQueryExecution:
         assert data["columns"] == ["id", "name"]
         assert len(data["rows"]) == 2
 
-    @patch('main.get_table_columns')
-    @patch('main.get_db_connection')
+    @patch(f"{MODULE_NAME}.get_table_columns")
+    @patch(f"{MODULE_NAME}.get_db_connection")
     def test_execute_query_with_params(self, mock_get_conn, mock_get_columns):
         """Test filtered query"""
         mock_get_columns.return_value = ["id", "name"]
@@ -91,8 +92,8 @@ class TestQueryExecution:
         )
         assert response.status_code == 200
 
-    @patch('main.get_table_columns')
-    @patch('main.get_db_connection')
+    @patch(f"{MODULE_NAME}.get_table_columns")
+    @patch(f"{MODULE_NAME}.get_db_connection")
     def test_execute_query_database_error(self, mock_get_conn, mock_get_columns):
         """Test database error handling"""
         mock_get_columns.return_value = ["id", "name"]
@@ -113,7 +114,7 @@ class TestQueryExecution:
 class TestListTables:
     """Test table listing functionality"""
 
-    @patch('main.get_db_connection')
+    @patch(f"{MODULE_NAME}.get_db_connection")
     def test_list_tables_success(self, mock_get_conn):
         """Test successful table listing"""
         mock_cursor = MagicMock()
@@ -130,7 +131,7 @@ class TestListTables:
         assert len(data) == 2
         assert data[0]["name"] == "users"
 
-    @patch('main.get_db_connection')
+    @patch(f"{MODULE_NAME}.get_db_connection")
     def test_list_tables_empty(self, mock_get_conn):
         """Test listing when no tables exist"""
         mock_cursor = MagicMock()
@@ -148,7 +149,7 @@ class TestListTables:
 class TestTableSchema:
     """Test table schema functionality"""
 
-    @patch('main.get_db_connection')
+    @patch(f"{MODULE_NAME}.get_db_connection")
     def test_describe_table_success(self, mock_get_conn):
         """Test successful table description"""
         mock_cursor = MagicMock()
@@ -168,7 +169,7 @@ class TestTableSchema:
         assert data["table_name"] == "users"
         assert len(data["columns"]) == 2
 
-    @patch('main.get_db_connection')
+    @patch(f"{MODULE_NAME}.get_db_connection")
     def test_describe_nonexistent_table(self, mock_get_conn):
         """Test describing non-existent table"""
         mock_cursor = MagicMock()
@@ -185,7 +186,7 @@ class TestTableSchema:
 class TestSampleData:
     """Test sample data functionality"""
 
-    @patch('main.get_db_connection')
+    @patch(f"{MODULE_NAME}.get_db_connection")
     def test_get_sample_data_success(self, mock_get_conn):
         """Test getting sample data"""
         mock_cursor = MagicMock()
@@ -202,7 +203,7 @@ class TestSampleData:
         data = response.json()
         assert len(data["rows"]) == 2
 
-    @patch('main.get_db_connection')
+    @patch(f"{MODULE_NAME}.get_db_connection")
     def test_get_sample_data_with_limit(self, mock_get_conn):
         """Test getting sample data with custom limit"""
         mock_cursor = MagicMock()
@@ -220,8 +221,8 @@ class TestSampleData:
 class TestSecurityVulnerabilities:
     """Test SQL injection and other security vulnerabilities"""
 
-    @patch('main.get_table_columns')
-    @patch('main.get_db_connection')
+    @patch(f"{MODULE_NAME}.get_table_columns")
+    @patch(f"{MODULE_NAME}.get_db_connection")
     def test_sql_injection_in_table_name(self, mock_get_conn, mock_get_columns):
         """Test SQL injection attempt in table name is blocked"""
         mock_get_columns.return_value = ["id"]
@@ -241,7 +242,7 @@ class TestSecurityVulnerabilities:
             response = client.get(f"/db/schema/{injection}")
             assert response.status_code in [400, 403]
 
-    @patch('main.get_db_connection')
+    @patch(f"{MODULE_NAME}.get_db_connection")
     def test_sql_injection_in_sample_limit(self, mock_get_conn):
         """Test SQL injection in limit parameter"""
         mock_cursor = MagicMock()
@@ -256,7 +257,7 @@ class TestSecurityVulnerabilities:
         response = client.get("/db/sample/users?limit=10; DROP TABLE users")
         assert response.status_code == 422
 
-    @patch('main.get_db_connection')
+    @patch(f"{MODULE_NAME}.get_db_connection")
     def test_dangerous_query_execution(self, mock_get_conn):
         """Test execution of dangerous queries"""
         mock_cursor = MagicMock()
@@ -282,7 +283,7 @@ class TestSecurityVulnerabilities:
 class TestPerformance:
     """Test performance and resource limits"""
 
-    @patch('main.get_db_connection')
+    @patch(f"{MODULE_NAME}.get_db_connection")
     def test_large_result_set_handling(self, mock_get_conn):
         """Test handling of large result sets"""
         # Simulate large result set (10000 rows)
@@ -305,7 +306,7 @@ class TestPerformance:
         # Should handle large result set
         # But ideally should have pagination or limit
 
-    @patch('main.get_db_connection')
+    @patch(f"{MODULE_NAME}.get_db_connection")
     def test_connection_cleanup(self, mock_get_conn):
         """Test that connections are properly closed"""
         mock_conn = MagicMock()
@@ -324,7 +325,7 @@ class TestPerformance:
 class TestIntegration:
     """Integration tests"""
 
-    @patch('main.get_db_connection')
+    @patch(f"{MODULE_NAME}.get_db_connection")
     def test_complete_workflow(self, mock_get_conn):
         """Test complete database workflow"""
         mock_cursor = MagicMock()
