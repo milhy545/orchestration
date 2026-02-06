@@ -194,7 +194,7 @@ async def health():
                 "database": "SQLite",
                 "timestamp": datetime.now().isoformat(),
             }
-    except Exception as e:
+    except Exception:
         raise HTTPException(status_code=503, detail="Database unavailable")
 
 
@@ -226,9 +226,9 @@ async def execute_query(request: SelectQueryRequest):
 
     except HTTPException:
         raise
-    except sqlite3.Error as e:
+    except sqlite3.Error:
         raise HTTPException(status_code=500, detail="Database error")
-    except Exception as e:
+    except Exception:
         raise HTTPException(status_code=500, detail="Query execution failed")
 
 
@@ -245,9 +245,9 @@ async def list_tables():
             )
             tables = [TableInfo(name=row["name"]) for row in cursor.fetchall()]
             return tables
-    except sqlite3.Error as e:
+    except sqlite3.Error:
         raise HTTPException(status_code=500, detail="Database error")
-    except Exception as e:
+    except Exception:
         raise HTTPException(status_code=500, detail="Failed to list tables")
 
 
@@ -279,9 +279,9 @@ async def describe_table(table_name: str):
 
     except HTTPException:
         raise
-    except sqlite3.Error as e:
+    except sqlite3.Error:
         raise HTTPException(status_code=500, detail="Database error")
-    except Exception as e:
+    except Exception:
         raise HTTPException(status_code=500, detail="Failed to get table schema")
 
 
@@ -323,7 +323,7 @@ async def get_sample_data(
 
     except HTTPException:
         raise
-    except sqlite3.Error as e:
+    except sqlite3.Error:
         raise HTTPException(status_code=500, detail="Database error")
-    except Exception as e:
+    except Exception:
         raise HTTPException(status_code=500, detail="Failed to get sample data")

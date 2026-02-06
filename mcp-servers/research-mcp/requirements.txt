@@ -1,4 +1,4 @@
 fastapi
 uvicorn
 pydantic
-httpxprometheus-fastapi-instrumentator>=6.1.0
+prometheus-fastapi-instrumentator>=6.1.0
