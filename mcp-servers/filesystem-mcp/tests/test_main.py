@@ -11,6 +11,9 @@ import os
 # Import the main app
 import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+if 'main' in sys.modules:
+    del sys.modules['main']
+
 from main import app
 
 client = TestClient(app)
