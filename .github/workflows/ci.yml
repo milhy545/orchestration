@@ -105,9 +105,11 @@ jobs:
           mcp-servers/${{ matrix.service }}/tests/
 
     - name: Upload coverage to Codecov
-      if: steps.test_check.outputs.has_tests == 'true'
+      if: steps.test_check.outputs.has_tests == 'true' && secrets.CODECOV_TOKEN != ''
+      continue-on-error: true
       uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de # v5.5.2
       with:
+        token: ${{ secrets.CODECOV_TOKEN }}
         files: ./coverage-${{ matrix.service }}.xml
         flags: unittests,${{ matrix.service }}
         name: codecov-${{ matrix.service }}
