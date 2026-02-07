@@ -13,9 +13,28 @@ permissions:
   contents: read
 
 jobs:
-  test:
-    name: Run Tests
+  discover-services:
+    name: Discover MCP Services
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      services: ${{ steps.discover.outputs.services }}
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+    - name: Discover service directories
+      id: discover
+      run: |
+        services_json=$(find mcp-servers -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sort | python -c 'import json,sys; print(json.dumps([line.strip() for line in sys.stdin if line.strip()]))')
+        echo "services=$services_json" >> "$GITHUB_OUTPUT"
+
+  test:
+    name: Run Tests (${{ matrix.service }})
+    runs-on: ubuntu-latest
+    needs: discover-services
     permissions:
       contents: read
       actions: write
@@ -23,6 +42,7 @@ jobs:
     strategy:
       matrix:
         python-version: ["3.11"]
+        service: ${{ fromJson(needs.discover-services.outputs.services) }}
 
     steps:
     - name: Harden Runner
@@ -42,7 +62,7 @@ jobs:
       uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
       with:
         path: ~/.cache/pip
-        key: ${{ runner.os }}-pip-${{ hashFiles('requirements-dev.txt') }}
+        key: ${{ runner.os }}-pip-${{ matrix.service }}-${{ hashFiles('requirements-dev.txt', format('mcp-servers/{0}/requirements.txt', matrix.service)) }}
         restore-keys: |
           ${{ runner.os }}-pip-
 
@@ -51,40 +71,49 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements-dev.txt
 
-    - name: Install service dependencies
-      run: |
-        # Install dependencies for all MCP services
-        for service in mcp-servers/*/requirements.txt; do
-          if [ -f "$service" ]; then
-            echo "Installing dependencies for $service..."
-            pip install -r "$service"
-          fi
-        done
+    - name: Install ${{ matrix.service }} dependencies
+      run: pip install -r mcp-servers/${{ matrix.service }}/requirements.txt
 
-    - name: Run pytest with coverage
+    - name: Check if service tests exist
+      id: test_check
+      run: |
+        test_path="mcp-servers/${{ matrix.service }}/tests"
+        if [ -d "$test_path" ] && find "$test_path" -type f -name 'test_*.py' -print -quit | grep -q .; then
+          echo "has_tests=true" >> "$GITHUB_OUTPUT"
+        else
+          echo "has_tests=false" >> "$GITHUB_OUTPUT"
+          echo "No tests found for ${{ matrix.service }}, skipping pytest."
+        fi
+
+    - name: Run pytest with coverage for ${{ matrix.service }}
+      if: steps.test_check.outputs.has_tests == 'true'
       run: |
         pytest \
           --verbose \
-          --cov=mcp-servers \
+          --cov=mcp-servers/${{ matrix.service }} \
           --cov-report=term-missing \
-          --cov-report=xml \
-          --cov-report=html \
+          --cov-report=xml:coverage-${{ matrix.service }}.xml \
+          --cov-report=html:htmlcov-${{ matrix.service }} \
           --cov-fail-under=70 \
-          mcp-servers/*/tests/
+          mcp-servers/${{ matrix.service }}/tests/
 
     - name: Upload coverage to Codecov
+      if: steps.test_check.outputs.has_tests == 'true'
       uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de # v5.5.2
       with:
-        file: ./coverage.xml
-        flags: unittests
-        name: codecov-umbrella
+        file: ./coverage-${{ matrix.service }}.xml
+        flags: unittests,${{ matrix.service }}
+        name: codecov-${{ matrix.service }}
         fail_ci_if_error: false
 
-    - name: Upload coverage HTML report
+    - name: Upload coverage artifacts
+      if: steps.test_check.outputs.has_tests == 'true'
       uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
       with:
-        name: coverage-report
-        path: htmlcov/
+        name: coverage-${{ matrix.service }}
+        path: |
+          coverage-${{ matrix.service }}.xml
+          htmlcov-${{ matrix.service }}/
         retention-days: 30
 
   security-scan:
