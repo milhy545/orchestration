@@ -21,6 +21,92 @@ echo ""
 
 FAILURES=0
 
+compose_check() {
+    local check_type=$1
+    shift
+
+    python3 - "$COMPOSE_FILE" "$check_type" "$@" <<'PY'
+import sys
+import yaml
+
+compose_file = sys.argv[1]
+check_type = sys.argv[2]
+args = sys.argv[3:]
+
+try:
+    with open(compose_file, encoding="utf-8") as f:
+        compose = yaml.safe_load(f) or {}
+except Exception:
+    sys.exit(1)
+
+if not isinstance(compose, dict):
+    sys.exit(1)
+
+services = compose.get("services")
+volumes = compose.get("volumes")
+if not isinstance(services, dict):
+    services = {}
+if not isinstance(volumes, dict):
+    volumes = {}
+
+
+def normalize_list_or_dict(value):
+    if isinstance(value, list):
+        return value
+    if isinstance(value, dict):
+        return list(value.keys())
+    return []
+
+
+def env_has_key(service_env, key):
+    if isinstance(service_env, dict):
+        return key in service_env
+    if isinstance(service_env, list):
+        return any(isinstance(item, str) and item.split("=", 1)[0] == key for item in service_env)
+    return False
+
+
+result = False
+
+if check_type == "service_exists":
+    service = args[0]
+    result = service in services
+elif check_type == "service_has_volume_substring":
+    service, expected = args
+    service_cfg = services.get(service, {})
+    mounts = service_cfg.get("volumes") if isinstance(service_cfg, dict) else []
+    if isinstance(mounts, list):
+        result = any(expected in str(mount) for mount in mounts)
+elif check_type == "volume_exists":
+    volume = args[0]
+    result = volume in volumes
+elif check_type == "service_has_port":
+    service, expected = args
+    service_cfg = services.get(service, {})
+    ports = service_cfg.get("ports") if isinstance(service_cfg, dict) else []
+    if isinstance(ports, list):
+        result = any(str(port) == expected for port in ports)
+elif check_type == "service_depends_on":
+    service, dependency = args
+    service_cfg = services.get(service, {})
+    depends_on = service_cfg.get("depends_on") if isinstance(service_cfg, dict) else []
+    deps = normalize_list_or_dict(depends_on)
+    result = dependency in deps
+elif check_type == "service_has_env_key":
+    service, env_key = args
+    service_cfg = services.get(service, {})
+    environment = service_cfg.get("environment") if isinstance(service_cfg, dict) else []
+    result = env_has_key(environment, env_key)
+elif check_type == "service_on_network":
+    service, network = args
+    service_cfg = services.get(service, {})
+    networks = service_cfg.get("networks") if isinstance(service_cfg, dict) else []
+    result = network in normalize_list_or_dict(networks)
+
+sys.exit(0 if result else 1)
+PY
+}
+
 # Test 1: Validate docker-compose.yml syntax
 echo "Test 1: Validating docker-compose.yml syntax..."
 if python3 -c "import yaml; yaml.safe_load(open('$COMPOSE_FILE'))" 2>/dev/null; then
@@ -36,7 +122,7 @@ echo "Test 2: Checking monitoring services are defined..."
 
 SERVICES=("prometheus" "grafana" "loki" "promtail")
 for service in "${SERVICES[@]}"; do
-    if grep -q "^  $service:" "$COMPOSE_FILE"; then
+    if compose_check service_exists "$service"; then
         echo -e "${GREEN}✓${NC} Service '$service' is defined"
     else
         echo -e "${RED}✗${NC} Service '$service' is NOT defined"
@@ -49,7 +135,7 @@ echo ""
 echo "Test 3: Checking volume mounts..."
 
 # Prometheus volume
-if grep -A10 "^  prometheus:" "$COMPOSE_FILE" | grep -q "monitoring/prometheus/prometheus.yml"; then
+if compose_check service_has_volume_substring "prometheus" "monitoring/prometheus/prometheus.yml"; then
     echo -e "${GREEN}✓${NC} Prometheus config volume is mounted"
 else
     echo -e "${RED}✗${NC} Prometheus config volume is NOT mounted"
@@ -57,7 +143,7 @@ else
 fi
 
 # Grafana provisioning volume
-if grep -A10 "^  grafana:" "$COMPOSE_FILE" | grep -q "monitoring/grafana/provisioning"; then
+if compose_check service_has_volume_substring "grafana" "monitoring/grafana/provisioning"; then
     echo -e "${GREEN}✓${NC} Grafana provisioning volume is mounted"
 else
     echo -e "${RED}✗${NC} Grafana provisioning volume is NOT mounted"
@@ -65,7 +151,7 @@ else
 fi
 
 # Loki config volume
-if grep -A10 "^  loki:" "$COMPOSE_FILE" | grep -q "monitoring/loki/loki-config.yml"; then
+if compose_check service_has_volume_substring "loki" "monitoring/loki/loki-config.yml"; then
     echo -e "${GREEN}✓${NC} Loki config volume is mounted"
 else
     echo -e "${RED}✗${NC} Loki config volume is NOT mounted"
@@ -73,7 +159,7 @@ else
 fi
 
 # Promtail config volume
-if grep -A10 "^  promtail:" "$COMPOSE_FILE" | grep -q "monitoring/promtail/promtail-config.yml"; then
+if compose_check service_has_volume_substring "promtail" "monitoring/promtail/promtail-config.yml"; then
     echo -e "${GREEN}✓${NC} Promtail config volume is mounted"
 else
     echo -e "${RED}✗${NC} Promtail config volume is NOT mounted"
@@ -86,7 +172,7 @@ echo "Test 4: Checking persistent volumes..."
 
 VOLUMES=("prometheus-data" "grafana-data" "loki-data")
 for volume in "${VOLUMES[@]}"; do
-    if grep -q "^  $volume:" "$COMPOSE_FILE"; then
+    if compose_check volume_exists "$volume"; then
         echo -e "${GREEN}✓${NC} Volume '$volume' is defined"
     else
         echo -e "${RED}✗${NC} Volume '$volume' is NOT defined"
@@ -106,7 +192,7 @@ declare -A PORT_MAP=(
 
 for service in "${!PORT_MAP[@]}"; do
     port="${PORT_MAP[$service]}"
-    if grep -A10 "^  $service:" "$COMPOSE_FILE" | grep -q "\"$port\""; then
+    if compose_check service_has_port "$service" "$port"; then
         echo -e "${GREEN}✓${NC} $service port mapping: $port"
     else
         echo -e "${RED}✗${NC} $service port mapping incorrect (expected: $port)"
@@ -119,8 +205,7 @@ echo ""
 echo "Test 6: Checking service dependencies..."
 
 # Grafana should depend on prometheus and loki
-GRAFANA_DEPS=$(grep -A20 "^  grafana:" "$COMPOSE_FILE" | grep -A5 "depends_on:")
-if echo "$GRAFANA_DEPS" | grep -q "prometheus" && echo "$GRAFANA_DEPS" | grep -q "loki"; then
+if compose_check service_depends_on "grafana" "prometheus" && compose_check service_depends_on "grafana" "loki"; then
     echo -e "${GREEN}✓${NC} Grafana depends on prometheus and loki"
 else
     echo -e "${RED}✗${NC} Grafana dependencies are incorrect"
@@ -128,7 +213,7 @@ else
 fi
 
 # Promtail should depend on loki
-if grep -A15 "^  promtail:" "$COMPOSE_FILE" | grep -A5 "depends_on:" | grep -q "loki"; then
+if compose_check service_depends_on "promtail" "loki"; then
     echo -e "${GREEN}✓${NC} Promtail depends on loki"
 else
     echo -e "${RED}✗${NC} Promtail dependency on loki is missing"
@@ -140,14 +225,14 @@ echo ""
 echo "Test 7: Checking environment variables..."
 
 # Grafana admin credentials
-if grep -A15 "^  grafana:" "$COMPOSE_FILE" | grep -q "GF_SECURITY_ADMIN_USER"; then
+if compose_check service_has_env_key "grafana" "GF_SECURITY_ADMIN_USER"; then
     echo -e "${GREEN}✓${NC} Grafana admin user is configured"
 else
     echo -e "${RED}✗${NC} Grafana admin user is NOT configured"
     ((FAILURES++))
 fi
 
-if grep -A15 "^  grafana:" "$COMPOSE_FILE" | grep -q "GF_SECURITY_ADMIN_PASSWORD"; then
+if compose_check service_has_env_key "grafana" "GF_SECURITY_ADMIN_PASSWORD"; then
     echo -e "${GREEN}✓${NC} Grafana admin password is configured"
 else
     echo -e "${RED}✗${NC} Grafana admin password is NOT configured"
@@ -159,7 +244,7 @@ echo ""
 echo "Test 8: Checking network configuration..."
 
 for service in "${SERVICES[@]}"; do
-    if grep -A20 "^  $service:" "$COMPOSE_FILE" | grep -A2 "networks:" | grep -q "mcp-network"; then
+    if compose_check service_on_network "$service" "mcp-network"; then
         echo -e "${GREEN}✓${NC} $service is on mcp-network"
     else
         echo -e "${RED}✗${NC} $service is NOT on mcp-network"
