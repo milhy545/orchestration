@@ -63,14 +63,19 @@ jobs:
 
     - name: Run pytest with coverage
       run: |
+        # Keep coverage scope aligned with collected pytest targets in CI:
+        # MCP service tests exercise code under mcp-servers/, and shared unit
+        # tests in tests/unit target orchestration helpers in mega_orchestrator/.
         pytest \
           --verbose \
           --cov=mcp-servers \
+          --cov=mega_orchestrator \
           --cov-report=term-missing \
           --cov-report=xml \
           --cov-report=html \
           --cov-fail-under=70 \
-          mcp-servers/*/tests/
+          mcp-servers/*/tests/ \
+          tests/unit
 
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de # v5.5.2
