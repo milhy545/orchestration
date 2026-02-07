@@ -548,6 +548,8 @@ async def connection_tool(request: ConnectionRequest) -> Dict[str, Any]:
                     status_code=400, detail=f"Unknown operation: {request.operation}"
                 )
 
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Connection operation failed: {str(e)}")
         raise HTTPException(status_code=500, detail="Connection operation failed")
