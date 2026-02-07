@@ -10,12 +10,13 @@ SECURITY: This service implements strict SQL injection prevention:
 - Query complexity limits
 - Comprehensive logging of operations
 """
+
 import logging
 import os
 import re
 from contextlib import asynccontextmanager
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Tuple, Literal
+from typing import Any, Dict, List, Literal, Optional, Tuple
 
 import asyncpg
 from fastapi import FastAPI, HTTPException

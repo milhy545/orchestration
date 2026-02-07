@@ -28,7 +28,14 @@ jobs:
     - name: Discover service directories
       id: discover
       run: |
-        services_json=$(find mcp-servers -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sort | python -c 'import json,sys; print(json.dumps([line.strip() for line in sys.stdin if line.strip()]))')
+        # Only include Python services (presence of requirements.txt) in the test matrix.
+        # This keeps non-Python folders (e.g. JS utilities) from breaking the Python test job.
+        services_json=$(
+          find mcp-servers -mindepth 2 -maxdepth 2 -type f -name requirements.txt -printf '%h\n' \
+            | xargs -r -n1 basename \
+            | sort \
+            | python -c 'import json,sys; print(json.dumps([line.strip() for line in sys.stdin if line.strip()]))'
+        )
         echo "services=$services_json" >> "$GITHUB_OUTPUT"
 
   test:
@@ -101,7 +108,7 @@ jobs:
       if: steps.test_check.outputs.has_tests == 'true'
       uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de # v5.5.2
       with:
-        file: ./coverage-${{ matrix.service }}.xml
+        files: ./coverage-${{ matrix.service }}.xml
         flags: unittests,${{ matrix.service }}
         name: codecov-${{ matrix.service }}
         fail_ci_if_error: false

@@ -55,8 +55,7 @@ def ensure_table_exists():
     with get_memory_connection() as conn:
         try:
             with conn.cursor() as cursor:
-                cursor.execute(
-                    """
+                cursor.execute("""
                     CREATE TABLE IF NOT EXISTS unified_memory (
                         id SERIAL PRIMARY KEY,
                         content TEXT NOT NULL,
@@ -66,8 +65,7 @@ def ensure_table_exists():
                         timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         metadata JSONB DEFAULT '{}'
                     )
-                """
-                )
+                """)
                 conn.commit()
         except Exception as e:
             conn.rollback()
@@ -278,16 +276,14 @@ async def memory_stats():
     with get_memory_connection() as conn:
         try:
             with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cursor:
-                cursor.execute(
-                    """
+                cursor.execute("""
                     SELECT
                         COUNT(*) as total_memories,
                         AVG(importance) as avg_importance,
                         COUNT(DISTINCT agent) as unique_agents,
                         COUNT(DISTINCT type) as unique_types
                     FROM unified_memory
-                """
-                )
+                """)
                 stats = cursor.fetchone()
                 return {
                     "total_memories": stats["total_memories"],

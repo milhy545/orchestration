@@ -3,6 +3,7 @@
 Redis MCP Service - Cache, session management, pub/sub
 Port: 7022
 """
+
 import json
 import logging
 import os

@@ -2,7 +2,7 @@ import re
 import sqlite3
 from contextlib import contextmanager
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Tuple, Literal
+from typing import Any, Dict, List, Literal, Optional, Tuple
 
 from fastapi import FastAPI, HTTPException, Query
 from prometheus_fastapi_instrumentator import Instrumentator

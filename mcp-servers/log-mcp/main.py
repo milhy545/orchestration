@@ -3,6 +3,7 @@
 Log MCP Service - Log aggregation, analysis, and monitoring
 Port: 7010
 """
+
 import gzip
 import json
 import logging

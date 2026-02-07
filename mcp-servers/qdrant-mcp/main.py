@@ -3,6 +3,7 @@
 Qdrant MCP Service - Vector database operations, embeddings, similarity search
 Port: 7023
 """
+
 import json
 import logging
 import os
