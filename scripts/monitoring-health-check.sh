@@ -41,7 +41,7 @@ args = sys.argv[3:]
 try:
     with open(compose_file, encoding="utf-8") as f:
         compose = yaml.safe_load(f) or {}
-except Exception:
+except (yaml.YAMLError, FileNotFoundError):
     sys.exit(1)
 
 if not isinstance(compose, dict):
