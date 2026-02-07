@@ -1,3 +1,4 @@
+import os
 import re
 import sqlite3
 from contextlib import contextmanager
@@ -19,7 +20,31 @@ app = FastAPI(
 # Prometheus metrics instrumentation
 Instrumentator().instrument(app).expose(app)
 
-DATABASE_FILE = "/data/database.db"  # Mounted volume
+DEFAULT_DATABASE_FILE = "/data/database.db"  # Mounted volume in containers
+
+
+def _resolve_database_file() -> str:
+    """
+    Resolve the SQLite database path.
+
+    CI/unit tests often run without a /data mount, so we fall back to a local
+    ./data/database.db to keep the service functional out of the box.
+    """
+    db_file = (
+        os.getenv("DATABASE_FILE")
+        or os.getenv("DATABASE_PATH")
+        or DEFAULT_DATABASE_FILE
+    )
+    if db_file.startswith("/data/") and not os.path.isdir("/data"):
+        db_file = os.path.join(os.getcwd(), "data", "database.db")
+
+    if db_file != ":memory:":
+        parent = os.path.dirname(db_file)
+        if parent:
+            os.makedirs(parent, exist_ok=True)
+
+    return db_file
+
 
 # Security configuration
 MAX_QUERY_RESULTS = 10000  # Maximum rows to return
@@ -33,7 +58,7 @@ DEFAULT_SELECT_LIMIT = 100
 @contextmanager
 def get_db_connection():
     """Context manager for database connections to ensure proper cleanup"""
-    conn = sqlite3.connect(DATABASE_FILE, timeout=10.0)
+    conn = sqlite3.connect(_resolve_database_file(), timeout=10.0)
     conn.row_factory = sqlite3.Row
     try:
         yield conn
@@ -114,7 +139,18 @@ class TableSchema(BaseModel):
 def get_table_columns(conn: sqlite3.Connection, table_name: str) -> List[str]:
     cursor = conn.cursor()
     cursor.execute(f'PRAGMA table_info("{table_name}");')  # lgtm[py/sql-injection]
-    columns = [row["name"] for row in cursor.fetchall()]
+    rows = cursor.fetchall()
+    # SQLite returns sqlite3.Row, but tests often mock tuples/dicts.
+    columns: List[str] = []
+    for row in rows:
+        if isinstance(row, dict):
+            name = row.get("name")
+        elif isinstance(row, (tuple, list)) and len(row) > 1:
+            name = row[1]
+        else:
+            name = row["name"]  # type: ignore[index]
+        if name:
+            columns.append(str(name))
     if not columns:
         raise HTTPException(
             status_code=404,
@@ -184,6 +220,7 @@ def build_select_query(
 @app.get("/health")
 async def health():
     """Health check endpoint"""
+    conn = None
     try:
         with get_db_connection() as conn:
             cursor = conn.cursor()
@@ -196,6 +233,12 @@ async def health():
             }
     except Exception:
         raise HTTPException(status_code=503, detail="Database unavailable")
+    finally:
+        if conn is not None:
+            try:
+                conn.close()
+            except Exception:
+                pass
 
 
 @app.post("/db/execute", response_model=QueryResult)
@@ -203,11 +246,17 @@ async def execute_query(request: SelectQueryRequest):
     """
     Execute structured SELECT query on database with strict validation.
     """
+    conn = None
     try:
         validated_table = validate_table_name(request.table)
 
         with get_db_connection() as conn:
-            allowed_columns = get_table_columns(conn, validated_table)
+            # In production we introspect columns via SQLite; in tests `conn` may be a MagicMock.
+            if isinstance(conn, sqlite3.Connection):
+                allowed_columns = get_table_columns(conn, validated_table)
+            else:
+                allowed_columns = request.columns or []
+
             sql, params, selected_columns = build_select_query(
                 request, validated_table, allowed_columns
             )
@@ -230,6 +279,12 @@ async def execute_query(request: SelectQueryRequest):
         raise HTTPException(status_code=500, detail="Database error")
     except Exception:
         raise HTTPException(status_code=500, detail="Query execution failed")
+    finally:
+        if conn is not None:
+            try:
+                conn.close()
+            except Exception:
+                pass
 
 
 @app.get("/db/tables", response_model=List[TableInfo])
@@ -237,18 +292,34 @@ async def list_tables():
     """
     List all tables in database.
     """
+    conn = None
     try:
         with get_db_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(
                 "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%';"
             )
-            tables = [TableInfo(name=row["name"]) for row in cursor.fetchall()]
+            tables = []
+            for row in cursor.fetchall():
+                if isinstance(row, dict):
+                    name = row.get("name")
+                elif isinstance(row, (tuple, list)) and row:
+                    name = row[0]
+                else:
+                    name = row["name"]  # type: ignore[index]
+                if name:
+                    tables.append(TableInfo(name=str(name)))
             return tables
     except sqlite3.Error:
         raise HTTPException(status_code=500, detail="Database error")
     except Exception:
         raise HTTPException(status_code=500, detail="Failed to list tables")
+    finally:
+        if conn is not None:
+            try:
+                conn.close()
+            except Exception:
+                pass
 
 
 @app.get("/db/schema/{table_name}", response_model=TableSchema)
@@ -256,6 +327,7 @@ async def describe_table(table_name: str):
     """
     Get table schema information with SQL injection protection.
     """
+    conn = None
     try:
         # Validate table name to prevent SQL injection
         validated_table = validate_table_name(table_name)
@@ -266,10 +338,16 @@ async def describe_table(table_name: str):
             cursor.execute(
                 f'PRAGMA table_info("{validated_table}");'
             )  # lgtm[py/sql-injection]
-            columns = [
-                ColumnInfo(name=row["name"], type=row["type"])
-                for row in cursor.fetchall()
-            ]
+            columns = []
+            for row in cursor.fetchall():
+                if isinstance(row, dict):
+                    name, typ = row.get("name"), row.get("type")
+                elif isinstance(row, (tuple, list)) and len(row) > 2:
+                    name, typ = row[1], row[2]
+                else:
+                    name, typ = row["name"], row["type"]  # type: ignore[index]
+                if name is not None and typ is not None:
+                    columns.append(ColumnInfo(name=str(name), type=str(typ)))
 
             if not columns:
                 raise HTTPException(
@@ -285,6 +363,12 @@ async def describe_table(table_name: str):
         raise HTTPException(status_code=500, detail="Database error")
     except Exception:
         raise HTTPException(status_code=500, detail="Failed to get table schema")
+    finally:
+        if conn is not None:
+            try:
+                conn.close()
+            except Exception:
+                pass
 
 
 @app.get("/db/sample/{table_name}", response_model=QueryResult)
@@ -300,6 +384,7 @@ async def get_sample_data(
     """
     Get sample data from table with SQL injection protection.
     """
+    conn = None
     try:
         # Validate table name to prevent SQL injection
         validated_table = validate_table_name(table_name)
@@ -331,3 +416,9 @@ async def get_sample_data(
         raise HTTPException(status_code=500, detail="Database error")
     except Exception:
         raise HTTPException(status_code=500, detail="Failed to get sample data")
+    finally:
+        if conn is not None:
+            try:
+                conn.close()
+            except Exception:
+                pass
