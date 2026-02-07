@@ -24,6 +24,52 @@ echo ""
 
 ERRORS=0
 WARNINGS=0
+DOCKER_COMPOSE="$PROJECT_ROOT/docker-compose.yml"
+
+compose_check() {
+    local check_type=$1
+    shift
+
+    python3 - "$DOCKER_COMPOSE" "$check_type" "$@" <<'PY'
+import sys
+import yaml
+
+compose_file = sys.argv[1]
+check_type = sys.argv[2]
+args = sys.argv[3:]
+
+try:
+    with open(compose_file, encoding="utf-8") as f:
+        compose = yaml.safe_load(f) or {}
+except Exception:
+    sys.exit(1)
+
+if not isinstance(compose, dict):
+    sys.exit(1)
+
+services = compose.get("services")
+volumes = compose.get("volumes")
+if not isinstance(services, dict):
+    services = {}
+if not isinstance(volumes, dict):
+    volumes = {}
+
+result = False
+
+if check_type == "service_exists":
+    result = args[0] in services
+elif check_type == "volume_exists":
+    result = args[0] in volumes
+elif check_type == "service_has_port":
+    service, expected = args
+    service_cfg = services.get(service, {})
+    ports = service_cfg.get("ports") if isinstance(service_cfg, dict) else []
+    if isinstance(ports, list):
+        result = any(str(port) == expected for port in ports)
+
+sys.exit(0 if result else 1)
+PY
+}
 
 # Function to check file exists
 check_file() {
@@ -157,13 +203,11 @@ echo ""
 echo "4. Checking Docker Compose Configuration"
 echo "-----------------------------------"
 
-DOCKER_COMPOSE="$PROJECT_ROOT/docker-compose.yml"
-
 # Check monitoring services defined
 MONITORING_SERVICES=("prometheus" "grafana" "loki" "promtail")
 
 for service in "${MONITORING_SERVICES[@]}"; do
-    if grep -q "^  $service:" "$DOCKER_COMPOSE"; then
+    if compose_check service_exists "$service"; then
         echo -e "${GREEN}✓${NC} Service defined: $service"
     else
         echo -e "${RED}✗${NC} Service missing: $service"
@@ -175,7 +219,7 @@ done
 VOLUMES=("prometheus-data" "grafana-data" "loki-data")
 
 for volume in "${VOLUMES[@]}"; do
-    if grep -q "  $volume:" "$DOCKER_COMPOSE"; then
+    if compose_check volume_exists "$volume"; then
         echo -e "${GREEN}✓${NC} Volume defined: $volume"
     else
         echo -e "${RED}✗${NC} Volume missing: $volume"
@@ -196,7 +240,7 @@ declare -A EXPECTED_PORTS=(
 
 for service in "${!EXPECTED_PORTS[@]}"; do
     expected="${EXPECTED_PORTS[$service]}"
-    if grep -A 10 "^  $service:" "$DOCKER_COMPOSE" | grep -q "$expected"; then
+    if compose_check service_has_port "$service" "$expected"; then
         echo -e "${GREEN}✓${NC} $service port mapping: $expected"
     else
         echo -e "${RED}✗${NC} $service port mapping incorrect (expected: $expected)"
