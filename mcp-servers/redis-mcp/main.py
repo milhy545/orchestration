@@ -256,6 +256,8 @@ async def cache_tool(request: CacheRequest) -> Dict[str, Any]:
 
         await client.aclose()
 
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Cache operation failed: {str(e)}")
         raise HTTPException(status_code=500, detail="Cache operation failed")
@@ -432,6 +434,8 @@ async def session_tool(request: SessionRequest) -> Dict[str, Any]:
 
         await client.aclose()
 
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Session operation failed: {str(e)}")
         raise HTTPException(status_code=500, detail="Session operation failed")
