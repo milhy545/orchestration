@@ -33,4 +33,4 @@ mkdocs-material==9.5.2
 
 # Utilities
 python-dotenv==1.2.1
-pydantic==2.6.4
+pydantic==2.12.5
