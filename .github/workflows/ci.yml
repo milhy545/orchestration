@@ -95,14 +95,19 @@ jobs:
     - name: Run pytest with coverage for ${{ matrix.service }}
       if: steps.test_check.outputs.has_tests == 'true'
       run: |
+        # Keep coverage scope aligned with collected pytest targets in CI:
+        # MCP service tests exercise code under mcp-servers/, and shared unit
+        # tests in tests/unit target orchestration helpers in mega_orchestrator/.
         pytest \
           --verbose \
           --cov=mcp-servers/${{ matrix.service }} \
+          --cov=mega_orchestrator \
           --cov-report=term-missing \
           --cov-report=xml:coverage-${{ matrix.service }}.xml \
           --cov-report=html:htmlcov-${{ matrix.service }} \
           --cov-fail-under=70 \
-          mcp-servers/${{ matrix.service }}/tests/
+          mcp-servers/${{ matrix.service }}/tests/ \
+          tests/unit
 
     - name: Upload coverage to Codecov
       if: steps.test_check.outputs.has_tests == 'true'
