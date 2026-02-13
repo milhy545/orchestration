@@ -67,27 +67,3 @@ scrape_configs:
           job: varlogs
           __path__: /var/log/*log
 
-# Pipeline stages for parsing logs
-pipeline_stages:
-  # Parse JSON logs from FastAPI
-  - json:
-      expressions:
-        timestamp: time
-        level: level
-        message: message
-        logger: logger
-  # Extract timestamp
-  - timestamp:
-      source: timestamp
-      format: RFC3339Nano
-  # Set log level
-  - labels:
-      level:
-  # Add regex parsing for non-JSON logs
-  - regex:
-      expression: '^(?P<time>\S+) (?P<level>\S+) (?P<message>.*)$'
-  - timestamp:
-      source: time
-      format: '2006-01-02T15:04:05.999999999Z07:00'
-  - labels:
-      level:
