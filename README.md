@@ -25,11 +25,31 @@ To get started with this project, follow these steps:
     git clone <repository-url>
     ```
 2.  **Set up the environment:**
-    - Copy the `.env.example` file to `.env` and customize the environment variables as needed.
+    - Copy `.env.example` to `.env` and customize credentials/API keys.
+    - Confirm path variables used by `docker-compose.yml`:
+      - `PROJECT_ROOT` (repo path visible to Docker daemon)
+      - `DATA_ROOT` (persistent data directory)
+      - `MONITORING_ROOT` (base path containing `monitoring/`)
+      - `HOST_HOME_PATH` (host `/home` mount used by `filesystem-mcp`)
+      - `ZEN_MCP_SERVER_PATH` (build context for `zen-mcp-server`)
 3.  **Run the services:**
     ```bash
-    docker-compose up -d
+    docker compose up -d
     ```
+
+### Portable path notes (Coder/remote Docker daemon)
+
+If your Docker daemon cannot access your workspace path directly (common in Coder or remote-Docker setups), set path variables to daemon-visible locations before starting services.
+
+```bash
+export PROJECT_ROOT=/absolute/path/visible/to/docker-daemon
+export DATA_ROOT=/absolute/path/visible/to/docker-daemon/data
+export MONITORING_ROOT=/absolute/path/visible/to/docker-daemon
+
+docker compose up -d prometheus grafana loki promtail
+```
+
+If monitoring files live only in your workspace filesystem, copy `monitoring/` to a daemon-visible path first, then point `MONITORING_ROOT` there.
 
 ## Services
 
@@ -146,7 +166,7 @@ http://localhost:7032
 
 ### Health Check
 
-Validate monitoring stack configuration:
+Validate monitoring stack configuration (requires `python3` + `PyYAML`):
 
 ```bash
 ./scripts/monitoring-health-check.sh

@@ -8,6 +8,11 @@ echo "Start time: $(date)"
 echo
 
 # Test configuration
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+# shellcheck source=tests/lib/e2e_preflight.sh
+source "$PROJECT_ROOT/tests/lib/e2e_preflight.sh"
+
 ZEN_URL='http://localhost:7000/mcp'
 MEMORY_URL='http://localhost:7005'
 TEST_ID=$(date +%s)
@@ -17,13 +22,13 @@ FAIL_COUNT=0
 # Helper functions
 test_pass() {
     echo "✅ PASS: $1"
-    PASS_COUNT=1
+    PASS_COUNT=$((PASS_COUNT+1))
 }
 
 test_fail() {
     echo "❌ FAIL: $1"
     echo "   Details: $2"
-    FAIL_COUNT=1
+    FAIL_COUNT=$((FAIL_COUNT+1))
 }
 
 measure_time() {
@@ -33,6 +38,14 @@ measure_time() {
     echo $((end - start))
 }
 
+# Preflight checks
+
+e2e_require_cmd curl
+e2e_require_http "ZEN Coordinator health" "http://localhost:7000/health"
+e2e_require_http "Memory MCP health" "http://localhost:7005/health"
+
+echo "✅ Preflight passed: required services are reachable"
+echo
 echo '📝 TEST 1: CREATE (Store Memory via Zen Coordinator)'
 echo '------------------------------------------------'
 

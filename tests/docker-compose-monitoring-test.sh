@@ -14,6 +14,14 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 COMPOSE_FILE="$PROJECT_ROOT/docker-compose.yml"
 
+if ! python3 - <<'PY' >/dev/null 2>&1
+import yaml
+PY
+then
+    echo -e "${RED}⛔ BLOCKED${NC} PyYAML is required (install with: pip install pyyaml)"
+    exit 2
+fi
+
 echo "=========================================="
 echo "  Docker Compose Monitoring Test"
 echo "=========================================="

@@ -8,9 +8,15 @@ echo "Start time: $(date)"
 echo
 
 # Test configuration
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+# shellcheck source=tests/lib/e2e_preflight.sh
+source "$PROJECT_ROOT/tests/lib/e2e_preflight.sh"
+
 ZEN_URL='http://localhost:7000/mcp'
 MEMORY_URL='http://localhost:7005'
 ZEN_BASE='http://localhost:7000'
+DATA_ROOT="${DATA_ROOT:-$PROJECT_ROOT/data}"
 TEST_ID=$(date +%s)
 PASS_COUNT=0
 FAIL_COUNT=0
@@ -34,6 +40,13 @@ security_warn() {
     echo "   Details: $2"
 }
 
+# Preflight checks
+
+e2e_require_cmd curl
+e2e_require_http "ZEN Coordinator health" "http://localhost:7000/health"
+
+echo "✅ Preflight passed: ZEN Coordinator is reachable"
+echo
 echo '🔒 SECURITY TEST 1: API Endpoint Security'
 echo '========================================'
 
@@ -129,8 +142,11 @@ else
 fi
 
 # Check database file permissions
-DB_PERMS=$(ls -la /home/orchestration/data/databases/*.db 2>/dev/null | head -1 | awk '{print $1}')
-if echo "$DB_PERMS" | grep 'rw-r--r--' >/dev/null; then
+DB_DIR="$DATA_ROOT/databases"
+DB_PERMS=$(ls -la "$DB_DIR"/*.db 2>/dev/null | head -1 | awk '{print $1}')
+if [ -z "$DB_PERMS" ]; then
+    security_warn "Database permissions" "No database file found in $DB_DIR"
+elif echo "$DB_PERMS" | grep 'rw-r--r--' >/dev/null; then
     security_warn "Database permissions" "Database files readable by others"
 else
     security_pass "Database file security"

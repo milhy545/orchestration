@@ -45,6 +45,8 @@ downloads/
 eggs/
 .eggs/
 lib/
+!tests/lib/
+!tests/lib/e2e_preflight.sh
 lib64/
 parts/
 sdist/

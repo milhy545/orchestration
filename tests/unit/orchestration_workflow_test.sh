@@ -8,6 +8,11 @@ echo "Start time: $(date)"
 echo
 
 # Test configuration
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+# shellcheck source=tests/lib/e2e_preflight.sh
+source "$PROJECT_ROOT/tests/lib/e2e_preflight.sh"
+
 ZEN_URL='http://localhost:7000/mcp'
 TEST_ID=$(date +%s)
 PASS_COUNT=0
@@ -33,6 +38,13 @@ measure_workflow_time() {
     echo $((end - start))
 }
 
+# Preflight checks
+
+e2e_require_cmd curl
+e2e_require_http "ZEN Coordinator health" "http://localhost:7000/health"
+
+echo "✅ Preflight passed: ZEN Coordinator is reachable"
+echo
 echo '📊 PRE-TEST: Service Discovery'
 echo '=============================='
 

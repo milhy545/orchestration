@@ -52,10 +52,21 @@ The monitoring stack provides:
 
 ```bash
 # Start all monitoring services
-docker-compose up -d prometheus grafana loki promtail
+docker compose up -d prometheus grafana loki promtail
 
 # Or start entire platform including monitoring
-docker-compose up -d
+docker compose up -d
+```
+
+If you run on Coder/remote Docker where daemon cannot read workspace paths directly,
+set `MONITORING_ROOT` (and optionally `PROJECT_ROOT`/`DATA_ROOT`) to daemon-visible absolute paths first:
+
+```bash
+export MONITORING_ROOT=/absolute/path/visible/to/docker-daemon
+export PROJECT_ROOT=/absolute/path/visible/to/docker-daemon
+export DATA_ROOT=/absolute/path/visible/to/docker-daemon/data
+
+docker compose up -d prometheus grafana loki promtail
 ```
 
 ### 2. Access Dashboards
@@ -223,7 +234,7 @@ monitoring/
 
 ### Health Check
 
-Run the monitoring health check script:
+Run the monitoring health check script (requires `python3` + `PyYAML`):
 
 ```bash
 ./scripts/monitoring-health-check.sh
