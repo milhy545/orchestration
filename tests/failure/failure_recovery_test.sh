@@ -8,6 +8,11 @@ echo "Start time: $(date)"
 echo
 
 # Test configuration
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+# shellcheck source=tests/lib/e2e_preflight.sh
+source "$PROJECT_ROOT/tests/lib/e2e_preflight.sh"
+
 ZEN_URL='http://localhost:7000/mcp'
 MEMORY_URL='http://localhost:7005'
 TEST_ID=$(date +%s)
@@ -83,6 +88,23 @@ verify_test_data() {
     fi
 }
 
+# Preflight checks
+
+e2e_require_cmd curl
+e2e_require_cmd docker
+e2e_require_http "ZEN Coordinator health" "http://localhost:7000/health"
+e2e_require_http "Memory MCP health" "http://localhost:7005/health"
+
+MEMORY_CONTAINER="$(e2e_require_container "Memory MCP" mcp-memory memory-mcp-prod)"
+ZEN_CONTAINER="$(e2e_detect_container zen-coordinator zen-coordinator-prod || true)"
+
+if [ -n "$ZEN_CONTAINER" ]; then
+  echo "✅ Preflight passed: using containers memory=$MEMORY_CONTAINER, zen=$ZEN_CONTAINER"
+else
+  echo "✅ Preflight passed: using memory container=$MEMORY_CONTAINER and host-process fallback for ZEN"
+fi
+
+echo
 echo '📊 PRE-FAILURE: System Health Baseline'
 echo '====================================='
 
@@ -123,8 +145,7 @@ echo '🚨 FAILURE TEST 1: Memory MCP Container Restart'
 echo '=============================================='
 echo 'Target: Simulate Memory MCP service failure and recovery'
 
-# Get Memory MCP container ID
-MEMORY_CONTAINER=$(docker ps --format '{{.Names}}' | grep memory-mcp-prod)
+# Memory container was resolved in preflight
 if [ -z "$MEMORY_CONTAINER" ]; then
     test_fail "Memory container identification" "Memory MCP container not found"
 else
@@ -209,74 +230,92 @@ echo '🚨 FAILURE TEST 2: Zen Coordinator Restart'
 echo '=========================================='
 echo 'Target: Test orchestration layer resilience'
 
-# Get Zen Coordinator process
-ZEN_PID=$(ps aux | grep zen_coordinator.py | grep -v grep | awk '{print $2}')
-if [ -z "$ZEN_PID" ]; then
-    test_fail "Zen Coordinator identification" "Zen Coordinator process not found"
+# Store pre-restart data via direct Memory MCP
+
+echo "💾 Storing data via direct MCP before Zen restart..."
+DIRECT_STORE_RESULT=$(curl -s -X POST "http://localhost:7005/memory/store" \
+    -H 'Content-Type: application/json' \
+    -d '{"content": "Direct store before Zen restart - TEST_ID: '${TEST_ID}'", "metadata": {"direct_store": true, "test_id": "'${TEST_ID}'"}}')
+
+if echo "$DIRECT_STORE_RESULT" | grep -q '"success": true'; then
+    DIRECT_MEMORY_ID=$(echo "$DIRECT_STORE_RESULT" | grep -o '"memory_id": [0-9]*' | grep -o '[0-9]*')
+    test_pass "Direct MCP storage before restart - ID: $DIRECT_MEMORY_ID"
 else
-    echo "🔍 Target process: PID $ZEN_PID"
-    
-    # Store pre-restart data via direct Memory MCP
-    echo "💾 Storing data via direct MCP before Zen restart..."
-    DIRECT_STORE_RESULT=$(curl -s -X POST "http://localhost:7005/memory/store" \
-        -H 'Content-Type: application/json' \
-        -d '{"content": "Direct store before Zen restart - TEST_ID: '${TEST_ID}'", "metadata": {"direct_store": true, "test_id": "'${TEST_ID}'"}}')
-    
-    if echo "$DIRECT_STORE_RESULT" | grep -q '"success": true'; then
-        DIRECT_MEMORY_ID=$(echo "$DIRECT_STORE_RESULT" | grep -o '"memory_id": [0-9]*' | grep -o '[0-9]*')
-        test_pass "Direct MCP storage before restart - ID: $DIRECT_MEMORY_ID"
-    else
-        test_fail "Direct MCP storage" "Failed to store via direct MCP"
-    fi
-    
-    # Restart Zen Coordinator
-    echo "💥 Restarting Zen Coordinator..."
-    kill $ZEN_PID
+    test_fail "Direct MCP storage" "Failed to store via direct MCP"
+fi
+
+# Restart ZEN coordinator (container-first, process fallback)
+if [ -n "$ZEN_CONTAINER" ]; then
+    echo "🔍 Target container: $ZEN_CONTAINER"
+    echo "💥 Restarting Zen Coordinator container..."
+    docker stop "$ZEN_CONTAINER" >/dev/null 2>&1
     sleep 2
-    
-    # Verify Zen is down
+
     if \! curl -s http://localhost:7000/health >/dev/null 2>&1; then
         test_pass "Zen Coordinator shutdown"
     else
         test_fail "Zen Coordinator shutdown" "Service still responding"
     fi
-    
-    # Restart Zen Coordinator
-    echo "🔄 Starting Zen Coordinator..."
-    nohup python3 /home/orchestrace/config/zen_coordinator.py >/dev/null 2>&1 &
-    
-    # Measure Zen recovery time
-    ZEN_RECOVERY_TIME=$(wait_for_service "http://localhost:7000/health" 20)
-    ZEN_RECOVERY_STATUS=$?
-    
-    if [ $ZEN_RECOVERY_STATUS -eq 0 ]; then
-        test_pass "Zen Coordinator restart (${ZEN_RECOVERY_TIME}s)"
+
+    echo "🔄 Starting Zen Coordinator container..."
+    docker start "$ZEN_CONTAINER" >/dev/null 2>&1
+else
+    ZEN_PID=$(ps aux | grep zen_coordinator.py | grep -v grep | awk '{print $2}')
+    if [ -z "$ZEN_PID" ]; then
+        test_fail "Zen Coordinator identification" "No container and no process target found"
     else
-        test_fail "Zen Coordinator restart" "Service failed to restart within 20s"
+        echo "🔍 Target process: PID $ZEN_PID"
+        echo "💥 Restarting Zen Coordinator process..."
+        kill "$ZEN_PID"
+        sleep 2
+
+        if \! curl -s http://localhost:7000/health >/dev/null 2>&1; then
+            test_pass "Zen Coordinator shutdown"
+        else
+            test_fail "Zen Coordinator shutdown" "Service still responding"
+        fi
+
+        echo "🔄 Starting Zen Coordinator process..."
+        ZEN_COORDINATOR_SCRIPT="${ZEN_COORDINATOR_SCRIPT:-$PROJECT_ROOT/config/zen_coordinator.py}"
+        if [ -f "$ZEN_COORDINATOR_SCRIPT" ]; then
+            nohup python3 "$ZEN_COORDINATOR_SCRIPT" >/dev/null 2>&1 &
+        else
+            test_fail "Zen Coordinator startup" "Script not found: $ZEN_COORDINATOR_SCRIPT"
+        fi
     fi
-    
-    # Test service mesh reconnection
-    echo "🔗 Testing service mesh reconnection..."
-    sleep 3
-    ZEN_STATUS_AFTER=$(curl -s http://localhost:7000/status)
-    SERVICES_CONNECTED=$(echo "$ZEN_STATUS_AFTER" | grep -o '"[a-z_]*": "http[^"]*"' | wc -l)
-    
-    if [ $SERVICES_CONNECTED -ge 6 ]; then
-        test_pass "Service mesh reconnection ($SERVICES_CONNECTED services)"
-    else
-        test_fail "Service mesh reconnection" "Only $SERVICES_CONNECTED services connected, expected 6+"
-    fi
-    
-    # Verify data accessibility via Zen after restart
-    DIRECT_SEARCH=$(curl -s -X POST "$ZEN_URL" \
-        -H 'Content-Type: application/json' \
-        -d '{"tool": "search_memories", "arguments": {"query": "Direct store before Zen restart", "limit": 5}}')
-    
-    if echo "$DIRECT_SEARCH" | grep -q "Direct store before Zen restart"; then
-        test_pass "Data accessibility after Zen restart"
-    else
-        test_fail "Data accessibility after Zen restart" "Cannot access data stored before restart"
-    fi
+fi
+
+# Measure Zen recovery time
+ZEN_RECOVERY_TIME=$(wait_for_service "http://localhost:7000/health" 20)
+ZEN_RECOVERY_STATUS=$?
+
+if [ $ZEN_RECOVERY_STATUS -eq 0 ]; then
+    test_pass "Zen Coordinator restart (${ZEN_RECOVERY_TIME}s)"
+else
+    test_fail "Zen Coordinator restart" "Service failed to restart within 20s"
+fi
+
+# Test service mesh reconnection
+echo "🔗 Testing service mesh reconnection..."
+sleep 3
+ZEN_STATUS_AFTER=$(curl -s http://localhost:7000/status)
+SERVICES_CONNECTED=$(echo "$ZEN_STATUS_AFTER" | grep -o '"[a-z_]*": "http[^"]*"' | wc -l)
+
+if [ $SERVICES_CONNECTED -ge 6 ]; then
+    test_pass "Service mesh reconnection ($SERVICES_CONNECTED services)"
+else
+    test_fail "Service mesh reconnection" "Only $SERVICES_CONNECTED services connected, expected 6+"
+fi
+
+# Verify data accessibility via Zen after restart
+DIRECT_SEARCH=$(curl -s -X POST "$ZEN_URL" \
+    -H 'Content-Type: application/json' \
+    -d '{"tool": "search_memories", "arguments": {"query": "Direct store before Zen restart", "limit": 5}}')
+
+if echo "$DIRECT_SEARCH" | grep -q "Direct store before Zen restart"; then
+    test_pass "Data accessibility after Zen restart"
+else
+    test_fail "Data accessibility after Zen restart" "Cannot access data stored before restart"
 fi
 
 echo

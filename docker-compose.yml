@@ -1,5 +1,3 @@
-version: "3.8"
-
 services:
   # ============================================================================
   # 7000: Mega-Orchestrator / ZEN Coordinator - Master Controller (HTTP ↔ MCP Bridge)
@@ -25,13 +23,13 @@ services:
   
   # 7001: Filesystem MCP - File Operations
   filesystem-mcp:
-    build: /home/orchestration/mcp-servers/filesystem-mcp
+    build: ${PROJECT_ROOT:-.}/mcp-servers/filesystem-mcp
     container_name: mcp-filesystem
     ports:
       - "7001:8000"
     volumes:
-      - /home/orchestration/data/workspaces:/workspace
-      - /home:/home:ro
+      - ${DATA_ROOT:-./data}/workspaces:/workspace
+      - ${HOST_HOME_PATH:-/home}:/home:ro
       - /tmp:/tmp
     environment:
       - MCP_DATABASE_URL=${MCP_DATABASE_URL:-postgresql://mcp_admin:change_me_in_production@postgresql:5432/mcp_unified}
@@ -45,13 +43,13 @@ services:
 
   # 7002: Git MCP - Version Control
   git-mcp:
-    build: /home/orchestration/mcp-servers/git-mcp
+    build: ${PROJECT_ROOT:-.}/mcp-servers/git-mcp
     container_name: mcp-git
     ports:
       - "7002:8000"
     volumes:
-      - /home/orchestration/data/repositories:/repositories
-      - /home/orchestration/data/workspaces:/workspace
+      - ${DATA_ROOT:-./data}/repositories:/repositories
+      - ${DATA_ROOT:-./data}/workspaces:/workspace
     environment:
       - MCP_DATABASE_URL=${MCP_DATABASE_URL:-postgresql://mcp_admin:change_me_in_production@postgresql:5432/mcp_unified}
       - REDIS_URL=redis://redis:6379
@@ -64,7 +62,7 @@ services:
 
   # 7003: Terminal MCP - Command Execution
   terminal-mcp:
-    build: /home/orchestration/mcp-servers/terminal-mcp
+    build: ${PROJECT_ROOT:-.}/mcp-servers/terminal-mcp
     container_name: mcp-terminal
     ports:
       - "7003:8000"
@@ -87,12 +85,12 @@ services:
 
   # 7004: Database MCP - Data Operations
   database-mcp:
-    build: /home/orchestration/mcp-servers/database-mcp
+    build: ${PROJECT_ROOT:-.}/mcp-servers/database-mcp
     container_name: mcp-database
     ports:
       - "7004:8000"
     volumes:
-      - /home/orchestration/data/database:/data
+      - ${DATA_ROOT:-./data}/database:/data
     environment:
       - MCP_DATABASE_URL=${MCP_DATABASE_URL:-postgresql://mcp_admin:change_me_in_production@postgresql:5432/mcp_unified}
       - REDIS_URL=redis://redis:6379
@@ -105,12 +103,12 @@ services:
 
   # 7005: Memory MCP - Simple Storage
   memory-mcp:
-    build: /home/orchestration/mcp-servers/memory-mcp
+    build: ${PROJECT_ROOT:-.}/mcp-servers/memory-mcp
     container_name: mcp-memory
     ports:
       - "7005:8000"
     volumes:
-      - /home/orchestration/data/databases:/home/orchestration/data/databases
+      - ${DATA_ROOT:-./data}/databases:/home/orchestration/data/databases
     environment:
       - MCP_DATABASE_URL=${MCP_DATABASE_URL:-postgresql://mcp_admin:change_me_in_production@postgresql:5432/mcp_unified}
       - REDIS_URL=redis://redis:6379
@@ -123,7 +121,7 @@ services:
 
   # 7006: Network MCP - Network Operations (placeholder - to be implemented)
   network-mcp:
-    build: /home/orchestration/mcp-servers/network-mcp
+    build: ${PROJECT_ROOT:-.}/mcp-servers/network-mcp
     container_name: mcp-network-service
     ports:
       - "7006:8000"
@@ -133,7 +131,7 @@ services:
 
   # 7007: System MCP - System Info (placeholder - to be implemented)  
   system-mcp:
-    build: /home/orchestration/mcp-servers/system-mcp
+    build: ${PROJECT_ROOT:-.}/mcp-servers/system-mcp
     container_name: mcp-system
     ports:
       - "7007:8000"
@@ -143,7 +141,7 @@ services:
 
   # 7008: Security MCP - Security Operations (placeholder - to be implemented)
   security-mcp:
-    build: /home/orchestration/mcp-servers/security-mcp
+    build: ${PROJECT_ROOT:-.}/mcp-servers/security-mcp
     container_name: mcp-security
     ports:
       - "7008:8000"
@@ -154,7 +152,7 @@ services:
 
   # 7009: Config MCP - Configuration Management (placeholder - to be implemented)
   config-mcp:
-    build: /home/orchestration/mcp-servers/config-mcp
+    build: ${PROJECT_ROOT:-.}/mcp-servers/config-mcp
     container_name: mcp-config
     ports:
       - "7009:8000"
@@ -165,7 +163,7 @@ services:
 
   # 7010: Log MCP - Logging Operations (placeholder - to be implemented)
   log-mcp:
-    build: /home/orchestration/mcp-servers/log-mcp
+    build: ${PROJECT_ROOT:-.}/mcp-servers/log-mcp
     container_name: mcp-log
     ports:
       - "7010:8000"
@@ -180,7 +178,7 @@ services:
 
   # 7011: Research MCP - AI Research
   research-mcp:
-    build: /home/orchestration/mcp-servers/research-mcp
+    build: ${PROJECT_ROOT:-.}/mcp-servers/research-mcp
     container_name: mcp-research
     ports:
       - "7011:8000"
@@ -203,7 +201,7 @@ services:
       - "7012:8000"
     working_dir: /app
     volumes:
-      - /home/orchestration/mcp-servers/cldmemory:/app
+      - ${PROJECT_ROOT:-.}/mcp-servers/cldmemory:/app
     environment:
       - MCP_DATABASE_URL=${MCP_DATABASE_URL:-postgresql://mcp_admin:change_me_in_production@postgresql:5432/mcp_unified}
       - REDIS_URL=redis://redis:6379
@@ -221,12 +219,12 @@ services:
 
   # 7013: Transcriber MCP - Audio Processing
   transcriber-mcp:
-    build: /home/orchestration/mcp-servers/webm-transcriber
+    build: ${PROJECT_ROOT:-.}/mcp-servers/webm-transcriber
     container_name: mcp-transcriber
     ports:
       - "7013:8000"
     volumes:
-      - /home/orchestration/data/transcripts:/transcripts
+      - ${DATA_ROOT:-./data}/transcripts:/transcripts
       - /tmp:/tmp
     environment:
       - MCP_DATABASE_URL=${MCP_DATABASE_URL:-postgresql://mcp_admin:change_me_in_production@postgresql:5432/mcp_unified}
@@ -245,7 +243,7 @@ services:
 
   # 7014-7016: Placeholders for future AI services
   vision-mcp:
-    build: /home/orchestration/mcp-servers/system-mcp
+    build: ${PROJECT_ROOT:-.}/mcp-servers/system-mcp
     container_name: mcp-vision
     ports:
       - "7014:8000"
@@ -257,7 +255,7 @@ services:
   # 7017: ZEN MCP Server - MCP Tools Orchestration
   zen-mcp-server:
     build:
-      context: /home/orchestration/data/repositories/zen-mcp-server
+      context: ${ZEN_MCP_SERVER_PATH:-./data/repositories/zen-mcp-server}
       dockerfile: Dockerfile
       target: runtime
     container_name: zen-mcp-server
@@ -308,7 +306,7 @@ services:
 
   # 7024: PostgreSQL MCP Wrapper - Database Operations API
   postgresql-mcp-wrapper:
-    build: /home/orchestration/mcp-servers/postgresql-mcp
+    build: ${PROJECT_ROOT:-.}/mcp-servers/postgresql-mcp
     container_name: mcp-postgresql-wrapper
     ports:
       - "7024:8000"
@@ -322,7 +320,7 @@ services:
 
   # 7025: Redis MCP Wrapper - Cache and Session Management API
   redis-mcp-wrapper:
-    build: /home/orchestration/mcp-servers/redis-mcp
+    build: ${PROJECT_ROOT:-.}/mcp-servers/redis-mcp
     container_name: mcp-redis-wrapper
     ports:
       - "7025:8000"
@@ -336,7 +334,7 @@ services:
 
   # 7026: Qdrant MCP Wrapper - Vector Database Operations API
   qdrant-mcp-wrapper:
-    build: /home/orchestration/mcp-servers/qdrant-mcp
+    build: ${PROJECT_ROOT:-.}/mcp-servers/qdrant-mcp
     container_name: mcp-qdrant-wrapper
     ports:
       - "7026:8000"
@@ -363,8 +361,8 @@ services:
     ports:
       - "7021:5432"
     volumes:
-      - /home/orchestration/data/postgresql:/var/lib/postgresql/data
-      - /home/orchestration/data/backups:/backups
+      - ${DATA_ROOT:-./data}/postgresql:/var/lib/postgresql/data
+      - ${DATA_ROOT:-./data}/backups:/backups
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 10s
@@ -381,7 +379,7 @@ services:
     ports:
       - "7022:6379"
     volumes:
-      - /home/orchestration/data/redis:/data
+      - ${DATA_ROOT:-./data}/redis:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -399,7 +397,7 @@ services:
       - "7023:6333"
       - "7027:6334"
     volumes:
-      - /home/orchestration/data/qdrant:/qdrant/storage
+      - ${DATA_ROOT:-./data}/qdrant:/qdrant/storage
     environment:
       - QDRANT__SERVICE__HTTP_PORT=6333
       - QDRANT__SERVICE__GRPC_PORT=6334
@@ -418,7 +416,7 @@ services:
     ports:
       - "7028:9090"
     volumes:
-      - /home/user/orchestration/monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ${MONITORING_ROOT:-.}/monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - prometheus-data:/prometheus
     command:
       - "--config.file=/etc/prometheus/prometheus.yml"
@@ -437,7 +435,7 @@ services:
     ports:
       - "7031:3000"
     volumes:
-      - /home/user/orchestration/monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ${MONITORING_ROOT:-.}/monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
       - grafana-data:/var/lib/grafana
     environment:
       - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
@@ -459,7 +457,7 @@ services:
     ports:
       - "7032:3100"
     volumes:
-      - /home/user/orchestration/monitoring/loki/loki-config.yml:/etc/loki/local-config.yaml:ro
+      - ${MONITORING_ROOT:-.}/monitoring/loki/loki-config.yml:/etc/loki/local-config.yaml:ro
       - loki-data:/loki
     command: -config.file=/etc/loki/local-config.yaml
     restart: unless-stopped
@@ -471,7 +469,7 @@ services:
     image: grafana/promtail:latest
     container_name: mcp-promtail
     volumes:
-      - /home/user/orchestration/monitoring/promtail/promtail-config.yml:/etc/promtail/config.yml:ro
+      - ${MONITORING_ROOT:-.}/monitoring/promtail/promtail-config.yml:/etc/promtail/config.yml:ro
       - /var/lib/docker/containers:/var/lib/docker/containers:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
     command: -config.file=/etc/promtail/config.yml
@@ -483,14 +481,14 @@ services:
 
   # 7029: Backup Service - Automated backups
   backup-service:
-    build: /home/orchestration/mcp-servers/system-mcp
+    build: ${PROJECT_ROOT:-.}/mcp-servers/system-mcp
     container_name: mcp-backup
     ports:
       - "7029:8000"
     working_dir: /app
     volumes:
-      - /home/orchestration/data:/data:ro
-      - /home/orchestration/data/backups:/backups
+      - ${DATA_ROOT:-./data}:/data:ro
+      - ${DATA_ROOT:-./data}/backups:/backups
     restart: unless-stopped
     networks:
       - mcp-network
@@ -502,7 +500,7 @@ services:
     ports:
       - "7030:6379"
     volumes:
-      - /home/orchestration/data/queue:/data
+      - ${DATA_ROOT:-./data}/queue:/data
     command: redis-server --appendonly yes
     restart: unless-stopped
     networks:
@@ -520,16 +518,16 @@ services:
     ports:
       - "7018:1883"
     volumes:
-      - /home/orchestration/mcp-servers/mqtt-broker/config:/mosquitto/config
-      - /home/orchestration/data/mqtt-data:/mosquitto/data
-      - /home/orchestration/data/mqtt-log:/mosquitto/log
+      - ${PROJECT_ROOT:-.}/mcp-servers/mqtt-broker/config:/mosquitto/config
+      - ${DATA_ROOT:-./data}/mqtt-data:/mosquitto/data
+      - ${DATA_ROOT:-./data}/mqtt-log:/mosquitto/log
     restart: unless-stopped
     networks:
       - mcp-network
 
   # 7019: MQTT MCP Server - MQTT Operations via MCP Protocol
   mqtt-mcp:
-    build: /home/orchestration/mcp-servers/mqtt-mcp
+    build: ${PROJECT_ROOT:-.}/mcp-servers/mqtt-mcp
     container_name: mcp-mqtt
     ports:
       - "7019:8000"
