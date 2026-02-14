@@ -3,7 +3,7 @@
 > **Model Context Protocol (MCP) microservices orchestration platform s unified HTTP interface**
 
 [![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?style=flat&logo=docker&logoColor=white)](https://docker.com)
-[![Python](https://img.shields.io/badge/Python-3.11+-3776AB?style=flat&logo=python&logoColor=white)](https://python.org)
+[![Python](https://img.shields.io/badge/Python-3.12+-3776AB?style=flat&logo=python&logoColor=white)](https://python.org)
 [![Node.js](https://img.shields.io/badge/Node.js-18+-339933?style=flat&logo=node.js&logoColor=white)](https://nodejs.org)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-336791?style=flat&logo=postgresql&logoColor=white)](https://postgresql.org)
 [![Redis](https://img.shields.io/badge/Redis-7-DC382D?style=flat&logo=redis&logoColor=white)](https://redis.io)
@@ -135,7 +135,7 @@ Platforma implementuje **Zero Trust** security model:
 ### Prerequisites
 
 - **Docker & Docker Compose** (20.10+)
-- **Python 3.11+**
+- **Python 3.12+**
 - **Node.js 18+**
 - **PostgreSQL 13+**
 - **Redis 6+**
@@ -736,7 +736,7 @@ cd mcp-servers/new-service
 
 2. **Create Dockerfile**:
 ```dockerfile
-FROM python:3.11-slim
+FROM python:3.12-slim
 WORKDIR /app
 COPY requirements.txt .
 RUN pip install -r requirements.txt

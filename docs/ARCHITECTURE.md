@@ -115,7 +115,7 @@ zen_mcp_server.py (408 lines, 16.4KB)
 - `file_analyze`: File metadata analysis
 
 **Technology Stack**:
-- Language: Python 3.11+
+- Language: Python 3.12+
 - Framework: FastAPI
 - File I/O: aiofiles for async operations
 - Security: Path traversal protection
@@ -131,7 +131,7 @@ zen_mcp_server.py (408 lines, 16.4KB)
 - `git_diff`: Show differences
 
 **Technology Stack**:
-- Language: Python 3.11+
+- Language: Python 3.12+
 - Git Library: GitPython
 - Authentication: SSH key / token support
 - Repository: Local git operations
@@ -145,7 +145,7 @@ zen_mcp_server.py (408 lines, 16.4KB)
 - `system_info`: System information
 
 **Technology Stack**:
-- Language: Python 3.11+
+- Language: Python 3.12+
 - Process Management: asyncio subprocess
 - Security: Command sanitization
 - Isolation: Containerized execution
@@ -160,7 +160,7 @@ zen_mcp_server.py (408 lines, 16.4KB)
 - `db_backup`: Database backup
 
 **Technology Stack**:
-- Language: Python 3.11+
+- Language: Python 3.12+
 - Drivers: asyncpg (PostgreSQL), aioredis (Redis)
 - Connection Pooling: Built-in pool management
 - Security: Parameterized queries
@@ -176,7 +176,7 @@ zen_mcp_server.py (408 lines, 16.4KB)
 - `list_memories`: List all memories
 
 **Technology Stack**:
-- Language: Python 3.11+
+- Language: Python 3.12+
 - Vector Store: Qdrant integration
 - Embeddings: sentence-transformers
 - Database: PostgreSQL for metadata
@@ -190,7 +190,7 @@ zen_mcp_server.py (408 lines, 16.4KB)
 - `web_search`: General web search
 
 **Technology Stack**:
-- Language: Python 3.11+
+- Language: Python 3.12+
 - APIs: Perplexity AI, web search APIs
 - Caching: Redis for search results
 - Rate Limiting: API quota management
@@ -199,7 +199,7 @@ zen_mcp_server.py (408 lines, 16.4KB)
 **Container**: `mcp-advanced-memory`
 **Purpose**: Enhanced memory with AI capabilities
 **Technology Stack**:
-- Language: Python 3.11+
+- Language: Python 3.12+
 - AI Integration: Gemini API
 - Enhanced Embeddings: Multi-model support
 - Context Management: Advanced context windows
@@ -214,7 +214,7 @@ zen_mcp_server.py (408 lines, 16.4KB)
 - `audio_convert`: Format conversion
 
 **Technology Stack**:
-- Language: Python 3.11+
+- Language: Python 3.12+
 - Audio Processing: FFmpeg, Whisper
 - AI Models: OpenAI Whisper, Gemini
 - Format Support: WebM, MP3, WAV, MP4

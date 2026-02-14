@@ -66,7 +66,7 @@ Port 7022: Redis             (Up 26h)
 ```
 
 ### **Development Stack:**
-- **Languages**: Python 3.11+, Node.js 18+
+- **Languages**: Python 3.12+, Node.js 18+
 - **Infrastructure**: Docker Compose, PostgreSQL, Redis, Qdrant
 - **Architecture**: Microservices with unified HTTP interface
 - **Protocol**: JSON-RPC 2.0 for MCP communication

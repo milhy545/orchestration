@@ -27,7 +27,7 @@ The Orchestration MCP Platform consists of **8 MCP services** providing **28 spe
 **Container**: `mcp-filesystem`  
 **Purpose**: Comprehensive file system operations and management  
 **Status**: ✅ Running (26h+ uptime)  
-**Technology**: Python 3.11+, FastAPI, aiofiles
+**Technology**: Python 3.12+, FastAPI, aiofiles
 
 ### Tools (5 total)
 
@@ -211,7 +211,7 @@ curl -X POST http://192.168.0.58:7000/mcp \
 **Container**: `mcp-git`  
 **Purpose**: Version control operations and repository management  
 **Status**: ✅ Running (26h+ uptime)  
-**Technology**: Python 3.11+, GitPython, SSH/HTTPS authentication
+**Technology**: Python 3.12+, GitPython, SSH/HTTPS authentication
 
 ### Tools (5 total)
 
@@ -380,7 +380,7 @@ curl -X POST http://192.168.0.58:7000/mcp \
 **Container**: `mcp-terminal`  
 **Purpose**: System command execution and system information  
 **Status**: ✅ Running (26h+ uptime)  
-**Technology**: Python 3.11+, asyncio subprocess, security sandboxing
+**Technology**: Python 3.12+, asyncio subprocess, security sandboxing
 
 ### Tools (3 total)
 
@@ -507,7 +507,7 @@ curl -X POST http://192.168.0.58:7000/mcp \
 **Container**: `mcp-database`  
 **Purpose**: Multi-database operations and management  
 **Status**: ✅ Running (26h+ uptime)  
-**Technology**: Python 3.11+, asyncpg, aioredis, connection pooling
+**Technology**: Python 3.12+, asyncpg, aioredis, connection pooling
 
 ### Supported Databases
 - **PostgreSQL** (Primary): Full SQL operations
@@ -681,7 +681,7 @@ curl -X POST http://192.168.0.58:7000/mcp \
 **Container**: `mcp-memory`  
 **Purpose**: Information storage and retrieval with semantic search  
 **Status**: ✅ Running (26h+ uptime)  
-**Technology**: Python 3.11+, PostgreSQL, Qdrant, sentence-transformers
+**Technology**: Python 3.12+, PostgreSQL, Qdrant, sentence-transformers
 
 ### Storage Architecture
 - **Text Storage**: PostgreSQL for structured data
@@ -903,7 +903,7 @@ curl -X POST http://192.168.0.58:7000/mcp \
 **Container**: `mcp-research`  
 **Purpose**: Web search, research, and information gathering  
 **Status**: ✅ Running (26h+ uptime)  
-**Technology**: Python 3.11+, Perplexity AI, web search APIs, caching
+**Technology**: Python 3.12+, Perplexity AI, web search APIs, caching
 
 ### API Integrations
 - **Perplexity AI**: Advanced AI-powered search
@@ -1056,7 +1056,7 @@ curl -X POST http://192.168.0.58:7000/mcp \
 **Container**: `mcp-advanced-memory`  
 **Purpose**: Enhanced memory capabilities with AI integration  
 **Status**: ✅ Running (26h+ uptime)  
-**Technology**: Python 3.11+, Gemini AI, advanced embeddings, context management
+**Technology**: Python 3.12+, Gemini AI, advanced embeddings, context management
 
 ### Enhanced Features
 - **Multi-Model Embeddings**: Support for multiple embedding models
@@ -1083,7 +1083,7 @@ The service is healthy and running, with basic memory operations delegated to th
 **Container**: `mcp-transcriber`  
 **Purpose**: Audio and video transcription services  
 **Status**: ⚠️ Currently unhealthy - debugging required  
-**Technology**: Python 3.11+, Whisper, FFmpeg, Gemini AI
+**Technology**: Python 3.12+, Whisper, FFmpeg, Gemini AI
 
 ### Known Issues
 - Service container is running but health checks are failing
@@ -1149,7 +1149,7 @@ The service is healthy and running, with basic memory operations delegated to th
 **Container**: `zen-mcp-server`  
 **Purpose**: MCP tool orchestration gateway for multi-model providers  
 **Status**: ✅ Running  
-**Technology**: Python 3.11+, FastAPI (runtime target)
+**Technology**: Python 3.12+, FastAPI (runtime target)
 
 ### Notes
 - Exposes MCP tool orchestration endpoints for LLM routing.

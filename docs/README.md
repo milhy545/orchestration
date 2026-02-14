@@ -24,7 +24,7 @@ This is a comprehensive **MCP (Model Context Protocol)** microservices orchestra
 ### Prerequisites
 
 - **Docker & Docker Compose** (20.10+)
-- **Python 3.11+** 
+- **Python 3.12+** 
 - **Node.js 18+**
 - **PostgreSQL 13+**
 - **Redis 6+**

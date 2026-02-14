@@ -129,7 +129,7 @@ Platforma implementuje Zero Trust security model:
 ### Prerequisites
 
 - **Docker & Docker Compose** (20.10+)
-- **Python 3.11+**
+- **Python 3.12+**
 - **Node.js 18+**
 - **PostgreSQL 13+**
 - **Redis 6+**
@@ -730,7 +730,7 @@ cd mcp-servers/new-service
 
 2. **Create Dockerfile**:
 ```dockerfile
-FROM python:3.11-slim
+FROM python:3.12-slim
 WORKDIR /app
 COPY requirements.txt .
 RUN pip install -r requirements.txt
