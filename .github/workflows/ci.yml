@@ -50,7 +50,7 @@ jobs:
 
     strategy:
       matrix:
-        python-version: ["3.11"]
+        python-version: ["3.12"]
         service: ${{ fromJson(needs.discover-services.outputs.services) }}
 
     steps:
@@ -148,7 +148,7 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
       with:
-        python-version: "3.11"
+        python-version: "3.12"
 
     - name: Install shared test dependencies
       run: |
@@ -189,7 +189,7 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
       with:
-        python-version: "3.11"
+        python-version: "3.12"
 
     - name: Install pip-audit
       run: |
@@ -235,7 +235,7 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
       with:
-        python-version: "3.11"
+        python-version: "3.12"
 
     - name: Install linting tools
       run: |
@@ -278,7 +278,7 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
       with:
-        python-version: "3.11"
+        python-version: "3.12"
 
     - name: Install PyYAML
       run: pip install pyyaml
