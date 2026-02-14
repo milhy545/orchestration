@@ -19,6 +19,9 @@ tmp/
 temp/
 *.tmp
 
+# Local quarantine workspace guard (repo-local only)
+.bin/
+
 # Personal archive/bin folders
 Skladka/
 
