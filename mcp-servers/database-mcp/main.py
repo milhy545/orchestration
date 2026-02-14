@@ -95,6 +95,11 @@ def validate_table_name(table_name: str) -> str:
     return table_name
 
 
+def _quote_identifier(name: str) -> str:
+    """Quote a SQLite identifier; callers must validate identifier format first."""
+    return f'"{name}"'
+
+
 class FilterCondition(BaseModel):
     column: str
     op: Literal["=", "!=", ">", ">=", "<", "<=", "like", "in"]
@@ -138,7 +143,7 @@ class TableSchema(BaseModel):
 
 def get_table_columns(conn: sqlite3.Connection, table_name: str) -> List[str]:
     cursor = conn.cursor()
-    cursor.execute(f'PRAGMA table_info("{table_name}");')  # lgtm[py/sql-injection]
+    cursor.execute(f"PRAGMA table_info({_quote_identifier(table_name)});")  # lgtm[py/sql-injection]
     rows = cursor.fetchall()
     # SQLite returns sqlite3.Row, but tests often mock tuples/dicts.
     columns: List[str] = []
@@ -336,7 +341,7 @@ async def describe_table(table_name: str):
             cursor = conn.cursor()
             # Safely inject validated table name as identifier using SQLite quoting
             cursor.execute(
-                f'PRAGMA table_info("{validated_table}");'
+                f"PRAGMA table_info({_quote_identifier(validated_table)});"
             )  # lgtm[py/sql-injection]
             columns = []
             for row in cursor.fetchall():
@@ -393,7 +398,7 @@ async def get_sample_data(
             cursor = conn.cursor()
             # Use parameterized query for limit
             cursor.execute(
-                f"SELECT * FROM {validated_table} LIMIT ?;", (limit,)
+                f"SELECT * FROM {_quote_identifier(validated_table)} LIMIT ?;", (limit,)
             )  # lgtm[py/sql-injection]
 
             columns = (
