@@ -13,6 +13,12 @@ This directory contains comprehensive documentation for the **Orchestration MCP 
 
 ---
 
+## 🗂️ Repository Layout Notes
+
+- Operational guides previously in repo root are now under [`docs/manuals/`](manuals/).
+- Generated reports and audit summaries are under [`docs/reports/`](reports/).
+- Ad-hoc diagnostic scripts are organized in [`scripts/diagnostics/`](../scripts/diagnostics/) and legacy one-offs in [`scripts/legacy/`](../scripts/legacy/).
+
 ## 📋 Documentation Contents
 
 ### 🏠 Core Documentation
@@ -174,7 +180,8 @@ This directory contains comprehensive documentation for the **Orchestration MCP 
 - **Health**: `http://192.168.0.58:7000/health`
 - **Services**: `http://192.168.0.58:7000/services`
 - **Tools**: `http://192.168.0.58:7000/tools/list`
-- **MCP**: `http://192.168.0.58:7000/mcp` (POST)
+- **Native MCP JSON-RPC**: `http://192.168.0.58:7000/mcp/rpc` (POST, recommended)
+- **Legacy MCP Gateway**: `http://192.168.0.58:7000/mcp` (POST, compatibility mode)
 
 ### Quick Health Check
 ```bash
@@ -184,7 +191,12 @@ curl http://192.168.0.58:7000/health
 # List all services
 curl http://192.168.0.58:7000/services
 
-# Test MCP tool
+# Test native MCP JSON-RPC handshake
+curl -X POST http://192.168.0.58:7000/mcp/rpc \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}'
+
+# Legacy custom request (compatibility mode)
 curl -X POST http://192.168.0.58:7000/mcp \
   -H "Content-Type: application/json" \
   -d '{"tool":"system_info","arguments":{}}'
