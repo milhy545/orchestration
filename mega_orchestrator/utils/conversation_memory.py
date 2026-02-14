@@ -21,7 +21,7 @@ from typing import Dict, List, Optional, Any, Tuple
 from dataclasses import dataclass, asdict
 from datetime import datetime, timedelta
 import asyncpg
-import aioredis
+import redis.asyncio as aioredis
 from pathlib import Path
 
 @dataclass

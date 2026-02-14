@@ -5,7 +5,7 @@ Unit tests for conversation memory helpers.
 import pytest
 
 pytest.importorskip("asyncpg")
-pytest.importorskip("aioredis")
+pytest.importorskip("redis")
 
 from mega_orchestrator.utils.conversation_memory import ConversationMemory
 
