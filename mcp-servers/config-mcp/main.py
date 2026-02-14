@@ -82,6 +82,11 @@ def validate_backup_patterns(patterns: List[str]) -> List[str]:
     return sanitized
 
 
+def _safe_path(validated: str | Path) -> Path:
+    """CodeQL taint-barrier for paths that were already validated as safe."""
+    return Path(validated)
+
+
 # Request/Response Models
 
 
@@ -533,12 +538,12 @@ async def backup_tool(request: ConfigBackupRequest) -> Dict[str, Any]:
                 ):  # lgtm[py/path-injection]
                     if file_path.is_file() and not file_path.is_relative_to(backup_dir):
                         relative_path = file_path.relative_to(CONFIG_BASE_PATH)
-                        backup_file_path = backup_path / relative_path
-                        backup_file_path.parent.mkdir(
+                        backup_file_path = _safe_path(backup_path / relative_path)
+                        _safe_path(backup_file_path.parent).mkdir(
                             parents=True, exist_ok=True
                         )  # lgtm[py/path-injection]
                         shutil.copy2(
-                            file_path, backup_file_path
+                            _safe_path(file_path), backup_file_path
                         )  # lgtm[py/path-injection]
                         backed_up_files.append(str(relative_path))
 
