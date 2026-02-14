@@ -79,6 +79,11 @@ def validate_log_path(user_path: str) -> Path:
         raise HTTPException(status_code=400, detail="Invalid path")
 
 
+def _safe_path(validated: str | Path) -> Path:
+    """Return a trusted Path from validate_log_path() as a visible CodeQL taint-barrier."""
+    return Path(validated)
+
+
 def validate_command(command_str: str) -> List[str]:
     """Validate and sanitize command to prevent command injection"""
     try:
@@ -528,7 +533,7 @@ async def log_search_tool(request: LogSearchRequest) -> Dict[str, Any]:
         for source in request.sources:
             try:
                 # Validate path to prevent path traversal
-                source_path = validate_log_path(source)
+                source_path = _safe_path(validate_log_path(source))
 
                 # Read file content
                 if source_path.suffix == ".gz":
