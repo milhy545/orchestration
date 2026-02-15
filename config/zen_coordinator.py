@@ -85,6 +85,20 @@ MCP_SERVICES = {
         "internal_port": 7015,
         "status": "unknown",
         "container": "mcp-gmail"
+    },
+    "forai": {
+        "description": "FORAI Code Analysis MCP Server",
+        "tools": ["forai_analyze", "forai_process", "forai_query"],
+        "internal_port": 7016,
+        "status": "unknown",
+        "container": "mcp-forai"
+    },
+    "code_graph": {
+        "description": "Code Graph Analysis MCP Server",
+        "tools": ["index_python_project", "query_code_graph", "find_dependencies", "find_callers", "detect_circular_imports"],
+        "internal_port": 7020,
+        "status": "unknown",
+        "container": "mcp-code-graph"
     }
 }
 
@@ -731,7 +745,13 @@ class ZENCoordinator(BaseHTTPRequestHandler):
             "list_labels": "gmail",
             "create_label": "gmail",
             "apply_label": "gmail",
-            "move_email": "gmail"
+            "move_email": "gmail",
+            "forai_": "forai",
+            "index_python": "code_graph",
+            "query_code": "code_graph",
+            "find_dep": "code_graph",
+            "find_call": "code_graph",
+            "detect_circular": "code_graph"
         }
         
         for prefix, service_name in routing_prefixes.items():

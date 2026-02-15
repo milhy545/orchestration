@@ -558,6 +558,64 @@ services:
     networks:
       - mcp-network
 
+  # ============================================================================
+  # Neo4j Graph Database (for code-graph-mcp)
+  # ============================================================================
+  neo4j:
+    image: neo4j:5-community
+    container_name: neo4j
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+    environment:
+      - NEO4J_AUTH=neo4j/${NEO4J_PASSWORD:-neo4j_password}
+    volumes:
+      - ${DATA_ROOT:-./data}/neo4j:/data
+    restart: unless-stopped
+    networks:
+      - mcp-network
+
+  # ============================================================================
+  # 7016: FORAI MCP - Code Analysis with FORAI Headers
+  # ============================================================================
+  forai-mcp:
+    build:
+      context: ./mcp-servers/forai-mcp
+      dockerfile: Dockerfile
+    container_name: mcp-forai
+    ports:
+      - "7016:8000"
+    volumes:
+      - ${PROJECT_ROOT:-.}:/workspace:ro
+    environment:
+      - MCP_SERVER_PORT=8000
+    restart: unless-stopped
+    networks:
+      - mcp-network
+
+  # ============================================================================
+  # 7020: Code Graph MCP - Python Code Graph Analyzer
+  # ============================================================================
+  code-graph-mcp:
+    build:
+      context: ./mcp-servers/code-graph-mcp
+      dockerfile: Dockerfile
+    container_name: mcp-code-graph
+    ports:
+      - "7020:8000"
+    volumes:
+      - ${PROJECT_ROOT:-.}:/workspace:ro
+    environment:
+      - NEO4J_URL=bolt://neo4j:7687
+      - NEO4J_USER=neo4j
+      - NEO4J_PASSWORD=${NEO4J_PASSWORD:-neo4j_password}
+      - MCP_SERVER_PORT=8000
+    depends_on:
+      - neo4j
+    restart: unless-stopped
+    networks:
+      - mcp-network
+
 networks:
   mcp-network:
     driver: bridge
