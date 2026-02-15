@@ -64,6 +64,13 @@ MCP_SERVICES = {
         "internal_port": 7011,
         "status": "unknown",
         "container": "mcp-research"
+    },
+    "zen": {
+        "description": "ZEN Multi-Model AI Development Server",
+        "tools": ["chat", "thinkdeep", "codereview", "precommit", "debug", "analyze", "refactor", "tracer", "testgen", "version"],
+        "internal_port": 7017,
+        "status": "unknown",
+        "container": "zen-mcp-server"
     }
 }
 
@@ -690,7 +697,16 @@ class ZENCoordinator(BaseHTTPRequestHandler):
             "transcribe_": "transcriber",
             "audio_": "transcriber",
             "research_": "research",
-            "web_": "research"
+            "web_": "research",
+            "chat": "zen",
+            "thinkdeep": "zen",
+            "codereview": "zen",
+            "precommit": "zen",
+            "debug_": "zen",
+            "analyze_": "zen",
+            "refactor_": "zen",
+            "tracer": "zen",
+            "testgen": "zen"
         }
         
         for prefix, service_name in routing_prefixes.items():

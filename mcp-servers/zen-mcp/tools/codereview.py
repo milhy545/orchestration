@@ -1,0 +1,281 @@
+"""
+Code Review tool - Comprehensive code analysis and review
+
+This tool provides professional-grade code review capabilities using
+the chosen model's understanding of code patterns, best practices, and common issues.
+It can analyze individual files or entire codebases, providing actionable
+feedback categorized by severity.
+
+Key Features:
+- Multi-file and directory support
+- Configurable review types (full, security, performance, quick)
+- Severity-based issue filtering
+- Custom focus areas and coding standards
+- Structured output with specific remediation steps
+"""
+
+from typing import Any, Optional
+
+from pydantic import Field
+
+from config import TEMPERATURE_ANALYTICAL
+from systemprompts import CODEREVIEW_PROMPT
+
+from .base import BaseTool, ToolRequest
+
+
+class CodeReviewRequest(ToolRequest):
+    """
+    Request model for the code review tool.
+
+    This model defines all parameters that can be used to customize
+    the code review process, from selecting files to specifying
+    review focus and standards.
+    """
+
+    files: list[str] = Field(
+        ...,
+        description="Code files or directories to review (must be absolute paths)",
+    )
+    prompt: str = Field(
+        ...,
+        description="User's summary of what the code does, expected behavior, constraints, and review objectives",
+    )
+    review_type: str = Field("full", description="Type of review: full|security|performance|quick")
+    focus_on: Optional[str] = Field(
+        None,
+        description="Specific aspects to focus on, or additional context that would help understand areas of concern",
+    )
+    standards: Optional[str] = Field(None, description="Coding standards or guidelines to enforce")
+    severity_filter: str = Field(
+        "all",
+        description="Minimum severity to report: critical|high|medium|all",
+    )
+
+
+class CodeReviewTool(BaseTool):
+    """
+    Professional code review tool implementation.
+
+    This tool analyzes code for bugs, security vulnerabilities, performance
+    issues, and code quality problems. It provides detailed feedback with
+    severity ratings and specific remediation steps.
+    """
+
+    def get_name(self) -> str:
+        return "codereview"
+
+    def get_description(self) -> str:
+        return (
+            "CODE REVIEW - Bug, security & quality analysis. "
+            "Files or directories. Issues by severity with fixes. "
+            "Review types: full/security/performance/quick."
+        )
+
+    def get_input_schema(self) -> dict[str, Any]:
+        schema = {
+            "type": "object",
+            "properties": {
+                "files": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Code files or directories to review (must be absolute paths)",
+                },
+                "model": self.get_model_field_schema(),
+                "prompt": {
+                    "type": "string",
+                    "description": "User's summary of what the code does, expected behavior, constraints, and review objectives",
+                },
+                "review_type": {
+                    "type": "string",
+                    "enum": ["full", "security", "performance", "quick"],
+                    "default": "full",
+                    "description": "Type of review to perform",
+                },
+                "focus_on": {
+                    "type": "string",
+                    "description": "Specific aspects to focus on, or additional context that would help understand areas of concern",
+                },
+                "standards": {
+                    "type": "string",
+                    "description": "Coding standards to enforce",
+                },
+                "severity_filter": {
+                    "type": "string",
+                    "enum": ["critical", "high", "medium", "all"],
+                    "default": "all",
+                    "description": "Minimum severity level to report",
+                },
+                "temperature": {
+                    "type": "number",
+                    "description": "Temperature (0-1, default 0.2 for consistency)",
+                    "minimum": 0,
+                    "maximum": 1,
+                },
+                "thinking_mode": {
+                    "type": "string",
+                    "enum": ["minimal", "low", "medium", "high", "max"],
+                    "description": "Thinking depth: minimal (0.5% of model max), low (8%), medium (33%), high (67%), max (100% of model max)",
+                },
+                "use_websearch": {
+                    "type": "boolean",
+                    "description": "Enable web search for documentation, best practices, and current information. Particularly useful for: brainstorming sessions, architectural design discussions, exploring industry best practices, working with specific frameworks/technologies, researching solutions to complex problems, or when current documentation and community insights would enhance the analysis.",
+                    "default": True,
+                },
+                "file_handling_mode": {
+                    "type": "string",
+                    "enum": ["embedded", "summary", "reference"],
+                    "default": "embedded",
+                    "description": "How to handle file content in responses. 'embedded' includes full content (default), 'summary' returns only summaries to save tokens, 'reference' stores files and returns IDs.",
+                },
+                "continuation_id": {
+                    "type": "string",
+                    "description": "Thread continuation ID for multi-turn conversations. Can be used to continue conversations across different tools. Only provide this if continuing a previous conversation thread.",
+                },
+            },
+            "required": ["files", "prompt"] + (["model"] if self.is_effective_auto_mode() else []),
+        }
+
+        return schema
+
+    def get_system_prompt(self) -> str:
+        return CODEREVIEW_PROMPT
+
+    def get_default_temperature(self) -> float:
+        return TEMPERATURE_ANALYTICAL
+
+    # Line numbers are enabled by default from base class for precise feedback
+
+    def get_request_model(self):
+        return CodeReviewRequest
+
+    async def prepare_prompt(self, request: CodeReviewRequest) -> str:
+        """
+        Prepare the code review prompt with customized instructions.
+
+        This method reads the requested files, validates token limits,
+        and constructs a detailed prompt based on the review parameters.
+
+        Args:
+            request: The validated review request
+
+        Returns:
+            str: Complete prompt for the model
+
+        Raises:
+            ValueError: If the code exceeds token limits
+        """
+        # Check for prompt.txt in files
+        prompt_content, updated_files = self.handle_prompt_file(request.files)
+
+        # If prompt.txt was found, incorporate it into the prompt
+        if prompt_content:
+            request.prompt = prompt_content + "\n\n" + request.prompt
+
+        # Update request files list
+        if updated_files is not None:
+            request.files = updated_files
+
+        # Check user input size at MCP transport boundary (before adding internal content)
+        user_content = request.prompt
+        size_check = self.check_prompt_size(user_content)
+        if size_check:
+            from tools.models import ToolOutput
+
+            raise ValueError(f"MCP_SIZE_CHECK:{ToolOutput(**size_check).model_dump_json()}")
+
+        # Also check focus_on field if provided (user input)
+        if request.focus_on:
+            focus_size_check = self.check_prompt_size(request.focus_on)
+            if focus_size_check:
+                from tools.models import ToolOutput
+
+                raise ValueError(f"MCP_SIZE_CHECK:{ToolOutput(**focus_size_check).model_dump_json()}")
+
+        # Use centralized file processing logic
+        continuation_id = getattr(request, "continuation_id", None)
+        file_content, processed_files, file_references = self._prepare_file_content_for_prompt(
+            request.files, continuation_id, "Code"
+        )
+
+        # Store file references for response formatting
+        if file_references:
+            self._store_file_references(file_references)
+        self._actually_processed_files = processed_files
+
+        # Build customized review instructions based on review type
+        review_focus = []
+        if request.review_type == "security":
+            review_focus.append("Focus on security vulnerabilities and authentication issues")
+        elif request.review_type == "performance":
+            review_focus.append("Focus on performance bottlenecks and optimization opportunities")
+        elif request.review_type == "quick":
+            review_focus.append("Provide a quick review focusing on critical issues only")
+
+        # Add any additional focus areas specified by the user
+        if request.focus_on:
+            review_focus.append(f"Pay special attention to: {request.focus_on}")
+
+        # Include custom coding standards if provided
+        if request.standards:
+            review_focus.append(f"Enforce these standards: {request.standards}")
+
+        # Apply severity filtering to reduce noise if requested
+        if request.severity_filter != "all":
+            review_focus.append(f"Only report issues of {request.severity_filter} severity or higher")
+
+        focus_instruction = "\n".join(review_focus) if review_focus else ""
+
+        # Add web search instruction if enabled
+        websearch_instruction = self.get_websearch_instruction(
+            request.use_websearch,
+            """When reviewing code, consider if searches for these would help:
+- Security vulnerabilities and CVEs for libraries/frameworks used
+- Best practices for the languages and frameworks in the code
+- Common anti-patterns and their solutions
+- Performance optimization techniques
+- Recent updates or deprecations in APIs used""",
+        )
+
+        # Construct the complete prompt with system instructions and code
+        full_prompt = f"""{self.get_system_prompt()}{websearch_instruction}
+
+=== USER CONTEXT ===
+{request.prompt}
+=== END CONTEXT ===
+
+{focus_instruction}
+
+=== CODE TO REVIEW ===
+{file_content}
+=== END CODE ===
+
+Please provide a code review aligned with the user's context and expectations, following the format specified in the system prompt."""
+
+        return full_prompt
+
+    def format_response(self, response: str, request: CodeReviewRequest, model_info: Optional[dict] = None) -> str:
+        """
+        Format the review response.
+
+        Args:
+            response: The raw review from the model
+            request: The original request for context
+            model_info: Optional dict with model metadata
+
+        Returns:
+            str: Formatted response with next steps
+        """
+        return f"""{response}
+
+---
+
+**Claude's Next Steps:**
+
+1. **Understand the Context**: First examine the specific functions, files, and code sections mentioned in the review to understand each issue thoroughly.
+
+2. **Present Options to User**: After understanding the issues, ask the user which specific improvements they would like to implement, presenting them as a clear list of options.
+
+3. **Implement Selected Fixes**: Only implement the fixes the user chooses, ensuring each change is made correctly and maintains code quality.
+
+Remember: Always understand the code context before suggesting fixes, and let the user decide which improvements to implement."""

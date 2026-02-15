@@ -255,7 +255,7 @@ services:
   # 7017: ZEN MCP Server - MCP Tools Orchestration
   zen-mcp-server:
     build:
-      context: ${ZEN_MCP_SERVER_PATH:-./data/repositories/zen-mcp-server}
+      context: ./mcp-servers/zen-mcp
       dockerfile: Dockerfile
       target: runtime
     container_name: zen-mcp-server
@@ -284,6 +284,9 @@ services:
       - PYTHONUNBUFFERED=1
       - PYTHONPATH=/app
       - TZ=${TZ:-UTC}
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - redis
     volumes:
       - zen-mcp-logs:/app/logs
       - zen-mcp-config:/app/conf
