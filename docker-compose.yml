@@ -195,20 +195,17 @@ services:
 
   # 7012: Advanced Memory MCP - AI Memory (vector search, semantic similarity)
   advanced-memory-mcp:
-    image: node:20-alpine
+    build:
+      context: ./mcp-servers/advanced-memory-mcp
+      dockerfile: Dockerfile
     container_name: mcp-advanced-memory
     ports:
       - "7012:8000"
-    working_dir: /app
-    volumes:
-      - ${PROJECT_ROOT:-.}/mcp-servers/cldmemory:/app
     environment:
       - MCP_DATABASE_URL=${MCP_DATABASE_URL:-postgresql://mcp_admin:change_me_in_production@postgresql:5432/mcp_unified}
       - REDIS_URL=redis://redis:6379
       - QDRANT_URL=http://qdrant-vector:6333
-      - GEMINI_API_KEY=${GEMINI_API_KEY:-your_gemini_api_key_here}
       - MCP_SERVER_PORT=8000
-    command: sh -c "npm install && npm start"
     depends_on:
       - postgresql
       - redis

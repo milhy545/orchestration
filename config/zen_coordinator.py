@@ -71,6 +71,13 @@ MCP_SERVICES = {
         "internal_port": 7017,
         "status": "unknown",
         "container": "zen-mcp-server"
+    },
+    "advanced_memory": {
+        "description": "Advanced Memory with Vector Search MCP Server",
+        "tools": ["store_memory", "search_memories", "semantic_similarity", "vector_search", "get_context"],
+        "internal_port": 7012,
+        "status": "unknown",
+        "container": "mcp-advanced-memory"
     }
 }
 
@@ -706,7 +713,9 @@ class ZENCoordinator(BaseHTTPRequestHandler):
             "analyze_": "zen",
             "refactor_": "zen",
             "tracer": "zen",
-            "testgen": "zen"
+            "testgen": "zen",
+            "semantic_": "advanced_memory",
+            "vector_": "advanced_memory"
         }
         
         for prefix, service_name in routing_prefixes.items():
