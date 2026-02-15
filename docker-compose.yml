@@ -193,6 +193,22 @@ services:
     networks:
       - mcp-network
 
+  # 7015: Gmail MCP - Email Operations (search, send, forward, labels)
+  gmail-mcp:
+    build: ${PROJECT_ROOT:-.}/mcp-servers/gmail-mcp
+    container_name: mcp-gmail
+    ports:
+      - "7015:8000"
+    environment:
+      - EMAIL_ADDRESS=${GMAIL_ADDRESS:-}
+      - EMAIL_PASSWORD=${GMAIL_APP_PASSWORD:-}
+      - IMAP_SERVER=${IMAP_SERVER:-imap.gmail.com}
+      - SMTP_SERVER=${SMTP_SERVER:-smtp.gmail.com}
+      - SMTP_PORT=${SMTP_PORT:-587}
+    restart: unless-stopped
+    networks:
+      - mcp-network
+
   # 7012: Advanced Memory MCP - AI Memory (vector search, semantic similarity)
   advanced-memory-mcp:
     build:

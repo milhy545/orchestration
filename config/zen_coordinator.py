@@ -78,6 +78,13 @@ MCP_SERVICES = {
         "internal_port": 7012,
         "status": "unknown",
         "container": "mcp-advanced-memory"
+    },
+    "gmail": {
+        "description": "Gmail Email Operations MCP Server",
+        "tools": ["search_emails", "get_email_content", "send_email", "forward_email", "count_daily_emails", "list_labels", "create_label", "apply_label", "move_email"],
+        "internal_port": 7015,
+        "status": "unknown",
+        "container": "mcp-gmail"
     }
 }
 
@@ -715,7 +722,16 @@ class ZENCoordinator(BaseHTTPRequestHandler):
             "tracer": "zen",
             "testgen": "zen",
             "semantic_": "advanced_memory",
-            "vector_": "advanced_memory"
+            "vector_": "advanced_memory",
+            "search_emails": "gmail",
+            "get_email": "gmail",
+            "send_email": "gmail",
+            "forward_email": "gmail",
+            "count_daily": "gmail",
+            "list_labels": "gmail",
+            "create_label": "gmail",
+            "apply_label": "gmail",
+            "move_email": "gmail"
         }
         
         for prefix, service_name in routing_prefixes.items():
