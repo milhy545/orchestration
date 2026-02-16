@@ -32,12 +32,12 @@ if ! docker info >/dev/null 2>&1; then
     exit 1
 fi
 
-# Check ZEN Coordinator
+# Check Mega-Orchestrator
 if curl -s http://localhost:7000/health >/dev/null; then
-    echo "✅ ZEN Coordinator: Running"
+    echo "✅ Mega-Orchestrator: Running"
 else
-    echo "❌ ZEN Coordinator: Failed"
-    echo "Fix: docker-compose restart zen-coordinator"
+    echo "❌ Mega-Orchestrator: Failed"
+    echo "Fix: docker-compose restart mega-orchestrator"
 fi
 
 # Check critical services
@@ -79,7 +79,7 @@ uptime                   # System load
 netstat -tlnp | grep -E ":(70[0-9][0-9]|6333|9001)"
 
 # Test internal connectivity
-curl http://localhost:7000/health    # ZEN Coordinator
+curl http://localhost:7000/health    # Mega-Orchestrator
 curl http://localhost:7001/health    # Filesystem MCP
 curl http://localhost:7021/         # PostgreSQL (should return error page)
 
@@ -90,8 +90,8 @@ docker network inspect orchestration_default
 
 ### Service-Specific Diagnostics
 ```bash
-# ZEN Coordinator logs
-docker logs zen-coordinator --tail=50
+# Mega-Orchestrator logs
+docker logs mega-orchestrator --tail=50
 
 # All MCP service logs
 docker logs mcp-filesystem --tail=20
@@ -109,7 +109,7 @@ docker logs mcp-redis --tail=30
 
 ## 🛠️ Common Issues & Solutions
 
-### 1. ZEN Coordinator Not Responding
+### 1. Mega-Orchestrator Not Responding
 
 **Symptoms:**
 - `curl http://localhost:7000/health` returns connection refused
@@ -118,10 +118,10 @@ docker logs mcp-redis --tail=30
 **Diagnosis:**
 ```bash
 # Check coordinator status
-docker ps | grep zen-coordinator
+docker ps | grep mega-orchestrator
 
 # Check coordinator logs
-docker logs zen-coordinator --tail=100
+docker logs mega-orchestrator --tail=100
 
 # Check if port is in use
 netstat -tlnp | grep :7000
@@ -131,7 +131,7 @@ netstat -tlnp | grep :7000
 
 **Solution A: Simple Restart**
 ```bash
-docker-compose restart zen-coordinator
+docker-compose restart mega-orchestrator
 sleep 10
 curl http://localhost:7000/health
 ```
@@ -139,14 +139,14 @@ curl http://localhost:7000/health
 **Solution B: Full Rebuild**
 ```bash
 # Stop and remove coordinator
-docker-compose stop zen-coordinator
-docker-compose rm -f zen-coordinator
+docker-compose stop mega-orchestrator
+docker-compose rm -f mega-orchestrator
 
 # Rebuild and start
-docker-compose up -d zen-coordinator
+docker-compose up -d mega-orchestrator
 
 # Verify startup
-docker logs zen-coordinator -f
+docker logs mega-orchestrator -f
 ```
 
 **Solution C: Check Dependencies**
@@ -166,13 +166,13 @@ for port in 7001 7002 7003 7004 7005 7011 7012; do
 done
 
 # Start coordinator after services are up
-docker-compose restart zen-coordinator
+docker-compose restart mega-orchestrator
 ```
 
 ### 2. MCP Service Communication Errors
 
 **Symptoms:**
-- ZEN Coordinator returns "Service on port XXXX requires MCP protocol adaptation"
+- Mega-Orchestrator returns "Service on port XXXX requires MCP protocol adaptation"
 - HTTP 502 errors when calling MCP tools
 
 **Diagnosis:**
@@ -190,8 +190,8 @@ docker logs mcp-filesystem | grep -i "mcp\|protocol\|error"
 
 **Solution A: Restart Problematic Service**
 ```bash
-# Identify which service is failing from ZEN Coordinator logs
-docker logs zen-coordinator | grep -i "error\|failed"
+# Identify which service is failing from Mega-Orchestrator logs
+docker logs mega-orchestrator | grep -i "error\|failed"
 
 # Restart specific service (example for filesystem)
 docker-compose restart mcp-filesystem
@@ -213,14 +213,14 @@ docker exec mcp-filesystem netstat -tlnp
 **Solution C: Protocol Debugging**
 ```bash
 # Enable debug mode in coordinator
-docker-compose stop zen-coordinator
+docker-compose stop mega-orchestrator
 
 # Edit docker-compose.yml to add debug environment
 # Then restart with debug logging
-docker-compose up -d zen-coordinator
+docker-compose up -d mega-orchestrator
 
 # Monitor debug logs
-docker logs zen-coordinator -f
+docker logs mega-orchestrator -f
 ```
 
 ### 3. Database Connection Issues
@@ -385,7 +385,7 @@ docker-compose up -d
 # Add memory limits to docker-compose.yml
 version: '3.8'
 services:
-  zen-coordinator:
+  mega-orchestrator:
     mem_limit: 512m
   mcp-filesystem:
     mem_limit: 256m
@@ -534,7 +534,7 @@ echo "$(date): Starting health check" >> $LOG_FILE
 
 # Check critical services
 critical_services=(
-    "http://localhost:7000/health"  # ZEN Coordinator
+    "http://localhost:7000/health"  # Mega-Orchestrator
     "http://localhost:7021/"        # PostgreSQL (expect connection)
     "http://localhost:7022/"        # Redis  
 )

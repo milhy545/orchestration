@@ -6,7 +6,7 @@ This project is a microservices-based system for orchestrating and managing a co
 
 ## Architecture
 
-The core of the project is the **ZEN Coordinator**, a Python-based HTTP server that acts as a secure proxy to the various MCP (Master Control Program) services. The coordinator is responsible for:
+The core of the project is the **Mega-Orchestrator**, a Python-based HTTP server that acts as a secure proxy to the various MCP (Master Control Program) services. The coordinator is responsible for:
 
 -   **Routing:** It routes incoming requests to the appropriate MCP service based on the requested tool.
 -   **Health Checks:** It monitors the health of the MCP services.
@@ -57,7 +57,7 @@ The `docker-compose.yml` file defines the following services, which are organize
 
 ### Master Controller
 
--   **`zen-coordinator` (Port 7000):** The master controller that acts as an HTTP to MCP (Master Control Program) bridge.
+-   **`mega-orchestrator` (Port 7000):** The master controller that acts as an HTTP to MCP (Master Control Program) bridge.
 
 ### Core MCP Services
 
@@ -110,7 +110,7 @@ The `docker-compose.yml` file defines the following services, which are organize
 
 ## API Endpoints
 
-The ZEN Coordinator exposes the following endpoints:
+The Mega-Orchestrator exposes the following endpoints:
 
 -   **`GET /services`**: Lists the available MCP services and their status.
 -   **`GET /health`**: Provides a health check of the coordinator and its database/cache connections.

@@ -8,20 +8,21 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements
-COPY requirements.txt .
+COPY config/requirements.txt ./requirements.txt
 
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy coordinator script
-COPY zen_coordinator.py .
+# Copy orchestrator bootstrap + package
+COPY config/mega_orchestrator.py ./mega_orchestrator.py
+COPY mega_orchestrator /app/mega_orchestrator
 
 # Expose port
-EXPOSE 8020
+EXPOSE 7000
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-    CMD curl -f http://localhost:8020/health || exit 1
+    CMD curl -f http://localhost:7000/health || exit 1
 
 # Run coordinator
-CMD ["python", "zen_coordinator.py"]
+CMD ["python", "mega_orchestrator.py"]

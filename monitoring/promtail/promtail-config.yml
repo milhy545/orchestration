@@ -54,7 +54,7 @@ scrape_configs:
         target_label: 'service_group'
         replacement: 'messaging'
       - source_labels: ['service']
-        regex: 'zen-coordinator'
+        regex: 'mega-orchestrator'
         target_label: 'service_group'
         replacement: 'coordinator'
 

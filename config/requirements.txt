@@ -1,2 +1,5 @@
+aiofiles
+aiohttp
+asyncpg
 psycopg2-binary
 redis

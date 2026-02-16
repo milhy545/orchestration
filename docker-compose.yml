@@ -1,18 +1,26 @@
 services:
   # ============================================================================
-  # 7000: Mega-Orchestrator / ZEN Coordinator - Master Controller (HTTP ↔ MCP Bridge)
+  # 7000: Mega-Orchestrator - Master Controller (HTTP ↔ MCP Bridge)
   # ============================================================================
-  zen-coordinator:
-    build: ./config
-    container_name: zen-coordinator
+  mega-orchestrator:
+    build:
+      context: .
+      dockerfile: config/Dockerfile
+    container_name: mega-orchestrator
     ports:
-      - "7000:8020"
+      - "7000:7000"
     environment:
       - MCP_DATABASE_URL=${MCP_DATABASE_URL:-postgresql://mcp_admin:change_me_in_production@postgresql:5432/mcp_unified}
       - REDIS_URL=${REDIS_URL:-redis://redis:6379}
     depends_on:
       - postgresql
       - redis
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
     restart: unless-stopped
     networks:
       - mcp-network

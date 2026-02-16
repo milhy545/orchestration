@@ -204,7 +204,7 @@ monitoring/
 
 **Scrape jobs:**
 - `prometheus` - Prometheus self-monitoring
-- `zen-coordinator` - Master controller
+- `mega-orchestrator` - Master controller
 - `mcp-core-services` - 10 core services
 - `mcp-ai-services` - AI/enhanced services
 - `mcp-db-wrappers` - Database wrapper services

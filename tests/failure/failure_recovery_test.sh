@@ -13,7 +13,7 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 # shellcheck source=tests/lib/e2e_preflight.sh
 source "$PROJECT_ROOT/tests/lib/e2e_preflight.sh"
 
-ZEN_URL='http://localhost:7000/mcp'
+ORCHESTRATOR_URL='http://localhost:7000/mcp'
 MEMORY_URL='http://localhost:7005'
 TEST_ID=$(date +%s)
 PASS_COUNT=0
@@ -58,7 +58,7 @@ measure_recovery_time() {
 
 store_test_data() {
     local content="Recovery test data $1 - TEST_ID: ${TEST_ID}"
-    local result=$(curl -s -X POST "$ZEN_URL" \
+    local result=$(curl -s -X POST "$ORCHESTRATOR_URL" \
         -H 'Content-Type: application/json' \
         -d "{\"tool\": \"store_memory\", \"arguments\": {\"content\": \"$content\", \"metadata\": {\"recovery_test\": true, \"test_id\": \"${TEST_ID}\", \"phase\": \"$1\"}}}" \
         --max-time 10)
@@ -74,7 +74,7 @@ store_test_data() {
 
 verify_test_data() {
     local query="Recovery test data $1"
-    local result=$(curl -s -X POST "$ZEN_URL" \
+    local result=$(curl -s -X POST "$ORCHESTRATOR_URL" \
         -H 'Content-Type: application/json' \
         -d "{\"tool\": \"search_memories\", \"arguments\": {\"query\": \"$query\", \"limit\": 5}}" \
         --max-time 10)
@@ -92,16 +92,16 @@ verify_test_data() {
 
 e2e_require_cmd curl
 e2e_require_cmd docker
-e2e_require_http "ZEN Coordinator health" "http://localhost:7000/health"
+e2e_require_http "Mega-Orchestrator health" "http://localhost:7000/health"
 e2e_require_http "Memory MCP health" "http://localhost:7005/health"
 
 MEMORY_CONTAINER="$(e2e_require_container "Memory MCP" mcp-memory memory-mcp-prod)"
-ZEN_CONTAINER="$(e2e_detect_container zen-coordinator zen-coordinator-prod || true)"
+ORCHESTRATOR_CONTAINER="$(e2e_detect_container mega-orchestrator mega-orchestrator-prod || true)"
 
-if [ -n "$ZEN_CONTAINER" ]; then
-  echo "✅ Preflight passed: using containers memory=$MEMORY_CONTAINER, zen=$ZEN_CONTAINER"
+if [ -n "$ORCHESTRATOR_CONTAINER" ]; then
+  echo "✅ Preflight passed: using containers memory=$MEMORY_CONTAINER, orchestrator=$ORCHESTRATOR_CONTAINER"
 else
-  echo "✅ Preflight passed: using memory container=$MEMORY_CONTAINER and host-process fallback for ZEN"
+  echo "✅ Preflight passed: using memory container=$MEMORY_CONTAINER and host-process fallback for orchestrator"
 fi
 
 echo
@@ -110,14 +110,14 @@ echo '====================================='
 
 # Establish baseline before failure tests
 echo '🔍 Checking initial system state...'
-INITIAL_ZEN_STATUS=$(curl -s http://localhost:7000/health 2>/dev/null)
+INITIAL_ORCHESTRATOR_STATUS=$(curl -s http://localhost:7000/health 2>/dev/null)
 INITIAL_MEMORY_STATUS=$(curl -s http://localhost:7005/health 2>/dev/null)
 INITIAL_CONTAINERS=$(docker ps --format '{{.Names}}' | grep mcp | wc -l)
 
-if echo "$INITIAL_ZEN_STATUS" | grep -q '"status": "healthy"'; then
-    test_pass "Zen Coordinator baseline health"
+if echo "$INITIAL_ORCHESTRATOR_STATUS" | grep -q '"status": "healthy"'; then
+    test_pass "Mega-Orchestrator baseline health"
 else
-    test_fail "Zen Coordinator baseline" "Service not healthy"
+    test_fail "Mega-Orchestrator baseline" "Service not healthy"
 fi
 
 if echo "$INITIAL_MEMORY_STATUS" | grep -q '"status": "healthy"'; then
@@ -127,7 +127,7 @@ else
 fi
 
 echo "📈 Baseline State:"
-echo "   - Zen Coordinator: $(echo "$INITIAL_ZEN_STATUS" | grep -o '"status": "[^"]*"' | cut -d'"' -f4)"
+echo "   - Mega-Orchestrator: $(echo "$INITIAL_ORCHESTRATOR_STATUS" | grep -o '"status": "[^"]*"' | cut -d'"' -f4)"
 echo "   - Memory MCP: $(echo "$INITIAL_MEMORY_STATUS" | grep -o '"status": "[^"]*"' | cut -d'"' -f4)"
 echo "   - MCP Containers: $INITIAL_CONTAINERS"
 
@@ -170,7 +170,7 @@ else
     
     # Attempt operation during failure
     echo "🔄 Testing operation during failure..."
-    FAILURE_OPERATION=$(curl -s -X POST "$ZEN_URL" \
+    FAILURE_OPERATION=$(curl -s -X POST "$ORCHESTRATOR_URL" \
         -H 'Content-Type: application/json' \
         -d '{"tool": "store_memory", "arguments": {"content": "During failure test", "metadata": {"during_failure": true}}}' \
         --max-time 5)
@@ -226,16 +226,16 @@ else
 fi
 
 echo
-echo '🚨 FAILURE TEST 2: Zen Coordinator Restart'
+echo '🚨 FAILURE TEST 2: Mega-Orchestrator Restart'
 echo '=========================================='
 echo 'Target: Test orchestration layer resilience'
 
 # Store pre-restart data via direct Memory MCP
 
-echo "💾 Storing data via direct MCP before Zen restart..."
+echo "💾 Storing data via direct MCP before orchestrator restart..."
 DIRECT_STORE_RESULT=$(curl -s -X POST "http://localhost:7005/memory/store" \
     -H 'Content-Type: application/json' \
-    -d '{"content": "Direct store before Zen restart - TEST_ID: '${TEST_ID}'", "metadata": {"direct_store": true, "test_id": "'${TEST_ID}'"}}')
+    -d '{"content": "Direct store before orchestrator restart - TEST_ID: '${TEST_ID}'", "metadata": {"direct_store": true, "test_id": "'${TEST_ID}'"}}')
 
 if echo "$DIRECT_STORE_RESULT" | grep -q '"success": true'; then
     DIRECT_MEMORY_ID=$(echo "$DIRECT_STORE_RESULT" | grep -o '"memory_id": [0-9]*' | grep -o '[0-9]*')
@@ -244,62 +244,62 @@ else
     test_fail "Direct MCP storage" "Failed to store via direct MCP"
 fi
 
-# Restart ZEN coordinator (container-first, process fallback)
-if [ -n "$ZEN_CONTAINER" ]; then
-    echo "🔍 Target container: $ZEN_CONTAINER"
-    echo "💥 Restarting Zen Coordinator container..."
-    docker stop "$ZEN_CONTAINER" >/dev/null 2>&1
+# Restart Mega-Orchestrator (container-first, process fallback)
+if [ -n "$ORCHESTRATOR_CONTAINER" ]; then
+    echo "🔍 Target container: $ORCHESTRATOR_CONTAINER"
+    echo "💥 Restarting Mega-Orchestrator container..."
+    docker stop "$ORCHESTRATOR_CONTAINER" >/dev/null 2>&1
     sleep 2
 
     if \! curl -s http://localhost:7000/health >/dev/null 2>&1; then
-        test_pass "Zen Coordinator shutdown"
+        test_pass "Mega-Orchestrator shutdown"
     else
-        test_fail "Zen Coordinator shutdown" "Service still responding"
+        test_fail "Mega-Orchestrator shutdown" "Service still responding"
     fi
 
-    echo "🔄 Starting Zen Coordinator container..."
-    docker start "$ZEN_CONTAINER" >/dev/null 2>&1
+    echo "🔄 Starting Mega-Orchestrator container..."
+    docker start "$ORCHESTRATOR_CONTAINER" >/dev/null 2>&1
 else
-    ZEN_PID=$(ps aux | grep zen_coordinator.py | grep -v grep | awk '{print $2}')
-    if [ -z "$ZEN_PID" ]; then
-        test_fail "Zen Coordinator identification" "No container and no process target found"
+    ORCHESTRATOR_PID=$(ps aux | grep mega_orchestrator.py | grep -v grep | awk '{print $2}')
+    if [ -z "$ORCHESTRATOR_PID" ]; then
+        test_fail "Mega-Orchestrator identification" "No container and no process target found"
     else
-        echo "🔍 Target process: PID $ZEN_PID"
-        echo "💥 Restarting Zen Coordinator process..."
-        kill "$ZEN_PID"
+        echo "🔍 Target process: PID $ORCHESTRATOR_PID"
+        echo "💥 Restarting Mega-Orchestrator process..."
+        kill "$ORCHESTRATOR_PID"
         sleep 2
 
         if \! curl -s http://localhost:7000/health >/dev/null 2>&1; then
-            test_pass "Zen Coordinator shutdown"
+            test_pass "Mega-Orchestrator shutdown"
         else
-            test_fail "Zen Coordinator shutdown" "Service still responding"
+            test_fail "Mega-Orchestrator shutdown" "Service still responding"
         fi
 
-        echo "🔄 Starting Zen Coordinator process..."
-        ZEN_COORDINATOR_SCRIPT="${ZEN_COORDINATOR_SCRIPT:-$PROJECT_ROOT/config/zen_coordinator.py}"
-        if [ -f "$ZEN_COORDINATOR_SCRIPT" ]; then
-            nohup python3 "$ZEN_COORDINATOR_SCRIPT" >/dev/null 2>&1 &
+        echo "🔄 Starting Mega-Orchestrator process..."
+        ORCHESTRATOR_SCRIPT="${ORCHESTRATOR_SCRIPT:-$PROJECT_ROOT/config/mega_orchestrator.py}"
+        if [ -f "$ORCHESTRATOR_SCRIPT" ]; then
+            nohup python3 "$ORCHESTRATOR_SCRIPT" >/dev/null 2>&1 &
         else
-            test_fail "Zen Coordinator startup" "Script not found: $ZEN_COORDINATOR_SCRIPT"
+            test_fail "Mega-Orchestrator startup" "Script not found: $ORCHESTRATOR_SCRIPT"
         fi
     fi
 fi
 
-# Measure Zen recovery time
-ZEN_RECOVERY_TIME=$(wait_for_service "http://localhost:7000/health" 20)
-ZEN_RECOVERY_STATUS=$?
+# Measure orchestrator recovery time
+ORCHESTRATOR_RECOVERY_TIME=$(wait_for_service "http://localhost:7000/health" 20)
+ORCHESTRATOR_RECOVERY_STATUS=$?
 
-if [ $ZEN_RECOVERY_STATUS -eq 0 ]; then
-    test_pass "Zen Coordinator restart (${ZEN_RECOVERY_TIME}s)"
+if [ $ORCHESTRATOR_RECOVERY_STATUS -eq 0 ]; then
+    test_pass "Mega-Orchestrator restart (${ORCHESTRATOR_RECOVERY_TIME}s)"
 else
-    test_fail "Zen Coordinator restart" "Service failed to restart within 20s"
+    test_fail "Mega-Orchestrator restart" "Service failed to restart within 20s"
 fi
 
 # Test service mesh reconnection
 echo "🔗 Testing service mesh reconnection..."
 sleep 3
-ZEN_STATUS_AFTER=$(curl -s http://localhost:7000/status)
-SERVICES_CONNECTED=$(echo "$ZEN_STATUS_AFTER" | grep -o '"[a-z_]*": "http[^"]*"' | wc -l)
+ORCHESTRATOR_STATUS_AFTER=$(curl -s http://localhost:7000/status)
+SERVICES_CONNECTED=$(echo "$ORCHESTRATOR_STATUS_AFTER" | grep -o '"[a-z_]*": "http[^"]*"' | wc -l)
 
 if [ $SERVICES_CONNECTED -ge 6 ]; then
     test_pass "Service mesh reconnection ($SERVICES_CONNECTED services)"
@@ -307,15 +307,15 @@ else
     test_fail "Service mesh reconnection" "Only $SERVICES_CONNECTED services connected, expected 6+"
 fi
 
-# Verify data accessibility via Zen after restart
-DIRECT_SEARCH=$(curl -s -X POST "$ZEN_URL" \
+# Verify data accessibility via orchestrator after restart
+DIRECT_SEARCH=$(curl -s -X POST "$ORCHESTRATOR_URL" \
     -H 'Content-Type: application/json' \
-    -d '{"tool": "search_memories", "arguments": {"query": "Direct store before Zen restart", "limit": 5}}')
+    -d '{"tool": "search_memories", "arguments": {"query": "Direct store before orchestrator restart", "limit": 5}}')
 
-if echo "$DIRECT_SEARCH" | grep -q "Direct store before Zen restart"; then
-    test_pass "Data accessibility after Zen restart"
+if echo "$DIRECT_SEARCH" | grep -q "Direct store before orchestrator restart"; then
+    test_pass "Data accessibility after orchestrator restart"
 else
-    test_fail "Data accessibility after Zen restart" "Cannot access data stored before restart"
+    test_fail "Data accessibility after orchestrator restart" "Cannot access data stored before restart"
 fi
 
 echo
@@ -325,7 +325,7 @@ echo 'Target: Test timeout handling and error recovery'
 
 # Test network timeout scenarios
 echo "⏱️  Testing request timeout handling..."
-TIMEOUT_TEST=$(curl -s -X POST "$ZEN_URL" \
+TIMEOUT_TEST=$(curl -s -X POST "$ORCHESTRATOR_URL" \
     -H 'Content-Type: application/json' \
     -d '{"tool": "execute_command", "arguments": {"command": "sleep 2 && echo timeout test"}}' \
     --max-time 1)
@@ -338,7 +338,7 @@ fi
 
 # Test system recovery after timeout
 echo "🔄 Testing system responsiveness after timeout..."
-RECOVERY_TEST=$(curl -s -X POST "$ZEN_URL" \
+RECOVERY_TEST=$(curl -s -X POST "$ORCHESTRATOR_URL" \
     -H 'Content-Type: application/json' \
     -d '{"tool": "execute_command", "arguments": {"command": "echo recovery test"}}' \
     --max-time 5)
@@ -355,7 +355,7 @@ echo '=========================================='
 echo 'Target: Verify database consistency during failures'
 
 # Count total memories before failure tests
-TOTAL_MEMORIES_BEFORE=$(curl -s -X POST "$ZEN_URL" \
+TOTAL_MEMORIES_BEFORE=$(curl -s -X POST "$ORCHESTRATOR_URL" \
     -H 'Content-Type: application/json' \
     -d '{"tool": "search_memories", "arguments": {"query": "Recovery test", "limit": 100}}' | \
     grep -o '"total_count": [0-9]*' | grep -o '[0-9]*')
@@ -371,7 +371,7 @@ else
 fi
 
 # Count memories after all failure tests
-TOTAL_MEMORIES_AFTER=$(curl -s -X POST "$ZEN_URL" \
+TOTAL_MEMORIES_AFTER=$(curl -s -X POST "$ORCHESTRATOR_URL" \
     -H 'Content-Type: application/json' \
     -d '{"tool": "search_memories", "arguments": {"query": "Recovery test", "limit": 100}}' | \
     grep -o '"total_count": [0-9]*' | grep -o '[0-9]*')
@@ -397,10 +397,10 @@ TOTAL_RECOVERY_TIME=$((RECOVERY_END_TIME - RECOVERY_START_TIME))
 
 echo "✅ PASSED: $PASS_COUNT tests"
 echo "❌ FAILED: $FAIL_COUNT tests"
-echo "🚨 Failure Categories: 4 (Memory MCP, Zen Coordinator, Network, Database)"
+echo "🚨 Failure Categories: 4 (Memory MCP, Mega-Orchestrator, Network, Database)"
 echo "⏱️  Recovery Metrics:"
 echo "   - Memory MCP Recovery: ${RECOVERY_TIME}s"
-echo "   - Zen Coordinator Recovery: ${ZEN_RECOVERY_TIME}s"
+echo "   - Mega-Orchestrator Recovery: ${ORCHESTRATOR_RECOVERY_TIME}s"
 echo "   - Service Mesh Reconnection: $SERVICES_CONNECTED services"
 echo "   - Database Records: $ACTUAL_NEW_RECORDS/$EXPECTED_RECORDS preserved"
 echo "📈 Total Test Duration: ${TOTAL_RECOVERY_TIME}ms"
@@ -408,7 +408,7 @@ echo "📈 Total Test Duration: ${TOTAL_RECOVERY_TIME}ms"
 # Overall resilience assessment
 CRITICAL_FAILURES=0
 if [ "$RECOVERY_TIME" -gt 10 ] 2>/dev/null; then CRITICAL_FAILURES=$((CRITICAL_FAILURES+1)); fi
-if [ "$ZEN_RECOVERY_TIME" -gt 20 ] 2>/dev/null; then CRITICAL_FAILURES=$((CRITICAL_FAILURES+1)); fi
+if [ "$ORCHESTRATOR_RECOVERY_TIME" -gt 20 ] 2>/dev/null; then CRITICAL_FAILURES=$((CRITICAL_FAILURES+1)); fi
 if [ $SERVICES_CONNECTED -lt 6 ] 2>/dev/null; then CRITICAL_FAILURES=$((CRITICAL_FAILURES+1)); fi
 
 # Final assessment

@@ -156,7 +156,7 @@ echo "2. Checking Prometheus Configuration"
 echo "-----------------------------------"
 
 # Check for required scrape jobs
-REQUIRED_JOBS=("prometheus" "zen-coordinator" "mcp-core-services" "mcp-ai-services" "mcp-db-wrappers" "mcp-mqtt")
+REQUIRED_JOBS=("prometheus" "mega-orchestrator" "mcp-core-services" "mcp-ai-services" "mcp-db-wrappers" "mcp-mqtt")
 
 for job in "${REQUIRED_JOBS[@]}"; do
     if grep -q "job_name: '$job'" "$MONITORING_DIR/prometheus/prometheus.yml"; then

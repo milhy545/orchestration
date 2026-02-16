@@ -95,7 +95,7 @@ echo "      - mcp-network"
 echo ""
 
 # 4. Generate orchestrator registration
-echo "📋 Add this to config/zen_coordinator.py MCP_SERVICES dict:"
+echo "📋 Add this to config/mega_orchestrator.py MCP_SERVICES dict:"
 echo ""
 echo "    \"${SERVICE_NAME}\": {"
 echo "        \"description\": \"${SERVICE_NAME} MCP Server\","

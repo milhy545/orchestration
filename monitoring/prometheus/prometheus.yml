@@ -19,12 +19,12 @@ scrape_configs:
       - targets: ['localhost:9090']
 
   # ZEN Coordinator - Master Controller
-  - job_name: 'zen-coordinator'
+  - job_name: 'mega-orchestrator'
     static_configs:
-      - targets: ['zen-coordinator:8020']
+      - targets: ['mega-orchestrator:7000']
         labels:
-          service: 'zen-coordinator'
-          type: 'coordinator'
+          service: 'mega-orchestrator'
+          type: 'orchestrator'
 
   # Core MCP Services (7001-7010)
   - job_name: 'mcp-core-services'

@@ -256,7 +256,7 @@ class EnhancedZENCoordinator(BaseHTTPRequestHandler):
                         # Direct MCP call to service
                         mcp_request = {
                             'jsonrpc': '2.0',
-                            'id': 'zen-coordinator',
+                            'id': 'mega-orchestrator',
                             'method': 'tools/call',
                             'params': {'name': tool, 'arguments': args}
                         }

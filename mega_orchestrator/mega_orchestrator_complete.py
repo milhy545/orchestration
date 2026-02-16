@@ -22,14 +22,14 @@ from dataclasses import dataclass, asdict
 from datetime import datetime
 import aiohttp
 from aiohttp import web
-import aioredis
+import redis.asyncio as aioredis
 import asyncpg
 
 # Import our enhanced components
-from providers.registry import ModelProviderRegistry, initialize_provider_registry
-from modes.sage_router import SAGEModeRouter, SAGEMode
-from utils.conversation_memory import ConversationMemory
-from utils.file_storage import FileStorage, FileHandlingMode
+from mega_orchestrator.providers.registry import ModelProviderRegistry, initialize_provider_registry
+from mega_orchestrator.modes.sage_router import SAGEModeRouter, SAGEMode
+from mega_orchestrator.utils.conversation_memory import ConversationMemory
+from mega_orchestrator.utils.file_storage import FileStorage, FileHandlingMode
 
 # Version and build info
 VERSION = "1.0.0"
@@ -195,13 +195,13 @@ class MegaOrchestrator:
     async def _init_infrastructure(self):
         """Initialize Redis and PostgreSQL connections"""
         # Connect to Redis
-        redis_url = "redis://localhost:7022"
+        redis_url = os.getenv("REDIS_URL", "redis://redis:6379")
         self.redis = aioredis.from_url(redis_url)
         await self.redis.ping()
-        logging.info("✅ Redis connection established")
+        logging.info(f"✅ Redis connection established: {redis_url}")
         
         # Connect to PostgreSQL
-        db_url = "postgresql://mcp_admin:change_me_in_production@localhost:7021/mcp_unified"
+        db_url = os.getenv("MCP_DATABASE_URL", "postgresql://mcp_admin:change_me_in_production@postgresql:5432/mcp_unified")
         
         self.db_pool = await asyncpg.create_pool(db_url, min_size=2, max_size=10)
         logging.info("✅ PostgreSQL connection pool established")
