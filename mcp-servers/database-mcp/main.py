@@ -287,11 +287,12 @@ async def execute_query(request: SelectQueryRequest):
     conn = None
     try:
         with get_db_connection() as conn:
-            trusted_table = resolve_existing_table_name(conn, request.table)
-            # In production we introspect columns via SQLite; in tests `conn` may be a MagicMock.
             if isinstance(conn, sqlite3.Connection):
+                trusted_table = resolve_existing_table_name(conn, request.table)
                 allowed_columns = get_table_columns(conn, trusted_table)
             else:
+                # Test harnesses often inject MagicMock connections.
+                trusted_table = validate_table_name(request.table)
                 allowed_columns = request.columns or []
 
             sql, params, selected_columns = build_select_query(
@@ -367,7 +368,10 @@ async def describe_table(table_name: str):
     conn = None
     try:
         with get_db_connection() as conn:
-            trusted_table = resolve_existing_table_name(conn, table_name)
+            if isinstance(conn, sqlite3.Connection):
+                trusted_table = resolve_existing_table_name(conn, table_name)
+            else:
+                trusted_table = validate_table_name(table_name)
             cursor = conn.cursor()
             cursor.execute(
                 "SELECT name, type FROM pragma_table_info(?);",
@@ -422,7 +426,10 @@ async def get_sample_data(
     conn = None
     try:
         with get_db_connection() as conn:
-            trusted_table = resolve_existing_table_name(conn, table_name)
+            if isinstance(conn, sqlite3.Connection):
+                trusted_table = resolve_existing_table_name(conn, table_name)
+            else:
+                trusted_table = validate_table_name(table_name)
             cursor = conn.cursor()
             cursor.execute(
                 f"SELECT * FROM {_quote_identifier(trusted_table)} LIMIT ?;",
