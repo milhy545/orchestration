@@ -108,6 +108,7 @@ async def shutdown_event():
 
 # --- Health ---
 
+
 @app.get("/health")
 async def health_check():
     """Health check endpoint."""
@@ -137,6 +138,7 @@ async def health_check():
 
 
 # --- MCP Tools API ---
+
 
 class ToolCallRequest(BaseModel):
     name: str
@@ -219,6 +221,7 @@ async def call_tool(request: ToolCallRequest):
 
 # --- Tool Handlers ---
 
+
 async def handle_store_memory(args: Dict[str, Any]) -> Dict[str, Any]:
     content = args.get("content")
     if not content:
@@ -244,7 +247,11 @@ async def handle_store_memory(args: Dict[str, Any]) -> Dict[str, Any]:
             PointStruct(
                 id=embedding_id,
                 vector=vector,
-                payload={"content": content, "category": category, "metadata": metadata},
+                payload={
+                    "content": content,
+                    "category": category,
+                    "metadata": metadata,
+                },
             )
         ],
     )
@@ -300,7 +307,9 @@ async def handle_search_memories(args: Dict[str, Any]) -> List[Dict[str, Any]]:
             "id": row["id"],
             "content": row["content"],
             "category": row["category"],
-            "metadata": json.loads(row["metadata_json"]) if row["metadata_json"] else {},
+            "metadata": (
+                json.loads(row["metadata_json"]) if row["metadata_json"] else {}
+            ),
             "created_at": row["created_at"].isoformat(),
         }
         for row in rows

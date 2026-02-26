@@ -11,14 +11,14 @@ import sys
 from typing import Any, Dict, List, Optional
 
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
 from prometheus_fastapi_instrumentator import Instrumentator
+from pydantic import BaseModel
 
 # Configure path so email_client imports work
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "src"))
 
-from email_client.handlers import handle_call_tool  # noqa: E402
 from email_client.config import EMAIL_CONFIG  # noqa: E402
+from email_client.handlers import handle_call_tool  # noqa: E402
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
@@ -35,8 +35,10 @@ Instrumentator().instrument(app).expose(app)
 
 # --------------- Models ---------------
 
+
 class ToolRequest(BaseModel):
     """Generic MCP tool invocation request."""
+
     arguments: Dict[str, Any] = {}
 
 
@@ -47,6 +49,7 @@ class ToolResponse(BaseModel):
 
 # --------------- Health ---------------
 
+
 @app.get("/health")
 async def health():
     configured = bool(EMAIL_CONFIG.get("email")) and bool(EMAIL_CONFIG.get("password"))
@@ -54,6 +57,7 @@ async def health():
 
 
 # --------------- Generic tool call ---------------
+
 
 async def _call_tool(name: str, arguments: dict) -> dict:
     """Call an MCP tool and return the text content."""
@@ -73,6 +77,7 @@ async def call_tool(tool_name: str, req: ToolRequest):
 
 
 # --------------- Convenience endpoints ---------------
+
 
 class SearchRequest(BaseModel):
     keyword: Optional[str] = None
@@ -121,7 +126,9 @@ async def get_email_content(email_id: str):
 
 @app.post("/gmail/count")
 async def count_daily_emails(start_date: str, end_date: str):
-    return await _call_tool("count-daily-emails", {"start_date": start_date, "end_date": end_date})
+    return await _call_tool(
+        "count-daily-emails", {"start_date": start_date, "end_date": end_date}
+    )
 
 
 @app.get("/gmail/labels")

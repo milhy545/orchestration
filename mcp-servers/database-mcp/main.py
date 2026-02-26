@@ -143,7 +143,9 @@ class TableSchema(BaseModel):
 
 def get_table_columns(conn: sqlite3.Connection, table_name: str) -> List[str]:
     cursor = conn.cursor()
-    cursor.execute(f"PRAGMA table_info({_quote_identifier(table_name)});")  # lgtm[py/sql-injection]
+    cursor.execute(
+        f"PRAGMA table_info({_quote_identifier(table_name)});"
+    )  # lgtm[py/sql-injection]
     rows = cursor.fetchall()
     # SQLite returns sqlite3.Row, but tests often mock tuples/dicts.
     columns: List[str] = []

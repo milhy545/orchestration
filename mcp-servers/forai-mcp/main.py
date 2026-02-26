@@ -24,6 +24,7 @@ WORKSPACE = os.getenv("WORKSPACE_PATH", "/workspace")
 # Models
 # ---------------------------------------------------------------------------
 
+
 class ToolCallRequest(BaseModel):
     name: str
     arguments: Dict[str, Any] = {}
@@ -47,6 +48,7 @@ class ForaiHeader(BaseModel):
 # ---------------------------------------------------------------------------
 # Core FORAI logic (inline — forai may not be pip-installable)
 # ---------------------------------------------------------------------------
+
 
 def _analyze_python_file(filepath: str) -> Dict[str, Any]:
     """Parse a single Python file and extract FORAI metadata."""
@@ -77,12 +79,21 @@ def _analyze_python_file(filepath: str) -> Dict[str, Any]:
                 imports.append(f"{module}.{alias.name}")
         elif isinstance(node, ast.ClassDef):
             bases = [
-                getattr(b, "id", None) or getattr(getattr(b, "attr", None), "__str__", lambda: "?")()
+                getattr(b, "id", None)
+                or getattr(getattr(b, "attr", None), "__str__", lambda: "?")()
                 for b in node.bases
             ]
             classes.append({"name": node.name, "bases": bases, "line": node.lineno})
-        elif isinstance(node, ast.FunctionDef) or isinstance(node, ast.AsyncFunctionDef):
-            functions.append({"name": node.name, "line": node.lineno, "async": isinstance(node, ast.AsyncFunctionDef)})
+        elif isinstance(node, ast.FunctionDef) or isinstance(
+            node, ast.AsyncFunctionDef
+        ):
+            functions.append(
+                {
+                    "name": node.name,
+                    "line": node.lineno,
+                    "async": isinstance(node, ast.AsyncFunctionDef),
+                }
+            )
         elif isinstance(node, ast.Assign):
             for target in node.targets:
                 if isinstance(target, ast.Name):
@@ -96,7 +107,9 @@ def _analyze_python_file(filepath: str) -> Dict[str, Any]:
                 if isinstance(target, ast.Name) and target.id == "__all__":
                     if isinstance(node.value, (ast.List, ast.Tuple)):
                         for elt in node.value.elts:
-                            if isinstance(elt, ast.Constant) and isinstance(elt.value, str):
+                            if isinstance(elt, ast.Constant) and isinstance(
+                                elt.value, str
+                            ):
                                 exports.append(elt.value)
 
     return {
@@ -147,6 +160,7 @@ def _collect_py_files(path: Path, recursive: bool = True) -> List[Path]:
 # Tool implementations
 # ---------------------------------------------------------------------------
 
+
 def forai_analyze(path: str) -> Dict[str, Any]:
     """Analyze file(s) and return FORAI metadata."""
     resolved = _resolve_path(path)
@@ -165,13 +179,18 @@ def forai_process(path: str, recursive: bool = True) -> Dict[str, Any]:
     for f in files[:200]:
         analysis = _analyze_python_file(str(f))
         if "error" in analysis:
-            processed.append({"file": str(f), "status": "skipped", "error": analysis["error"]})
+            processed.append(
+                {"file": str(f), "status": "skipped", "error": analysis["error"]}
+            )
             continue
         header = _generate_forai_header(analysis)
         content = f.read_text(encoding="utf-8", errors="replace")
         # Remove existing FORAI header
         import re
-        content = re.sub(r"# FORAI:START.*?# FORAI:END\n?", "", content, flags=re.DOTALL)
+
+        content = re.sub(
+            r"# FORAI:START.*?# FORAI:END\n?", "", content, flags=re.DOTALL
+        )
         new_content = header + "\n\n" + content.lstrip("\n")
         f.write_text(new_content, encoding="utf-8")
         processed.append({"file": str(f), "status": "processed"})
@@ -222,7 +241,10 @@ TOOLS = [
         "parameters": {
             "type": "object",
             "properties": {
-                "path": {"type": "string", "description": "File or directory path to analyze"},
+                "path": {
+                    "type": "string",
+                    "description": "File or directory path to analyze",
+                },
             },
             "required": ["path"],
         },
@@ -233,8 +255,15 @@ TOOLS = [
         "parameters": {
             "type": "object",
             "properties": {
-                "path": {"type": "string", "description": "File or directory path to process"},
-                "recursive": {"type": "boolean", "description": "Process subdirectories recursively", "default": True},
+                "path": {
+                    "type": "string",
+                    "description": "File or directory path to process",
+                },
+                "recursive": {
+                    "type": "boolean",
+                    "description": "Process subdirectories recursively",
+                    "default": True,
+                },
             },
             "required": ["path"],
         },
@@ -245,8 +274,14 @@ TOOLS = [
         "parameters": {
             "type": "object",
             "properties": {
-                "path": {"type": "string", "description": "File or directory path to query"},
-                "query": {"type": "string", "description": "Query string (e.g. 'imports', 'classes', 'functions')"},
+                "path": {
+                    "type": "string",
+                    "description": "File or directory path to query",
+                },
+                "query": {
+                    "type": "string",
+                    "description": "Query string (e.g. 'imports', 'classes', 'functions')",
+                },
             },
             "required": ["path", "query"],
         },
@@ -255,14 +290,20 @@ TOOLS = [
 
 TOOL_DISPATCH = {
     "forai_analyze": lambda args: forai_analyze(args["path"]),
-    "forai_process": lambda args: forai_process(args["path"], args.get("recursive", True)),
+    "forai_process": lambda args: forai_process(
+        args["path"], args.get("recursive", True)
+    ),
     "forai_query": lambda args: forai_query(args["path"], args["query"]),
 }
 
 
 @app.get("/health")
 async def health():
-    return {"status": "healthy", "service": "forai-mcp", "timestamp": datetime.utcnow().isoformat()}
+    return {
+        "status": "healthy",
+        "service": "forai-mcp",
+        "timestamp": datetime.utcnow().isoformat(),
+    }
 
 
 @app.get("/tools/list")

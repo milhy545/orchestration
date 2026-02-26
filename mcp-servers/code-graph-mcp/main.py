@@ -36,6 +36,7 @@ def _get_driver():
     if _driver is None:
         try:
             from neo4j import GraphDatabase
+
             _driver = GraphDatabase.driver(NEO4J_URL, auth=(NEO4J_USER, NEO4J_PASSWORD))
         except Exception as exc:
             logger.warning(f"Neo4j connection failed: {exc}")
@@ -56,6 +57,7 @@ def _run_cypher(query: str, params: Optional[Dict] = None) -> List[Dict]:
 # Models
 # ---------------------------------------------------------------------------
 
+
 class ToolCallRequest(BaseModel):
     name: str
     arguments: Dict[str, Any] = {}
@@ -70,6 +72,7 @@ class ToolCallResponse(BaseModel):
 # ---------------------------------------------------------------------------
 # Python AST-based code analysis (fallback when tree-sitter unavailable)
 # ---------------------------------------------------------------------------
+
 
 def _parse_python_file(filepath: Path) -> Dict[str, Any]:
     """Parse a Python file and extract structural information."""
@@ -97,13 +100,21 @@ def _parse_python_file(filepath: Path) -> Dict[str, Any]:
                     bases.append(ast.dump(b))
             classes.append({"name": node.name, "bases": bases, "line": node.lineno})
             for dec in node.decorator_list:
-                dec_name = getattr(dec, "id", None) or getattr(getattr(dec, "func", None), "id", None) or "unknown"
+                dec_name = (
+                    getattr(dec, "id", None)
+                    or getattr(getattr(dec, "func", None), "id", None)
+                    or "unknown"
+                )
                 decorators.append({"target": node.name, "decorator": str(dec_name)})
 
         elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
             functions.append({"name": node.name, "line": node.lineno})
             for dec in node.decorator_list:
-                dec_name = getattr(dec, "id", None) or getattr(getattr(dec, "func", None), "id", None) or "unknown"
+                dec_name = (
+                    getattr(dec, "id", None)
+                    or getattr(getattr(dec, "func", None), "id", None)
+                    or "unknown"
+                )
                 decorators.append({"target": node.name, "decorator": str(dec_name)})
 
         elif isinstance(node, ast.Import):
@@ -144,6 +155,7 @@ def _parse_python_file(filepath: Path) -> Dict[str, Any]:
 # Tool implementations
 # ---------------------------------------------------------------------------
 
+
 def index_python_project(path: str) -> Dict[str, Any]:
     """Index all .py files under path into Neo4j."""
     resolved = Path(path) if Path(path).is_absolute() else Path(WORKSPACE) / path
@@ -163,7 +175,10 @@ def index_python_project(path: str) -> Dict[str, Any]:
         if driver:
             with driver.session() as session:
                 # Clear previous data for this path
-                session.run("MATCH (n {project: $project}) DETACH DELETE n", {"project": str(resolved)})
+                session.run(
+                    "MATCH (n {project: $project}) DETACH DELETE n",
+                    {"project": str(resolved)},
+                )
 
                 for a in analyses:
                     if "error" in a:
@@ -171,7 +186,11 @@ def index_python_project(path: str) -> Dict[str, Any]:
                     # Create Module node
                     session.run(
                         "MERGE (m:Module {name: $name, project: $project, file: $file})",
-                        {"name": a["module"], "project": str(resolved), "file": a["file"]},
+                        {
+                            "name": a["module"],
+                            "project": str(resolved),
+                            "file": a["file"],
+                        },
                     )
                     # Classes
                     for cls in a["classes"]:
@@ -180,7 +199,11 @@ def index_python_project(path: str) -> Dict[str, Any]:
                             "WITH c "
                             "MATCH (m:Module {name: $module, project: $project}) "
                             "MERGE (m)-[:DEFINES]->(c)",
-                            {"name": cls["name"], "project": str(resolved), "module": a["module"]},
+                            {
+                                "name": cls["name"],
+                                "project": str(resolved),
+                                "module": a["module"],
+                            },
                         )
                         for base in cls["bases"]:
                             session.run(
@@ -188,7 +211,11 @@ def index_python_project(path: str) -> Dict[str, Any]:
                                 "WITH parent "
                                 "MATCH (child:Class {name: $name, project: $project}) "
                                 "MERGE (child)-[:INHERITS]->(parent)",
-                                {"base": base, "name": cls["name"], "project": str(resolved)},
+                                {
+                                    "base": base,
+                                    "name": cls["name"],
+                                    "project": str(resolved),
+                                },
                             )
                     # Functions
                     for func in a["functions"]:
@@ -197,7 +224,11 @@ def index_python_project(path: str) -> Dict[str, Any]:
                             "WITH f "
                             "MATCH (m:Module {name: $module, project: $project}) "
                             "MERGE (m)-[:DEFINES]->(f)",
-                            {"name": func["name"], "project": str(resolved), "module": a["module"]},
+                            {
+                                "name": func["name"],
+                                "project": str(resolved),
+                                "module": a["module"],
+                            },
                         )
                     # Imports
                     for imp in a["imports"]:
@@ -205,7 +236,11 @@ def index_python_project(path: str) -> Dict[str, Any]:
                             "MATCH (m:Module {name: $module, project: $project}) "
                             "MERGE (target:Module {name: $imported, project: $project}) "
                             "MERGE (m)-[:IMPORTS]->(target)",
-                            {"module": a["module"], "imported": imp["module"].split(".")[0], "project": str(resolved)},
+                            {
+                                "module": a["module"],
+                                "imported": imp["module"].split(".")[0],
+                                "project": str(resolved),
+                            },
                         )
                     # Decorators
                     for dec in a.get("decorators", []):
@@ -213,7 +248,11 @@ def index_python_project(path: str) -> Dict[str, Any]:
                             "MATCH (t {name: $target, project: $project}) "
                             "MERGE (d:Function {name: $decorator, project: $project}) "
                             "MERGE (d)-[:DECORATES]->(t)",
-                            {"target": dec["target"], "decorator": dec["decorator"], "project": str(resolved)},
+                            {
+                                "target": dec["target"],
+                                "decorator": dec["decorator"],
+                                "project": str(resolved),
+                            },
                         )
             stored = True
     except Exception as exc:
@@ -299,7 +338,9 @@ def detect_circular_imports(path: str) -> Dict[str, Any]:
             if neighbor not in visited:
                 _dfs(neighbor, path_so_far + [neighbor])
             elif neighbor in rec_stack:
-                cycle_start = path_so_far.index(neighbor) if neighbor in path_so_far else -1
+                cycle_start = (
+                    path_so_far.index(neighbor) if neighbor in path_so_far else -1
+                )
                 if cycle_start >= 0:
                     cycles.append(path_so_far[cycle_start:] + [neighbor])
                 else:
@@ -341,7 +382,10 @@ TOOLS = [
         "parameters": {
             "type": "object",
             "properties": {
-                "cypher_query": {"type": "string", "description": "Cypher query string"},
+                "cypher_query": {
+                    "type": "string",
+                    "description": "Cypher query string",
+                },
             },
             "required": ["cypher_query"],
         },
@@ -363,7 +407,10 @@ TOOLS = [
         "parameters": {
             "type": "object",
             "properties": {
-                "function": {"type": "string", "description": "Function name to look up"},
+                "function": {
+                    "type": "string",
+                    "description": "Function name to look up",
+                },
             },
             "required": ["function"],
         },
