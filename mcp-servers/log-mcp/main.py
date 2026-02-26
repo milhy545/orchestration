@@ -84,6 +84,21 @@ def _safe_path(validated: str | Path) -> Path:
     return Path(validated)
 
 
+def _ensure_allowed_log_path(path_obj: Path) -> Path:
+    """Re-validate resolved path against allowed log roots before IO."""
+    resolved = path_obj.resolve()
+    allowed = any(
+        resolved.is_relative_to(Path(allowed_dir).resolve())
+        for allowed_dir in ALLOWED_LOG_DIRS
+    )
+    if not allowed:
+        raise HTTPException(
+            status_code=403,
+            detail=f"Access denied: Path not in allowed directories {ALLOWED_LOG_DIRS}",
+        )
+    return resolved
+
+
 def validate_command(command_str: str) -> List[str]:
     """Validate and sanitize command to prevent command injection"""
     try:
@@ -218,15 +233,21 @@ async def log_analysis_tool(request: LogAnalysisRequest) -> Dict[str, Any]:
 
         if request.log_source == "file_path":
             # Validate path to prevent path traversal
-            log_path = validate_log_path(request.source_value)
+            log_path = _ensure_allowed_log_path(
+                _safe_path(validate_log_path(request.source_value))
+            )
 
             # Handle compressed files
             if log_path.suffix == ".gz":
                 # lgtm[py/path-injection] - log_path validated to allowed directories
-                with gzip.open(log_path, "rt") as f:  # lgtm[py/path-injection]
+                with gzip.open(
+                    log_path, "rt", encoding="utf-8", errors="ignore"
+                ) as f:  # lgtm[py/path-injection]
                     log_lines = f.readlines()
             else:
-                log_lines = log_path.read_text().splitlines()  # lgtm[py/path-injection]
+                log_lines = log_path.read_text(
+                    encoding="utf-8", errors="ignore"
+                ).splitlines()  # lgtm[py/path-injection]
 
         elif request.log_source == "command":
             # Validate command to prevent command injection
@@ -533,17 +554,21 @@ async def log_search_tool(request: LogSearchRequest) -> Dict[str, Any]:
         for source in request.sources:
             try:
                 # Validate path to prevent path traversal
-                source_path = _safe_path(validate_log_path(source))
+                source_path = _ensure_allowed_log_path(
+                    _safe_path(validate_log_path(source))
+                )
 
                 # Read file content
                 if source_path.suffix == ".gz":
                     # lgtm[py/path-injection] - source_path validated to allowed directories
-                    with gzip.open(source_path, "rt") as f:  # lgtm[py/path-injection]
+                    with gzip.open(
+                        source_path, "rt", encoding="utf-8", errors="ignore"
+                    ) as f:  # lgtm[py/path-injection]
                         lines = f.readlines()
                 else:
-                    lines = (
-                        source_path.read_text().splitlines()
-                    )  # lgtm[py/path-injection]
+                    lines = source_path.read_text(
+                        encoding="utf-8", errors="ignore"
+                    ).splitlines()  # lgtm[py/path-injection]
             except HTTPException:
                 # Skip files that fail validation
                 continue

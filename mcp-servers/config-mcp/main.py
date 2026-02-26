@@ -87,6 +87,17 @@ def _safe_path(validated: str | Path) -> Path:
     return Path(validated)
 
 
+def _ensure_within(base_dir: Path, candidate_path: Path) -> Path:
+    """Ensure candidate_path resolves under base_dir and return resolved path."""
+    base_resolved = base_dir.resolve()
+    candidate_resolved = candidate_path.resolve()
+    try:
+        candidate_resolved.relative_to(base_resolved)
+    except ValueError:
+        raise HTTPException(status_code=403, detail="Path outside allowed directory")
+    return candidate_resolved
+
+
 # Request/Response Models
 
 
@@ -523,7 +534,7 @@ async def backup_tool(request: ConfigBackupRequest) -> Dict[str, Any]:
             backup_name = validate_backup_name(
                 request.backup_name or f"backup_{timestamp}"
             )
-            backup_path = backup_dir / backup_name  # lgtm[py/path-injection]
+            backup_path = _ensure_within(backup_dir, backup_dir / backup_name)
 
             if backup_path.exists():  # lgtm[py/path-injection]
                 raise HTTPException(status_code=409, detail="Backup already exists")
@@ -536,14 +547,21 @@ async def backup_tool(request: ConfigBackupRequest) -> Dict[str, Any]:
                 for file_path in CONFIG_BASE_PATH.glob(
                     pattern
                 ):  # lgtm[py/path-injection]
-                    if file_path.is_file() and not file_path.is_relative_to(backup_dir):
-                        relative_path = file_path.relative_to(CONFIG_BASE_PATH)
-                        backup_file_path = _safe_path(backup_path / relative_path)
-                        _safe_path(backup_file_path.parent).mkdir(
+                    resolved_source = _ensure_within(CONFIG_BASE_PATH, file_path)
+                    if resolved_source.is_file() and not resolved_source.is_relative_to(
+                        backup_dir.resolve()
+                    ):
+                        relative_path = resolved_source.relative_to(
+                            CONFIG_BASE_PATH.resolve()
+                        )
+                        backup_file_path = _ensure_within(
+                            backup_path, backup_path / relative_path
+                        )
+                        _ensure_within(backup_path, backup_file_path.parent).mkdir(
                             parents=True, exist_ok=True
-                        )  # lgtm[py/path-injection]
+                        )
                         shutil.copy2(
-                            _safe_path(file_path), backup_file_path
+                            str(resolved_source), str(backup_file_path)
                         )  # lgtm[py/path-injection]
                         backed_up_files.append(str(relative_path))
 
@@ -591,7 +609,7 @@ async def backup_tool(request: ConfigBackupRequest) -> Dict[str, Any]:
 
         elif request.operation == "restore":
             backup_name = validate_backup_name(request.backup_name)
-            backup_path = backup_dir / backup_name  # lgtm[py/path-injection]
+            backup_path = _ensure_within(backup_dir, backup_dir / backup_name)
             if not backup_path.exists():  # lgtm[py/path-injection]
                 raise HTTPException(status_code=404, detail="Backup not found")
 
@@ -599,19 +617,15 @@ async def backup_tool(request: ConfigBackupRequest) -> Dict[str, Any]:
             for backup_file in backup_path.rglob("*"):  # lgtm[py/path-injection]
                 if backup_file.is_file():
                     relative_path = backup_file.relative_to(backup_path)
-                    target_path = (
-                        CONFIG_BASE_PATH / relative_path
-                    ).resolve()  # lgtm[py/path-injection]
-                    try:
-                        target_path.relative_to(CONFIG_BASE_PATH.resolve())
-                    except ValueError:
-                        raise HTTPException(
-                            status_code=403, detail="Path outside allowed directory"
-                        )
+                    target_path = _ensure_within(
+                        CONFIG_BASE_PATH, CONFIG_BASE_PATH / relative_path
+                    )
                     target_path.parent.mkdir(
                         parents=True, exist_ok=True
                     )  # lgtm[py/path-injection]
-                    shutil.copy2(backup_file, target_path)  # lgtm[py/path-injection]
+                    shutil.copy2(
+                        str(_ensure_within(backup_path, backup_file)), str(target_path)
+                    )  # lgtm[py/path-injection]
                     restored_files.append(str(relative_path))
 
             return {
@@ -624,7 +638,7 @@ async def backup_tool(request: ConfigBackupRequest) -> Dict[str, Any]:
 
         elif request.operation == "delete":
             backup_name = validate_backup_name(request.backup_name)
-            backup_path = backup_dir / backup_name  # lgtm[py/path-injection]
+            backup_path = _ensure_within(backup_dir, backup_dir / backup_name)
             if not backup_path.exists():  # lgtm[py/path-injection]
                 raise HTTPException(status_code=404, detail="Backup not found")
 

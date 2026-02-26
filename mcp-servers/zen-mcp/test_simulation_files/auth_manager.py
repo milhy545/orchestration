@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 import hashlib
+import hmac
 import pickle
+import secrets
 import sqlite3
 
 
@@ -12,24 +14,29 @@ class AuthenticationManager:
 
     def login(self, username, password):
         """User login with various security vulnerabilities"""
-        # A03: Injection - SQL injection vulnerability
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
 
-        # Direct string interpolation in SQL query
-        query = f"SELECT id, password_hash FROM users WHERE username = '{username}'"
-        cursor.execute(query)
+        cursor.execute(
+            "SELECT id, password_hash FROM users WHERE username = ?",
+            (username,),
+        )
 
         user = cursor.fetchone()
         if not user:
             return {"status": "failed", "message": "User not found"}
 
-        # A02: Cryptographic Failures - Weak hashing algorithm
-        password_hash = hashlib.md5(password.encode()).hexdigest()
+        stored_hash = str(user[1])
+        if "$" not in stored_hash:
+            return {"status": "failed", "message": "Invalid password storage format"}
 
-        if user[1] == password_hash:
-            # A07: Identification and Authentication Failures - Weak session generation
-            session_id = hashlib.md5(f"{username}{password}".encode()).hexdigest()
+        salt, expected_hash = stored_hash.split("$", 1)
+        password_hash = hashlib.pbkdf2_hmac(
+            "sha256", password.encode(), salt.encode(), 100_000
+        ).hex()
+
+        if hmac.compare_digest(expected_hash, password_hash):
+            session_id = secrets.token_urlsafe(32)
             self.sessions[session_id] = {"user_id": user[0], "username": username}
 
             return {"status": "success", "session_id": session_id}
@@ -38,8 +45,7 @@ class AuthenticationManager:
 
     def reset_password(self, email):
         """Password reset with security issues"""
-        # A04: Insecure Design - No rate limiting or validation
-        reset_token = hashlib.md5(email.encode()).hexdigest()
+        reset_token = secrets.token_urlsafe(32)
 
         # A09: Security Logging and Monitoring Failures - No security event logging
         # Simply returns token without any verification or logging

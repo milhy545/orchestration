@@ -107,6 +107,21 @@ def _safe_path(validated: str | Path) -> Path:
     return Path(validated)
 
 
+def _ensure_allowed_path(path_obj: Path) -> Path:
+    """Re-check resolved path against allowlist right before filesystem access."""
+    resolved = path_obj.resolve()
+    allowed = any(
+        resolved.is_relative_to(Path(allowed_dir).resolve())
+        for allowed_dir in ALLOWED_DIRECTORIES
+    )
+    if not allowed:
+        raise HTTPException(
+            status_code=403,
+            detail=f"Access to path {resolved} is not allowed. Allowed directories: {ALLOWED_DIRECTORIES}",
+        )
+    return resolved
+
+
 @app.get("/health")
 async def health():
     return {"status": "ok", "timestamp": datetime.now().isoformat()}
@@ -201,7 +216,9 @@ async def read_file(
     """Read file content with security validation and size limits"""
     try:
         # Validate path for security
-        safe_full_path = _safe_path(validate_path(path, operation="read"))
+        safe_full_path = _ensure_allowed_path(
+            _safe_path(validate_path(path, operation="read"))
+        )
         full_path = str(safe_full_path)
 
         # lgtm[py/path-injection] - full_path is validated to allowed directories
@@ -218,7 +235,7 @@ async def read_file(
         # lgtm[py/path-injection] - full_path is validated to allowed directories
         file_size = None
         try:
-            file_size = os.path.getsize(safe_full_path)  # lgtm[py/path-injection]
+            file_size = safe_full_path.stat().st_size
         except OSError:
             file_size = None
 
@@ -227,8 +244,8 @@ async def read_file(
         truncated = bool(file_size is not None and bytes_to_read < file_size)
 
         # lgtm[py/path-injection] - full_path is validated to allowed directories
-        with open(
-            safe_full_path, "r", encoding="utf-8", errors="ignore"
+        with safe_full_path.open(
+            "r", encoding="utf-8", errors="ignore"
         ) as f:  # lgtm[py/path-injection]
             content = f.read(bytes_to_read)
 

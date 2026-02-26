@@ -73,7 +73,7 @@ def check_environment():
         value = os.getenv(key)
         if value:
             if len(value.strip()) < 10:
-                print(f"API key {key} appears too short or invalid", file=sys.stderr)
+                print("An API key appears too short or invalid", file=sys.stderr)
                 return False
 
     return True

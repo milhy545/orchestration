@@ -282,7 +282,7 @@ def main():
         logger.error("No GOOGLE_API_KEY or GEMINI_API_KEY found in environment")
         return 1
     
-    logger.info(f"Using API key: {api_key[:10]}...")
+    logger.info("Using API key from environment")
     
     # Check file exists
     if not os.path.exists(file_path):

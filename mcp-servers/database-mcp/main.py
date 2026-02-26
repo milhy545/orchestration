@@ -100,6 +100,35 @@ def _quote_identifier(name: str) -> str:
     return f'"{name}"'
 
 
+def resolve_existing_table_name(conn: sqlite3.Connection, table_name: str) -> str:
+    """Resolve a user-requested table name to a concrete SQLite table entry.
+
+    This function uses a parameterized query against sqlite_master and returns
+    the canonical table name from the database itself.
+    """
+    validated = validate_table_name(table_name)
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name = ? AND name NOT LIKE 'sqlite_%' LIMIT 1;",
+        (validated,),
+    )
+    row = cursor.fetchone()
+    if not row:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Table {table_name} not found or inaccessible.",
+        )
+    if isinstance(row, dict):
+        name = row.get("name")
+    elif isinstance(row, (tuple, list)) and row:
+        name = row[0]
+    else:
+        name = row["name"]  # type: ignore[index]
+    if not name:
+        raise HTTPException(status_code=404, detail=f"Table {table_name} not found.")
+    return str(name)
+
+
 class FilterCondition(BaseModel):
     column: str
     op: Literal["=", "!=", ">", ">=", "<", "<=", "like", "in"]
@@ -142,10 +171,12 @@ class TableSchema(BaseModel):
 
 
 def get_table_columns(conn: sqlite3.Connection, table_name: str) -> List[str]:
+    trusted_table = resolve_existing_table_name(conn, table_name)
     cursor = conn.cursor()
     cursor.execute(
-        f"PRAGMA table_info({_quote_identifier(table_name)});"
-    )  # lgtm[py/sql-injection]
+        "SELECT name FROM pragma_table_info(?);",
+        (trusted_table,),
+    )
     rows = cursor.fetchall()
     # SQLite returns sqlite3.Row, but tests often mock tuples/dicts.
     columns: List[str] = []
@@ -255,17 +286,16 @@ async def execute_query(request: SelectQueryRequest):
     """
     conn = None
     try:
-        validated_table = validate_table_name(request.table)
-
         with get_db_connection() as conn:
+            trusted_table = resolve_existing_table_name(conn, request.table)
             # In production we introspect columns via SQLite; in tests `conn` may be a MagicMock.
             if isinstance(conn, sqlite3.Connection):
-                allowed_columns = get_table_columns(conn, validated_table)
+                allowed_columns = get_table_columns(conn, trusted_table)
             else:
                 allowed_columns = request.columns or []
 
             sql, params, selected_columns = build_select_query(
-                request, validated_table, allowed_columns
+                request, trusted_table, allowed_columns
             )
             cursor = conn.cursor()
             cursor.execute(sql, params)  # lgtm[py/sql-injection]
@@ -336,21 +366,19 @@ async def describe_table(table_name: str):
     """
     conn = None
     try:
-        # Validate table name to prevent SQL injection
-        validated_table = validate_table_name(table_name)
-
         with get_db_connection() as conn:
+            trusted_table = resolve_existing_table_name(conn, table_name)
             cursor = conn.cursor()
-            # Safely inject validated table name as identifier using SQLite quoting
             cursor.execute(
-                f"PRAGMA table_info({_quote_identifier(validated_table)});"
-            )  # lgtm[py/sql-injection]
+                "SELECT name, type FROM pragma_table_info(?);",
+                (trusted_table,),
+            )
             columns = []
             for row in cursor.fetchall():
                 if isinstance(row, dict):
                     name, typ = row.get("name"), row.get("type")
-                elif isinstance(row, (tuple, list)) and len(row) > 2:
-                    name, typ = row[1], row[2]
+                elif isinstance(row, (tuple, list)) and len(row) > 1:
+                    name, typ = row[0], row[1]
                 else:
                     name, typ = row["name"], row["type"]  # type: ignore[index]
                 if name is not None and typ is not None:
@@ -362,7 +390,7 @@ async def describe_table(table_name: str):
                     detail=f"Table {table_name} not found or has no columns.",
                 )
 
-            return TableSchema(table_name=validated_table, columns=columns)
+            return TableSchema(table_name=trusted_table, columns=columns)
 
     except HTTPException:
         raise
@@ -393,14 +421,12 @@ async def get_sample_data(
     """
     conn = None
     try:
-        # Validate table name to prevent SQL injection
-        validated_table = validate_table_name(table_name)
-
         with get_db_connection() as conn:
+            trusted_table = resolve_existing_table_name(conn, table_name)
             cursor = conn.cursor()
-            # Use parameterized query for limit
             cursor.execute(
-                f"SELECT * FROM {_quote_identifier(validated_table)} LIMIT ?;", (limit,)
+                f"SELECT * FROM {_quote_identifier(trusted_table)} LIMIT ?;",
+                (limit,),
             )  # lgtm[py/sql-injection]
 
             columns = (
