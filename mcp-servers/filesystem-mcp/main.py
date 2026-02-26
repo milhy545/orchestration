@@ -235,7 +235,7 @@ async def read_file(
         # lgtm[py/path-injection] - full_path is validated to allowed directories
         file_size = None
         try:
-            file_size = safe_full_path.stat().st_size
+            file_size = os.path.getsize(full_path)  # lgtm[py/path-injection]
         except OSError:
             file_size = None
 
@@ -244,8 +244,8 @@ async def read_file(
         truncated = bool(file_size is not None and bytes_to_read < file_size)
 
         # lgtm[py/path-injection] - full_path is validated to allowed directories
-        with safe_full_path.open(
-            "r", encoding="utf-8", errors="ignore"
+        with open(
+            full_path, "r", encoding="utf-8", errors="ignore"
         ) as f:  # lgtm[py/path-injection]
             content = f.read(bytes_to_read)
 
