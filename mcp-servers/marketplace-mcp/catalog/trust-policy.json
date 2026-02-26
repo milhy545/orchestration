@@ -1,0 +1,10 @@
+{
+  "policy": "hash-integrity",
+  "required": ["sha256"],
+  "publishers": [
+    {
+      "name": "internal-admin",
+      "source": "lan-git"
+    }
+  ]
+}

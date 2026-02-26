@@ -1,0 +1,59 @@
+{
+  "servers": [
+    {
+      "id": "filesystem-mcp",
+      "name": "Filesystem MCP",
+      "description": "File operations service",
+      "source": "internal",
+      "tags": ["filesystem", "core"],
+      "versions": [
+        {
+          "version": "1.0.0",
+          "transport": "streamable_http",
+          "endpoint": "http://localhost:7001/mcp",
+          "auth": {
+            "type": "none"
+          },
+          "tags": ["filesystem", "read", "write"]
+        }
+      ]
+    },
+    {
+      "id": "marketplace-mcp",
+      "name": "Marketplace MCP",
+      "description": "Internal skills market and MCP subregistry",
+      "source": "internal",
+      "tags": ["registry", "market", "skills"],
+      "versions": [
+        {
+          "version": "1.0.0",
+          "transport": "streamable_http",
+          "endpoint": "http://localhost:7034/mcp",
+          "auth": {
+            "type": "bearer",
+            "scopes": ["market:read"]
+          },
+          "tags": ["registry", "market", "skills"]
+        }
+      ]
+    },
+    {
+      "id": "security-mcp",
+      "name": "Security MCP",
+      "description": "Authentication and crypto toolchain",
+      "source": "internal",
+      "tags": ["security", "jwt", "crypto"],
+      "versions": [
+        {
+          "version": "1.0.0",
+          "transport": "streamable_http",
+          "endpoint": "http://localhost:7008/mcp",
+          "auth": {
+            "type": "none"
+          },
+          "tags": ["security", "jwt"]
+        }
+      ]
+    }
+  ]
+}

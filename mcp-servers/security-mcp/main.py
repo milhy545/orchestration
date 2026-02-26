@@ -7,6 +7,7 @@ Port: 7008
 import base64
 import hashlib
 import logging
+import os
 import re
 import secrets
 import socket
@@ -40,7 +41,7 @@ Instrumentator().instrument(app).expose(app)
 security = HTTPBearer(auto_error=False)
 
 # Security configuration
-SECRET_KEY = secrets.token_urlsafe(32)
+SECRET_KEY = os.getenv("JWT_SECRET_KEY") or secrets.token_urlsafe(32)
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 

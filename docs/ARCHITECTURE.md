@@ -68,6 +68,7 @@ The platform implements a **Zero Trust** security model where:
 | 7000 | ZEN Coordinator | Public | External + Internal |
 | 7001-7017 | MCP Services | Private | Internal Only |
 | 7021-7022 | Databases | Private | Internal Only |
+| 7034 | Marketplace MCP | Protected | External + Internal (JWT) |
 | 6333 | Vector Store | Private | Internal Only |
 | 9001 | Management | Limited | Portainer Only |
 
@@ -218,6 +219,22 @@ zen_mcp_server.py (408 lines, 16.4KB)
 - Audio Processing: FFmpeg, Whisper
 - AI Models: OpenAI Whisper, Gemini
 - Format Support: WebM, MP3, WAV, MP4
+
+#### 9. Marketplace MCP (Port 7034)
+**Container**: `mcp-marketplace`  
+**Purpose**: Hybrid private Skills Catalog + MCP Subregistry for LAN clients  
+**Tools**: 5 tools
+- `skills_list`: List available skill packages and filters
+- `skills_resolve`: Resolve specific version / latest version
+- `registry_search`: Search internal MCP server registry
+- `registry_get_server`: Fetch server metadata by id
+- `catalog_validate`: Validate catalog integrity and artifact checksums
+
+**Technology Stack**:
+- Language: Python 3.12+
+- Framework: FastAPI
+- Auth: JWT bearer (`market:read`/`market:write` scopes)
+- Integrity: SHA-256 package verification
 
 ## 🗄️ Data Architecture
 

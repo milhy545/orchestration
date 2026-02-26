@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import json
+import os
 import sys
 import subprocess
 import time
@@ -22,6 +23,7 @@ class ZENMCPServerV2:
             'advanced_memory': {'port': 7012, 'methods': ['semantic_store', 'vector_search', 'analyze']},
             'research': {'port': 7011, 'methods': ['query', 'web_search', 'perplexity']},
             'transcriber': {'port': 7013, 'methods': ['audio', 'video', 'convert']},
+            'marketplace': {'port': 7034, 'methods': ['skills_list', 'skills_resolve', 'registry_search', 'registry_get_server', 'catalog_validate']},
         }
         
         self.tool_service_mapping = {
@@ -39,6 +41,11 @@ class ZENMCPServerV2:
             'research_query': {'service': 'research', 'method': 'query'},
             'transcribe_audio': {'service': 'transcriber', 'method': 'audio'},
             'semantic_store': {'service': 'advanced_memory', 'method': 'semantic_store'},
+            'skills_list': {'service': 'marketplace', 'method': 'skills_list'},
+            'skills_resolve': {'service': 'marketplace', 'method': 'skills_resolve'},
+            'registry_search': {'service': 'marketplace', 'method': 'registry_search'},
+            'registry_get_server': {'service': 'marketplace', 'method': 'registry_get_server'},
+            'catalog_validate': {'service': 'marketplace', 'method': 'catalog_validate'},
         }
 
     def call_mcp_service(self, service: str, method: str, params: Dict = None) -> Dict:
@@ -64,10 +71,14 @@ class ZENMCPServerV2:
             curl_cmd = [
                 'curl', '-s', '-X', 'POST',
                 '-H', 'Content-Type: application/json',
-                '-d', json.dumps(payload),
                 '--max-time', '15',
-                url
             ]
+            if service == 'marketplace':
+                token = os.getenv('MARKETPLACE_JWT_TOKEN', '').strip()
+                if token:
+                    curl_cmd.extend(['-H', f'Authorization: Bearer {token}'])
+
+            curl_cmd.extend(['-d', json.dumps(payload), url])
             
             result = subprocess.run(curl_cmd, capture_output=True, text=True, timeout=20)
             

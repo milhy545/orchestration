@@ -12,6 +12,7 @@ services:
     environment:
       - MCP_DATABASE_URL=${MCP_DATABASE_URL:-postgresql://mcp_admin:change_me_in_production@postgresql:5432/mcp_unified}
       - REDIS_URL=${REDIS_URL:-redis://redis:6379}
+      - MARKETPLACE_JWT_TOKEN=${MARKETPLACE_JWT_TOKEN:-}
     depends_on:
       - postgresql
       - redis
@@ -153,6 +154,8 @@ services:
     container_name: mcp-security
     ports:
       - "7008:8000"
+    environment:
+      - JWT_SECRET_KEY=${JWT_SECRET:-change_me_market_jwt}
     working_dir: /app
     restart: unless-stopped
     networks:
@@ -325,6 +328,22 @@ services:
     tmpfs:
       - /tmp:noexec,nosuid,size=100m
       - /app/tmp:noexec,nosuid,size=50m
+    networks:
+      - mcp-network
+
+  # 7034: Marketplace MCP - Private Skills Catalog + MCP Subregistry
+  marketplace-mcp:
+    build: ${PROJECT_ROOT:-.}/mcp-servers/marketplace-mcp
+    container_name: mcp-marketplace
+    ports:
+      - "7034:8000"
+    environment:
+      - MARKET_CATALOG_PATH=/app/catalog
+      - MARKET_BASE_URL=${MARKET_BASE_URL:-http://localhost:7034}
+      - JWT_SECRET=${JWT_SECRET:-change_me_market_jwt}
+    volumes:
+      - ${PROJECT_ROOT:-.}/mcp-servers/marketplace-mcp/catalog:/app/catalog:ro
+    restart: unless-stopped
     networks:
       - mcp-network
 
