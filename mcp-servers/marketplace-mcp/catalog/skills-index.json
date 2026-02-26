@@ -1,0 +1,17 @@
+{
+  "skills": [
+    {
+      "name": "my-skills-export",
+      "version": "2026.02.26",
+      "description": "Example LAN-exported Codex skills bundle",
+      "archive_url": "artifacts/my-skills-export-2026.02.26.tar.gz",
+      "sha256": "43b870188f3fd00b49e5e5237f183894a0b72821f99ec6332847f31358d91e77",
+      "tags": ["backup", "skills", "codex"],
+      "source": "internal",
+      "compat": {
+        "clients": ["codex-cli"],
+        "min_version": "0.0.0"
+      }
+    }
+  ]
+}

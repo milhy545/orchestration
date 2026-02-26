@@ -97,11 +97,54 @@ The `docker-compose.yml` file defines the following services, which are organize
 -   **`prometheus` (Port 7028):** Metrics collection and storage for all MCP services.
 -   **`grafana` (Port 7031):** Dashboards and visualization platform with pre-configured MCP overview dashboard.
 -   **`loki` (Port 7032):** Log aggregation system collecting logs from all Docker containers.
+-   **`marketplace-mcp` (Port 7034):** Private Skills Catalog + MCP Subregistry API for LAN clients.
 -   **`promtail`:** Log collection agent (no external port, internal service).
 -   **`backup-service` (Port 7029):** Performs automated backups.
 -   **`message-queue` (Port 7030):** A Redis-based message queue for task queuing.
 
 **📊 Full observability stack** - See [MONITORING.md](docs/MONITORING.md) for complete monitoring documentation.
+
+## Hybrid Marketplace (Skills + MCP Registry)
+
+The stack now includes a Dockerized hybrid marketplace service:
+
+- Skills Catalog API: `/skills/v1/*`
+- MCP Subregistry API: `/registry/v0.1/*`
+- MCP tool dispatch: `/mcp`, `/tools/*`
+
+### Quick start
+
+1. Set a shared JWT secret in `.env`:
+
+```bash
+JWT_SECRET=change_me_market_jwt
+MARKET_BASE_URL=http://localhost:7034
+```
+
+2. Start services:
+
+```bash
+docker compose up -d security-mcp marketplace-mcp
+```
+
+3. Mint read token:
+
+```bash
+scripts/marketplace/get_market_token.sh market-client 120 --export-file ~/.config/orchestration-market/market.env
+```
+
+4. Configure local client env:
+
+```bash
+scripts/marketplace/codex_configure_market.sh --token-file ~/.config/orchestration-market/market.env
+```
+
+5. Install a skill package from the marketplace:
+
+```bash
+source ~/.config/orchestration-market/market.env
+scripts/marketplace/install_skill_from_market.sh --skill my-skills-export
+```
 
 ### MQTT Services
 

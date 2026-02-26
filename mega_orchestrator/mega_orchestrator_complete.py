@@ -45,6 +45,7 @@ class MCPServiceConfig:
     priority: int = 1
     timeout: int = 30
     retry_count: int = 3
+    auth_env: Optional[str] = None
 
 class MegaOrchestrator:
     """
@@ -163,6 +164,21 @@ class MegaOrchestrator:
                 sage_modes=[SAGEMode.ANALYZE],
                 priority=2,
                 timeout=120
+            ),
+            "marketplace": MCPServiceConfig(
+                name="Marketplace MCP",
+                port=7034,
+                tools=[
+                    "skills_list",
+                    "skills_resolve",
+                    "registry_search",
+                    "registry_get_server",
+                    "catalog_validate",
+                ],
+                sage_modes=[SAGEMode.DOCS, SAGEMode.MEMORY],
+                priority=1,
+                timeout=20,
+                auth_env="MARKETPLACE_JWT_TOKEN",
             )
         }
 
@@ -433,11 +449,16 @@ class MegaOrchestrator:
                     "_orchestrator": "mega",
                     "_version": self.version
                 }
+                headers = {}
+                if service.auth_env:
+                    token = os.getenv(service.auth_env, "").strip()
+                    if token:
+                        headers["Authorization"] = f"Bearer {token}"
                 
                 timeout = aiohttp.ClientTimeout(total=service.timeout)
                 
                 async with aiohttp.ClientSession(timeout=timeout) as session:
-                    async with session.post(url, json=payload) as response:
+                    async with session.post(url, json=payload, headers=headers or None) as response:
                         if response.status == 200:
                             result = await response.json()
                             return result

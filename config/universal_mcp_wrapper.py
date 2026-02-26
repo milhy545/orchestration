@@ -5,6 +5,7 @@ Supports all 29 MCP tools with intelligent routing
 """
 
 import json
+import os
 import subprocess
 import asyncio
 import aiohttp
@@ -57,7 +58,14 @@ class UniversalMCPWrapper:
             'research_query': 'http://localhost:7011',
             'web_search': 'http://localhost:7011',
             'search_web': 'http://localhost:7011',
-            'perplexity_search': 'http://localhost:7011'
+            'perplexity_search': 'http://localhost:7011',
+
+            # Marketplace tools (port 7034)
+            'skills_list': 'http://localhost:7034',
+            'skills_resolve': 'http://localhost:7034',
+            'registry_search': 'http://localhost:7034',
+            'registry_get_server': 'http://localhost:7034',
+            'catalog_validate': 'http://localhost:7034'
         }
     
     async def call_tool(self, tool_name: str, arguments: Dict[str, Any] = None) -> Dict[str, Any]:
@@ -99,10 +107,23 @@ class UniversalMCPWrapper:
         }
         
         try:
+            headers = {}
+            if tool_name in {
+                'skills_list',
+                'skills_resolve',
+                'registry_search',
+                'registry_get_server',
+                'catalog_validate'
+            }:
+                token = os.getenv('MARKETPLACE_JWT_TOKEN', '').strip()
+                if token:
+                    headers['Authorization'] = f'Bearer {token}'
+
             async with aiohttp.ClientSession() as session:
                 async with session.post(
                     f"{service_url}/tools/{tool_name}",
                     json=payload,
+                    headers=headers or None,
                     timeout=30
                 ) as response:
                     if response.status == 200:
@@ -187,7 +208,8 @@ print(json.dumps({{'success': True, 'data': 'Direct MCP call', 'method': 'direct
             '7004': 'database',
             '7005': 'memory',
             '7013': 'transcription', 
-            '7011': 'research'
+            '7011': 'research',
+            '7034': 'marketplace'
         }
         
         return {
