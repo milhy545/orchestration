@@ -126,7 +126,7 @@ jobs:
   review:
     needs: 'dispatch'
     if: |-
-      ${{ needs.dispatch.outputs.command == 'review' }}
+      ${{ needs.dispatch.outputs.command == 'review' && (vars.GCP_WIF_PROVIDER != '' || secrets.GEMINI_API_KEY != '' || secrets.GOOGLE_API_KEY != '') }}
     uses: './.github/workflows/gemini-review.yml'
     permissions:
       contents: 'read'
