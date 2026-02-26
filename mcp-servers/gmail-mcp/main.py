@@ -5,8 +5,9 @@ Exposes the MCP tool operations as REST endpoints compatible with
 the orchestration stack (zen_coordinator).
 """
 
-import os
 import logging
+import os
+import sys
 from typing import Any, Dict, List, Optional
 
 from fastapi import FastAPI, HTTPException
@@ -14,11 +15,10 @@ from pydantic import BaseModel
 from prometheus_fastapi_instrumentator import Instrumentator
 
 # Configure path so email_client imports work
-import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "src"))
 
-from email_client.handlers import handle_call_tool
-from email_client.config import EMAIL_CONFIG
+from email_client.handlers import handle_call_tool  # noqa: E402
+from email_client.config import EMAIL_CONFIG  # noqa: E402
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
