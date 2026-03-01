@@ -239,6 +239,16 @@ docker compose -f docker-compose.yml -f docker-compose.vault.yml up -d --build
 
 The first functional version is restart-based: save secrets in the Web UI, then restart the affected service so it reloads the rendered env file from `/vault/runtime`. See [docs/VAULT_VARIANT_B.md](docs/VAULT_VARIANT_B.md) for the full operator workflow.
 
+## MCP Client Compatibility
+
+`mega-orchestrator` supports:
+
+- Legacy custom bridge via `POST /mcp`
+- Native MCP JSON-RPC via `POST /mcp` or `POST /mcp/rpc`
+- MCP stdio bridge via `python -m mega_orchestrator.mcp_stdio_bridge`
+
+For client-specific examples, see [docs/MEGA_MCP_COMPATIBILITY.md](docs/MEGA_MCP_COMPATIBILITY.md).
+
 ## Contributing
 
 Please refer to the existing coding style and conventions. Before submitting a pull request, ensure that your changes are well-tested.

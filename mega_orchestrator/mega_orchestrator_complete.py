@@ -31,6 +31,7 @@ import asyncpg
 # Import our enhanced components
 from mega_orchestrator.providers.registry import ModelProviderRegistry, initialize_provider_registry
 from mega_orchestrator.modes.sage_router import SAGEModeRouter, SAGEMode
+from mega_orchestrator.mcp_tooling import build_mcp_tools
 from mega_orchestrator.utils.conversation_memory import ConversationMemory
 from mega_orchestrator.utils.file_storage import FileStorage, FileHandlingMode
 
@@ -257,12 +258,14 @@ class MegaOrchestrator:
         
         # Core MCP routes
         self.app.router.add_post('/mcp', self._handle_mcp_request)
+        self.app.router.add_post('/mcp/rpc', self._handle_mcp_request)
         self.app.router.add_post('/mcp/{service}', self._handle_direct_service_request)
         
         # Information routes
         self.app.router.add_get('/health', self._handle_health)
         self.app.router.add_get('/services', self._handle_services)
         self.app.router.add_get('/tools/list', self._handle_tools_list)
+        self.app.router.add_get('/mcp/schema', self._handle_mcp_schema)
         self.app.router.add_get('/status', self._handle_status)
         self.app.router.add_get('/stats', self._handle_stats)
         
@@ -308,6 +311,9 @@ class MegaOrchestrator:
         """Handle intelligent MCP request with SAGE routing"""
         try:
             data = await request.json()
+            if isinstance(data, dict) and "jsonrpc" in data:
+                return await self._handle_mcp_jsonrpc(data)
+
             tool = data.get("tool")
             arguments = data.get("arguments", {})
             mode = data.get("mode")
@@ -342,6 +348,93 @@ class MegaOrchestrator:
         except Exception as e:
             logging.error(f"Error handling MCP request: {e}")
             return web.json_response({"error": str(e)}, status=500)
+
+    def _get_mcp_tool_specs(self) -> List[Dict[str, Any]]:
+        """Return MCP-compatible tool definitions for the currently exposed working subset."""
+        available_tools: List[str] = []
+        for service_name, config in self.services.items():
+            if service_name in {"advanced_memory"}:
+                continue
+            available_tools.extend(config.tools or [])
+        return build_mcp_tools(available_tools)
+
+    def _jsonrpc_result(self, request_id: Any, result: Dict[str, Any]) -> web.Response:
+        return web.json_response({"jsonrpc": "2.0", "id": request_id, "result": result})
+
+    def _jsonrpc_error(self, request_id: Any, code: int, message: str, status: int = 200) -> web.Response:
+        return web.json_response(
+            {
+                "jsonrpc": "2.0",
+                "id": request_id,
+                "error": {"code": code, "message": message},
+            },
+            status=status,
+        )
+
+    async def _handle_mcp_jsonrpc(self, data: Dict[str, Any]) -> web.Response:
+        """Handle JSON-RPC 2.0 MCP-compatible requests."""
+        request_id = data.get("id")
+        if data.get("jsonrpc") != "2.0":
+            return self._jsonrpc_error(request_id, -32600, "Invalid Request")
+
+        method = data.get("method")
+        params = data.get("params", {}) or {}
+        if not method:
+            return self._jsonrpc_error(request_id, -32600, "Method is required")
+
+        if method == "initialize":
+            return self._jsonrpc_result(
+                request_id,
+                {
+                    "protocolVersion": "2025-03-26",
+                    "serverInfo": {
+                        "name": "mega-orchestrator",
+                        "version": self.version,
+                    },
+                    "capabilities": {
+                        "tools": {"listChanged": False},
+                    },
+                },
+            )
+
+        if method == "notifications/initialized":
+            return web.Response(status=202)
+
+        if method == "ping":
+            return self._jsonrpc_result(request_id, {"ok": True})
+
+        if method == "tools/list":
+            return self._jsonrpc_result(request_id, {"tools": self._get_mcp_tool_specs()})
+
+        if method == "tools/call":
+            tool_name = params.get("name")
+            if not tool_name:
+                return self._jsonrpc_error(request_id, -32602, "Tool name is required")
+
+            allowed_tools = {tool["name"] for tool in self._get_mcp_tool_specs()}
+            if tool_name not in allowed_tools:
+                return self._jsonrpc_error(request_id, -32601, f"Tool not found: {tool_name}")
+
+            result = await self._route_enhanced_request(
+                tool=tool_name,
+                arguments=params.get("arguments", {}) or {},
+                mode=self.sage_router.detect_mode(tool_name, params.get("arguments", {}) or {}),
+                session_id=params.get("session_id"),
+                context_id=params.get("context_id"),
+            )
+            return self._jsonrpc_result(
+                request_id,
+                {
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": json.dumps(result, ensure_ascii=True),
+                        }
+                    ]
+                },
+            )
+
+        return self._jsonrpc_error(request_id, -32601, f"Method not found: {method}")
             
     async def _route_enhanced_request(self, tool: str, arguments: Dict[str, Any],
                                     mode: SAGEMode, session_id: Optional[str] = None,
@@ -961,6 +1054,16 @@ class MegaOrchestrator:
             "tools": all_tools,
             "total_tools": len(all_tools)
         })
+
+    async def _handle_mcp_schema(self, request):
+        """Return MCP-compatible tool schema for external bridges and diagnostics."""
+        return web.json_response(
+            {
+                "server": "mega-orchestrator",
+                "version": self.version,
+                "tools": self._get_mcp_tool_specs(),
+            }
+        )
         
     async def _handle_status(self, request):
         """Return comprehensive orchestrator status"""
