@@ -175,6 +175,11 @@ curl http://localhost:7000/services
 curl http://localhost:7000/tools/list
 ```
 
+Current routing note:
+- `git_push` is implemented with a safe-upstream-only policy through `git-mcp`.
+- `file_write`, `file_search`, and `file_analyze` are implemented through `filesystem-mcp`.
+- `transcriber` and `video_processing` should remain template targets on this host; plan to move those workloads to separate, stronger hardware later.
+
 ### Portainer Deployment
 
 #### Prerequisites for Portainer
@@ -598,6 +603,16 @@ For issues and questions:
 - **GitHub Issues**: [orchestration/issues](https://github.com/milhy545/orchestration/issues)
 - **Documentation**: See [docs/](docs/) directory
 - **Production Support**: Contact system administrator
+
+## Vault Variant B
+
+An optional Vault overlay is available via [VAULT_VARIANT_B.md](VAULT_VARIANT_B.md).
+
+- Vault API default port: `7070`
+- Vault Web UI default port: `10000`
+- Secret changes are applied after restarting the affected service
+
+The overlay now injects runtime secrets into first-wave services including `mega-orchestrator`, `research-mcp`, `zen-mcp-server`, `gmail-mcp`, `security-mcp`, and `marketplace-mcp`.
 
 ---
 

@@ -176,6 +176,11 @@ docker-compose up -d
 - **Services List**: http://localhost:7000/services
 - **Tools List**: http://localhost:7000/tools/list
 
+Aktuální routing poznámka:
+- `git_push` je implementovaný se safe-upstream-only politikou.
+- `file_write`, `file_search` a `file_analyze` jsou implementované přes `filesystem-mcp`.
+- `transcriber` a `video_processing` zůstávají na tomto stroji jen jako template targety.
+
 ---
 
 ## Konfigurace

@@ -50,7 +50,8 @@ seed_secret "secret/orchestration/mega-orchestrator" \
   ANTHROPIC_API_KEY="" \
   GEMINI_API_KEY="" \
   GOOGLE_API_KEY="" \
-  PERPLEXITY_API_KEY=""
+  PERPLEXITY_API_KEY="" \
+  MARKETPLACE_JWT_TOKEN=""
 
 seed_secret "secret/orchestration/research-mcp" \
   PERPLEXITY_API_KEY="" \
@@ -80,6 +81,16 @@ seed_secret "secret/orchestration/common-mcp" \
   OPENAI_API_KEY="" \
   ANTHROPIC_API_KEY="" \
   GEMINI_API_KEY=""
+
+seed_secret "secret/orchestration/gmail-mcp" \
+  EMAIL_ADDRESS="" \
+  EMAIL_PASSWORD="" \
+  IMAP_SERVER="imap.gmail.com" \
+  SMTP_SERVER="smtp.gmail.com" \
+  SMTP_PORT="587"
+
+seed_secret "secret/orchestration/internal-auth" \
+  JWT_SECRET="change_me_market_jwt"
 
 seed_secret "secret/orchestration/perplexity-hub" \
   PERPLEXITY_API_KEY=""

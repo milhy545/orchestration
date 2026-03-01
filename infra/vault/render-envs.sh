@@ -33,29 +33,50 @@ load_token() {
   export VAULT_TOKEN="${VAULT_DEV_ROOT_TOKEN:-dev-root-token}"
 }
 
+shell_quote() {
+  printf "%s" "$1" | sed "s/'/'\\\\''/g; 1s/^/'/; \$s/\$/'/"
+}
+
+write_assignment() {
+  key="$1"
+  value="$2"
+  printf '%s=' "$key"
+  shell_quote "$value"
+  printf '\n'
+}
+
 write_key() {
   path="$1"
-  key="$2"
-  outfile="$3"
-  value="$(vault kv get -field="$key" "$path" 2>/dev/null || true)"
-  if [ -n "$value" ]; then
-    printf '%s=%s\n' "$key" "$value" >> "$outfile"
-  fi
+  source_key="$2"
+  target_key="$3"
+  outfile="$4"
+  value="$(vault kv get -field="$source_key" "$path" 2>/dev/null || true)"
+  write_assignment "$target_key" "$value" >> "$outfile"
 }
 
 render_env_file() {
   service="$1"
   path="$2"
-  keys="$3"
+  key_specs="$3"
   tmp_file="$RUNTIME_DIR/$service.env.tmp"
   out_file="$RUNTIME_DIR/$service.env"
 
   cat "$HEADER_FILE" > "$tmp_file"
-  printf 'SERVICE_NAME=%s\n' "$service" >> "$tmp_file"
-  printf 'VAULT_SECRET_PATH=%s\n' "$path" >> "$tmp_file"
+  write_assignment "SERVICE_NAME" "$service" >> "$tmp_file"
+  write_assignment "VAULT_SECRET_PATH" "$path" >> "$tmp_file"
 
-  for key in $keys; do
-    write_key "$path" "$key" "$tmp_file"
+  for spec in $key_specs; do
+    case "$spec" in
+      *=*)
+        source_key="${spec%%=*}"
+        target_key="${spec#*=}"
+        ;;
+      *)
+        source_key="$spec"
+        target_key="$spec"
+        ;;
+    esac
+    write_key "$path" "$source_key" "$target_key" "$tmp_file"
   done
 
   mv "$tmp_file" "$out_file"
@@ -65,7 +86,7 @@ render_all() {
   render_env_file \
     "mega-orchestrator" \
     "secret/orchestration/mega-orchestrator" \
-    "OPENAI_API_KEY ANTHROPIC_API_KEY GEMINI_API_KEY GOOGLE_API_KEY PERPLEXITY_API_KEY"
+    "OPENAI_API_KEY ANTHROPIC_API_KEY GEMINI_API_KEY GOOGLE_API_KEY PERPLEXITY_API_KEY MARKETPLACE_JWT_TOKEN"
 
   render_env_file \
     "research-mcp" \
@@ -86,6 +107,21 @@ render_all() {
     "common-mcp" \
     "secret/orchestration/common-mcp" \
     "OPENAI_API_KEY ANTHROPIC_API_KEY GEMINI_API_KEY"
+
+  render_env_file \
+    "gmail-mcp" \
+    "secret/orchestration/gmail-mcp" \
+    "EMAIL_ADDRESS EMAIL_PASSWORD IMAP_SERVER SMTP_SERVER SMTP_PORT"
+
+  render_env_file \
+    "security-mcp" \
+    "secret/orchestration/internal-auth" \
+    "JWT_SECRET=JWT_SECRET_KEY"
+
+  render_env_file \
+    "marketplace-mcp" \
+    "secret/orchestration/internal-auth" \
+    "JWT_SECRET"
 
   render_env_file \
     "perplexity-hub" \

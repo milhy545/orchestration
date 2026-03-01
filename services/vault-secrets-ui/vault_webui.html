@@ -261,6 +261,13 @@
                         </select>
                     </div>
 
+                    <div class="border p-3 text-sm md:text-base" style="border-color: var(--primary); background: rgba(0, 0, 0, 0.25);">
+                        <div class="font-bold mb-1 accent-text">RUNTIME APPLY MODEL</div>
+                        <div id="service-meta-line" class="opacity-90">Changes apply after restarting the target service.</div>
+                        <div id="service-restart-line" class="opacity-70 mt-1">Restart target: -</div>
+                        <div id="service-command-line" class="opacity-60 mt-1 break-all">Command: -</div>
+                    </div>
+
                     <div class="relative group">
                         <label class="block text-lg mb-1 opacity-80 group-hover:opacity-100 transition-opacity" data-translate="editor">SECRET PAYLOAD (JSON)</label>
                         <textarea id="secret-json" class="pip-textarea font-mono" spellcheck="false">{}</textarea>
@@ -287,6 +294,7 @@
     <script>
         let lang = "EN";
         let themeIndex = 0;
+        const serviceCatalog = {{SERVICE_METADATA_JSON}};
 
         const themes = [
             { short: "PIP-BOY", full: "PIP-BOY", class: "" },
@@ -355,6 +363,24 @@
             return document.getElementById("target-service").value;
         }
 
+        function updateServiceMetadata() {
+            const service = currentService();
+            const meta = serviceCatalog[service];
+            if (!meta) {
+                document.getElementById("service-meta-line").textContent = "Unknown service.";
+                document.getElementById("service-restart-line").textContent = "Restart target: -";
+                document.getElementById("service-command-line").textContent = "Command: -";
+                return;
+            }
+
+            document.getElementById("service-meta-line").textContent =
+                (meta.description || "Vault-backed secret set.") + " Changes apply after restart.";
+            document.getElementById("service-restart-line").textContent =
+                "Restart target: " + meta.restart_target;
+            document.getElementById("service-command-line").textContent =
+                "Command: " + meta.restart_command;
+        }
+
         function formatJson() {
             const input = document.getElementById("secret-json");
             try {
@@ -375,6 +401,9 @@
                 const payload = await response.json();
                 document.getElementById("secret-json").value = JSON.stringify(payload.data || {}, null, 2);
                 logLine("Synced " + service + " from Vault.", false);
+                if (payload.metadata && payload.metadata.restart_target) {
+                    logLine("Restart target: " + payload.metadata.restart_target, false);
+                }
             } catch (error) {
                 logLine("Sync failed for " + service + ": " + error.message, true);
             }
@@ -403,16 +432,25 @@
                     throw new Error(await response.text());
                 }
 
+                const payload = await response.json();
                 logLine("Uploaded payload for " + service + ".", false);
+                if (payload.restart_required) {
+                    logLine("Restart required: " + payload.restart_target, false);
+                    logLine(payload.restart_command, false);
+                }
             } catch (error) {
                 logLine("Upload failed for " + service + ": " + error.message, true);
             }
         }
 
-        document.getElementById("target-service").addEventListener("change", loadSecrets);
+        document.getElementById("target-service").addEventListener("change", () => {
+            updateServiceMetadata();
+            loadSecrets();
+        });
 
         applyTheme();
         applyLanguage();
+        updateServiceMetadata();
         loadSecrets();
     </script>
 </body>
