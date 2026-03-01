@@ -88,18 +88,18 @@ jobs:
         env:
           EVENT_TYPE: '${{ github.event_name }}.${{ github.event.action }}'
           REQUEST: '${{ github.event.comment.body || github.event.review.body || github.event.issue.body }}'
-          HAS_GCP_WIF_PROVIDER: '${{ vars.GCP_WIF_PROVIDER != '' }}'
-          HAS_GEMINI_API_KEY: '${{ secrets.GEMINI_API_KEY != '' }}'
-          HAS_GOOGLE_API_KEY: '${{ secrets.GOOGLE_API_KEY != '' }}'
+          GCP_WIF_PROVIDER: '${{ vars.GCP_WIF_PROVIDER }}'
+          GEMINI_API_KEY: '${{ secrets.GEMINI_API_KEY }}'
+          GOOGLE_API_KEY: '${{ secrets.GOOGLE_API_KEY }}'
         with:
           script: |
             const request = process.env.REQUEST;
             const eventType = process.env.EVENT_TYPE;
             const hasGeminiCredentials = [
-              process.env.HAS_GCP_WIF_PROVIDER,
-              process.env.HAS_GEMINI_API_KEY,
-              process.env.HAS_GOOGLE_API_KEY,
-            ].includes('true');
+              process.env.GCP_WIF_PROVIDER,
+              process.env.GEMINI_API_KEY,
+              process.env.GOOGLE_API_KEY,
+            ].some((value) => Boolean((value || '').trim()));
             core.setOutput('request', request);
             core.setOutput('has_gemini_credentials', hasGeminiCredentials ? 'true' : 'false');
 
