@@ -1,0 +1,120 @@
+services:
+  vault:
+    image: hashicorp/vault:1.16
+    container_name: mcp-vault
+    cap_add:
+      - IPC_LOCK
+    command: server -dev -dev-root-token-id=${VAULT_DEV_ROOT_TOKEN:-dev-root-token} -dev-listen-address=0.0.0.0:8200
+    ports:
+      - "${VAULT_PORT:-7070}:8200"
+    environment:
+      - VAULT_DEV_ROOT_TOKEN=${VAULT_DEV_ROOT_TOKEN:-dev-root-token}
+      - VAULT_ADDR=http://127.0.0.1:8200
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "/bin/sh",
+          "-lc",
+          "export VAULT_ADDR=http://127.0.0.1:8200 VAULT_TOKEN=${VAULT_DEV_ROOT_TOKEN:-dev-root-token}; vault status >/dev/null 2>&1",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+    volumes:
+      - vault-runtime:/vault/runtime
+    restart: unless-stopped
+    networks:
+      - mcp-network
+
+  vault-bootstrap:
+    image: hashicorp/vault:1.16
+    container_name: mcp-vault-bootstrap
+    entrypoint: ["/bin/sh", "/vault/config/bootstrap.sh"]
+    environment:
+      - VAULT_ADDR=http://vault:8200
+      - VAULT_DEV_ROOT_TOKEN=${VAULT_DEV_ROOT_TOKEN:-dev-root-token}
+    depends_on:
+      vault:
+        condition: service_healthy
+    volumes:
+      - ./infra/vault:/vault/config:ro
+      - vault-runtime:/vault/runtime
+    restart: "no"
+    networks:
+      - mcp-network
+
+  vault-agent-common:
+    image: hashicorp/vault:1.16
+    container_name: mcp-vault-agent-common
+    entrypoint: ["/bin/sh", "/vault/config/render-envs.sh"]
+    environment:
+      - VAULT_ADDR=http://vault:8200
+      - VAULT_DEV_ROOT_TOKEN=${VAULT_DEV_ROOT_TOKEN:-dev-root-token}
+      - RENDER_INTERVAL_SECONDS=${RENDER_INTERVAL_SECONDS:-30}
+    depends_on:
+      vault-bootstrap:
+        condition: service_completed_successfully
+    volumes:
+      - ./infra/vault:/vault/config:ro
+      - vault-runtime:/vault/runtime
+    restart: unless-stopped
+    networks:
+      - mcp-network
+
+  vault-secrets-ui:
+    build:
+      context: ./services/vault-secrets-ui
+      dockerfile: Dockerfile
+    container_name: mcp-vault-secrets-ui
+    ports:
+      - "${VAULT_WEBUI_PORT:-10000}:10000"
+    environment:
+      - VAULT_ADDR=http://vault:8200
+      - VAULT_TOKEN_FILE=/vault/runtime/admin.token
+      - WEBUI_PORT=10000
+    depends_on:
+      vault-bootstrap:
+        condition: service_completed_successfully
+    volumes:
+      - vault-runtime:/vault/runtime:ro
+    restart: unless-stopped
+    networks:
+      - mcp-network
+
+  mega-orchestrator:
+    depends_on:
+      - postgresql
+      - redis
+      - vault-agent-common
+    volumes:
+      - vault-runtime:/vault/runtime:ro
+
+  research-mcp:
+    depends_on:
+      - postgresql
+      - redis
+      - vault-agent-common
+    volumes:
+      - vault-runtime:/vault/runtime:ro
+
+  advanced-memory-mcp:
+    depends_on:
+      - postgresql
+      - redis
+      - qdrant-vector
+      - vault-agent-common
+    volumes:
+      - vault-runtime:/vault/runtime:ro
+
+  zen-mcp-server:
+    depends_on:
+      - redis
+      - vault-agent-common
+    volumes:
+      - vault-runtime:/vault/runtime:ro
+
+volumes:
+  vault-runtime:
+    driver: local
