@@ -71,6 +71,31 @@ def _fallback_tools() -> Dict[str, Any]:
     return {"tools": build_mcp_tools(MCP_TOOL_DEFINITIONS.keys())}
 
 
+def _fallback_resources() -> Dict[str, Any]:
+    return {
+        "resources": [
+            {
+                "uri": "mega://health",
+                "name": "Mega Orchestrator Health",
+                "description": "Current orchestrator and downstream service health snapshot.",
+                "mimeType": "application/json",
+            },
+            {
+                "uri": "mega://services",
+                "name": "Mega Orchestrator Services",
+                "description": "Registered downstream services and routing metadata.",
+                "mimeType": "application/json",
+            },
+            {
+                "uri": "mega://schema",
+                "name": "Mega Orchestrator MCP Schema",
+                "description": "Canonical MCP tool schema exposed by mega-orchestrator.",
+                "mimeType": "application/json",
+            },
+        ]
+    }
+
+
 def _handle_request(message: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     request_id = message.get("id")
 
@@ -108,6 +133,27 @@ def _handle_request(message: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         except Exception:
             result = _fallback_tools()
         return {"jsonrpc": "2.0", "id": request_id, "result": result}
+
+    if method in {"resources/list", "resources/templates/list", "resources/read"}:
+        try:
+            result = _post_json(
+                RPC_URL,
+                {
+                    "jsonrpc": "2.0",
+                    "id": request_id,
+                    "method": method,
+                    "params": params,
+                },
+            )
+            return result
+        except Exception:
+            if method == "resources/list":
+                return {"jsonrpc": "2.0", "id": request_id, "result": _fallback_resources()}
+            return {
+                "jsonrpc": "2.0",
+                "id": request_id,
+                "error": {"code": -32603, "message": "Backend unreachable"},
+            }
 
     if method == "tools/call":
         try:

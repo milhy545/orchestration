@@ -358,6 +358,46 @@ class MegaOrchestrator:
             available_tools.extend(config.tools or [])
         return build_mcp_tools(available_tools)
 
+    def _get_mcp_resources(self) -> List[Dict[str, Any]]:
+        """Return stable MCP resources for client-side inspection."""
+        return [
+            {
+                "uri": "mega://health",
+                "name": "Mega Orchestrator Health",
+                "description": "Current orchestrator and downstream service health snapshot.",
+                "mimeType": "application/json",
+            },
+            {
+                "uri": "mega://services",
+                "name": "Mega Orchestrator Services",
+                "description": "Registered downstream services and routing metadata.",
+                "mimeType": "application/json",
+            },
+            {
+                "uri": "mega://schema",
+                "name": "Mega Orchestrator MCP Schema",
+                "description": "Canonical MCP tool schema exposed by mega-orchestrator.",
+                "mimeType": "application/json",
+            },
+        ]
+
+    def _get_mcp_resource_templates(self) -> List[Dict[str, Any]]:
+        """Return parameterized MCP resource templates."""
+        return [
+            {
+                "uriTemplate": "mega://services/{service}",
+                "name": "Service Detail",
+                "description": "Inspect one downstream service by name.",
+                "mimeType": "application/json",
+            },
+            {
+                "uriTemplate": "mega://contexts/{session_id}",
+                "name": "Session Context Thread",
+                "description": "Inspect recent conversation contexts for one session.",
+                "mimeType": "application/json",
+            },
+        ]
+
     def _jsonrpc_result(self, request_id: Any, result: Dict[str, Any]) -> web.Response:
         return web.json_response({"jsonrpc": "2.0", "id": request_id, "result": result})
 
@@ -393,6 +433,7 @@ class MegaOrchestrator:
                     },
                     "capabilities": {
                         "tools": {"listChanged": False},
+                        "resources": {"subscribe": False, "listChanged": False},
                     },
                 },
             )
@@ -405,6 +446,24 @@ class MegaOrchestrator:
 
         if method == "tools/list":
             return self._jsonrpc_result(request_id, {"tools": self._get_mcp_tool_specs()})
+
+        if method == "resources/list":
+            return self._jsonrpc_result(request_id, {"resources": self._get_mcp_resources()})
+
+        if method == "resources/templates/list":
+            return self._jsonrpc_result(
+                request_id,
+                {"resourceTemplates": self._get_mcp_resource_templates()},
+            )
+
+        if method == "resources/read":
+            uri = params.get("uri")
+            if not uri:
+                return self._jsonrpc_error(request_id, -32602, "Resource URI is required")
+            resource = await self._read_mcp_resource(uri)
+            if resource is None:
+                return self._jsonrpc_error(request_id, -32602, f"Resource not found: {uri}")
+            return self._jsonrpc_result(request_id, {"contents": [resource]})
 
         if method == "tools/call":
             tool_name = params.get("name")
@@ -435,6 +494,119 @@ class MegaOrchestrator:
             )
 
         return self._jsonrpc_error(request_id, -32601, f"Method not found: {method}")
+
+    async def _read_mcp_resource(self, uri: str) -> Optional[Dict[str, Any]]:
+        """Read an MCP resource and return content in MCP-compatible format."""
+        payload: Optional[Dict[str, Any]] = None
+        if uri == "mega://health":
+            payload = await self._build_health_snapshot()
+        elif uri == "mega://services":
+            payload = self._build_services_snapshot()
+        elif uri == "mega://schema":
+            payload = {
+                "server": "mega-orchestrator",
+                "version": self.version,
+                "tools": self._get_mcp_tool_specs(),
+            }
+        elif uri.startswith("mega://services/"):
+            service_key = uri.split("/", 3)[-1]
+            if service_key in self.services:
+                config = self.services[service_key]
+                payload = {
+                    "service": service_key,
+                    "name": config.name,
+                    "host": config.host,
+                    "port": config.port,
+                    "health_endpoint": config.health_endpoint,
+                    "tools": config.tools or [],
+                    "priority": config.priority,
+                    "timeout": config.timeout,
+                }
+        elif uri.startswith("mega://contexts/"):
+            session_id = uri.split("/", 3)[-1]
+            contexts = await self.conversation_memory.get_conversation_thread(session_id, limit=20)
+            payload = {
+                "session_id": session_id,
+                "context_count": len(contexts),
+                "contexts": [asdict(ctx) for ctx in contexts],
+            }
+
+        if payload is None:
+            return None
+
+        return {
+            "uri": uri,
+            "mimeType": "application/json",
+            "text": json.dumps(payload, ensure_ascii=True),
+        }
+
+    def _build_services_snapshot(self) -> Dict[str, Any]:
+        services_info = {}
+        for name, config in self.services.items():
+            services_info[name] = {
+                "name": config.name,
+                "host": config.host,
+                "port": config.port,
+                "tools": config.tools or [],
+                "sage_modes": [mode.value for mode in (config.sage_modes or [])],
+                "priority": config.priority,
+                "timeout": config.timeout,
+            }
+        return {
+            "orchestrator": "mega",
+            "version": self.version,
+            "services": services_info,
+            "total_services": len(services_info),
+        }
+
+    async def _build_health_snapshot(self) -> Dict[str, Any]:
+        health_data = {
+            "orchestrator": "mega",
+            "version": self.version,
+            "build_date": self.build_date,
+            "status": "healthy",
+            "port": self.port,
+            "backup_mode": self.backup_mode,
+            "timestamp": time.time(),
+            "uptime": time.time() - self.stats["startup_time"],
+        }
+
+        try:
+            await self.redis.ping()
+            health_data["redis"] = "healthy"
+        except Exception:
+            health_data["redis"] = "unhealthy"
+            health_data["status"] = "degraded"
+
+        try:
+            async with self.db_pool.acquire() as conn:
+                await conn.fetchval("SELECT 1")
+            health_data["database"] = "healthy"
+        except Exception:
+            health_data["database"] = "unhealthy"
+            health_data["status"] = "degraded"
+
+        service_health = await self._check_all_services_health()
+        health_data["services"] = service_health
+
+        healthy_services = sum(1 for s in service_health.values() if s.get("status") == "healthy")
+        total_services = len(service_health)
+        health_data["service_summary"] = {
+            "healthy": healthy_services,
+            "total": total_services,
+            "percentage": round((healthy_services / total_services) * 100, 1) if total_services > 0 else 0,
+        }
+
+        if healthy_services < total_services * 0.7:
+            health_data["status"] = "degraded"
+
+        health_data["components"] = {
+            "provider_registry": len(self.provider_registry.get_available_providers_with_keys()) > 0,
+            "conversation_memory": True,
+            "file_storage": True,
+            "sage_router": True,
+        }
+        return health_data
             
     async def _route_enhanced_request(self, tool: str, arguments: Dict[str, Any],
                                     mode: SAGEMode, session_id: Optional[str] = None,

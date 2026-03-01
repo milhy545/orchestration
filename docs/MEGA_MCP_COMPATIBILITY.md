@@ -26,6 +26,9 @@ Supported JSON-RPC methods:
 - `notifications/initialized`
 - `tools/list`
 - `tools/call`
+- `resources/list`
+- `resources/read`
+- `resources/templates/list`
 - `ping`
 
 ## Stdio MCP
@@ -47,3 +50,14 @@ This is the recommended path for:
 - The MCP-exposed tool set is the currently supported working subset.
 - Legacy `/tools/list` remains available for custom clients and diagnostics.
 - `advanced-memory-mcp` remains outside the MCP-compatible working subset on this hardware.
+
+Available MCP resources:
+
+- `mega://health`
+- `mega://services`
+- `mega://schema`
+
+Available resource templates:
+
+- `mega://services/{service}`
+- `mega://contexts/{session_id}`
