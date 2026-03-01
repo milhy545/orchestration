@@ -268,7 +268,7 @@ async def git_commit(path: str, request: GitCommitRequest):
             timeout=GIT_TIMEOUT,
         )
 
-        commit_result = subprocess.run(
+        subprocess.run(
             [
                 "git",
                 "-c",
