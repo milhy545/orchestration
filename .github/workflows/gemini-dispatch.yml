@@ -67,6 +67,7 @@ jobs:
       command: '${{ steps.extract_command.outputs.command }}'
       request: '${{ steps.extract_command.outputs.request }}'
       additional_context: '${{ steps.extract_command.outputs.additional_context }}'
+      has_gemini_credentials: '${{ steps.extract_command.outputs.has_gemini_credentials }}'
       issue_number: '${{ github.event.pull_request.number || github.event.issue.number }}'
     steps:
       - name: 'Mint identity token'
@@ -87,11 +88,20 @@ jobs:
         env:
           EVENT_TYPE: '${{ github.event_name }}.${{ github.event.action }}'
           REQUEST: '${{ github.event.comment.body || github.event.review.body || github.event.issue.body }}'
+          GCP_WIF_PROVIDER: '${{ vars.GCP_WIF_PROVIDER }}'
+          GEMINI_API_KEY: '${{ secrets.GEMINI_API_KEY }}'
+          GOOGLE_API_KEY: '${{ secrets.GOOGLE_API_KEY }}'
         with:
           script: |
             const request = process.env.REQUEST;
-            const eventType = process.env.EVENT_TYPE
+            const eventType = process.env.EVENT_TYPE;
+            const hasGeminiCredentials = [
+              process.env.GCP_WIF_PROVIDER,
+              process.env.GEMINI_API_KEY,
+              process.env.GOOGLE_API_KEY,
+            ].some((value) => Boolean((value || '').trim()));
             core.setOutput('request', request);
+            core.setOutput('has_gemini_credentials', hasGeminiCredentials ? 'true' : 'false');
 
             if (request.startsWith("@gemini-cli /review")) {
               core.setOutput('command', 'review');
@@ -126,7 +136,7 @@ jobs:
   review:
     needs: 'dispatch'
     if: |-
-      ${{ needs.dispatch.outputs.command == 'review' && (vars.GCP_WIF_PROVIDER != '' || secrets.GEMINI_API_KEY != '' || secrets.GOOGLE_API_KEY != '') }}
+      ${{ needs.dispatch.outputs.command == 'review' && needs.dispatch.outputs.has_gemini_credentials == 'true' }}
     uses: './.github/workflows/gemini-review.yml'
     permissions:
       contents: 'read'

@@ -93,6 +93,12 @@ curl http://192.168.0.58:7000/services
 #### GET /tools/list
 List all available MCP tools across all services.
 
+Operational note:
+- Tool registration in `/tools/list` is broader than the currently verified execution set.
+- `git_push` is implemented with a safe-upstream-only policy.
+- `file_write`, `file_search`, and `file_analyze` are implemented through `filesystem-mcp`.
+- `transcriber` and `video_processing` stay registered as templates on this host and should be redirected to a stronger machine in a future deployment.
+
 **Request:**
 ```bash
 curl http://192.168.0.58:7000/tools/list
@@ -1023,5 +1029,28 @@ print(f"Found {len(results['result']['memories'])} memories")
 3. **Performance**: MCP tools are optimized for concurrent execution
 4. **Monitoring**: Use `/health` and `/services` endpoints for monitoring
 5. **Backup**: Regular database backups via `db_backup` tool recommended
+
+## 🔐 Vault Variant B Runtime Secrets
+
+The repository includes an optional Vault overlay:
+
+- Start with `docker compose -f docker-compose.yml -f docker-compose.vault.yml up -d --build`
+- Vault API defaults to `http://localhost:7070`
+- Vault Web UI defaults to `http://localhost:10000`
+
+The first functional version uses a restart-based model:
+
+1. Write or update secrets in the Vault Web UI.
+2. Restart the affected service.
+3. The service reloads its Vault-rendered env file from `/vault/runtime`.
+
+First-wave runtime consumers:
+
+- `mega-orchestrator`
+- `research-mcp`
+- `zen-mcp-server`
+- `gmail-mcp`
+- `security-mcp`
+- `marketplace-mcp`
 
 For additional support, see the [troubleshooting guide](TROUBLESHOOTING.md) or [GitHub issues](https://github.com/milhy545/orchestration/issues).

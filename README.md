@@ -76,7 +76,7 @@ The `docker-compose.yml` file defines the following services, which are organize
 
 -   **`research-mcp` (Port 7011):** Facilitates AI research tasks.
 -   **`advanced-memory-mcp` (Port 7012):** Provides AI-powered memory with vector search and semantic similarity.
--   **`transcriber-mcp` (Port 7013):** Handles audio processing and transcription.
+-   **`transcriber-mcp` (Port 7013):** Handles audio processing and transcription. On this host it is currently treated as a template target only; production routing should be moved to stronger hardware.
 -   **`vision-mcp` (Port 7014):** (Placeholder) Intended for vision-related tasks.
 -   **`zen-mcp-server` (Port 7017):** MCP tool orchestration gateway for multi-model usage.
 
@@ -107,6 +107,12 @@ The `docker-compose.yml` file defines the following services, which are organize
 ## Hybrid Marketplace (Skills + MCP Registry)
 
 The stack now includes a Dockerized hybrid marketplace service:
+
+## Current Mega Orchestrator Routing Notes
+
+- `git_push` is implemented through `git-mcp` with a safe-upstream-only policy: current branch, existing upstream, no force push.
+- `file_write`, `file_search`, and `file_analyze` are implemented through `filesystem-mcp` and routed by `mega-orchestrator`.
+- `transcriber` and `video_processing` remain template targets on this machine. Keep them registered for orchestration compatibility, but plan to redirect those workloads to a separate, stronger host in a future deployment.
 
 - Skills Catalog API: `/skills/v1/*`
 - MCP Subregistry API: `/registry/v0.1/*`
@@ -216,6 +222,32 @@ Validate monitoring stack configuration (requires `python3` + `PyYAML`):
 ```
 
 **📊 For detailed monitoring documentation, see [MONITORING.md](docs/MONITORING.md)**
+
+## Vault Variant B
+
+Vault Variant B is available as an optional overlay that adds:
+
+- HashiCorp Vault on `7070`
+- Vault Web UI on `10000`
+- restart-based runtime secret injection for selected services
+
+Start it with:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.vault.yml up -d --build
+```
+
+The first functional version is restart-based: save secrets in the Web UI, then restart the affected service so it reloads the rendered env file from `/vault/runtime`. See [docs/VAULT_VARIANT_B.md](docs/VAULT_VARIANT_B.md) for the full operator workflow.
+
+## MCP Client Compatibility
+
+`mega-orchestrator` supports:
+
+- Legacy custom bridge via `POST /mcp`
+- Native MCP JSON-RPC via `POST /mcp` or `POST /mcp/rpc`
+- MCP stdio bridge via `python -m mega_orchestrator.mcp_stdio_bridge`
+
+For client-specific examples, see [docs/MEGA_MCP_COMPATIBILITY.md](docs/MEGA_MCP_COMPATIBILITY.md).
 
 ## Contributing
 

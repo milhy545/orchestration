@@ -1,6 +1,7 @@
 # \!/usr/bin/env python3
 import fnmatch
 import json
+import mimetypes
 import os
 from datetime import datetime
 from pathlib import Path
@@ -8,7 +9,7 @@ from typing import Any, Dict, List, Optional
 
 from fastapi import FastAPI, HTTPException, Query
 from prometheus_fastapi_instrumentator import Instrumentator
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 app = FastAPI(title="Filesystem MCP API", version="1.0.0")
 # Prometheus metrics instrumentation
@@ -46,6 +47,50 @@ class DirectoryResponse(BaseModel):
     total_count: int
     page: int = 1
     has_more: bool = False
+
+
+class FileWriteRequest(BaseModel):
+    path: str
+    content: str
+    overwrite: bool = False
+    create_dirs: bool = False
+
+
+class FileWriteResponse(BaseModel):
+    path: str
+    bytes_written: int
+    created: bool
+    overwritten: bool
+    timestamp: str
+
+
+class SearchMatch(BaseModel):
+    name: str
+    path: str
+    type: str
+    size: Optional[int] = None
+    modified: Optional[str] = None
+    snippet: Optional[str] = None
+
+
+class FileSearchResponse(BaseModel):
+    root: str
+    matches: List[SearchMatch]
+    count: int
+    truncated: bool = False
+
+
+class FileAnalyzeResponse(BaseModel):
+    path: str
+    exists: bool
+    type: str
+    size: int
+    extension: str = ""
+    line_count: Optional[int] = None
+    mime_guess: Optional[str] = None
+    preview: Optional[str] = None
+    truncated: bool = False
+    timestamp: str
 
 
 def validate_path(path: str, operation: str = "read") -> str:
@@ -120,6 +165,18 @@ def _ensure_allowed_path(path_obj: Path) -> Path:
             detail=f"Access to path {resolved} is not allowed. Allowed directories: {ALLOWED_DIRECTORIES}",
         )
     return resolved
+
+
+def _build_file_info(item_path: Path) -> FileInfo:
+    """Build file metadata for a validated path."""
+    stat = item_path.stat()
+    return FileInfo(
+        name=item_path.name,
+        path=str(item_path),
+        type="directory" if item_path.is_dir() else "file",
+        size=stat.st_size if item_path.is_file() else None,
+        modified=datetime.fromtimestamp(stat.st_mtime).isoformat(),
+    )
 
 
 @app.get("/health")
@@ -264,6 +321,191 @@ async def read_file(
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to read file: {str(e)}")
+
+
+@app.post("/file/write", response_model=FileWriteResponse)
+async def write_file(request: FileWriteRequest):
+    """Write a UTF-8 text file within the allowed directory sandbox."""
+    try:
+        safe_path = _ensure_allowed_path(
+            _safe_path(validate_path(request.path, operation="write"))
+        )
+        parent = _ensure_allowed_path(safe_path.parent)
+
+        if not parent.exists():
+            if not request.create_dirs:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Parent directory does not exist: {parent}",
+                )
+            parent.mkdir(parents=True, exist_ok=True)
+            _ensure_allowed_path(parent)
+
+        existed = safe_path.exists()
+        if existed and safe_path.is_dir():
+            raise HTTPException(
+                status_code=400, detail=f"Path is a directory: {safe_path}"
+            )
+        if existed and not request.overwrite:
+            raise HTTPException(
+                status_code=409, detail=f"File already exists: {safe_path}"
+            )
+
+        safe_path.write_text(request.content, encoding="utf-8")
+
+        return FileWriteResponse(
+            path=str(safe_path),
+            bytes_written=len(request.content.encode("utf-8")),
+            created=not existed,
+            overwritten=existed,
+            timestamp=datetime.now().isoformat(),
+        )
+
+    except HTTPException:
+        raise
+    except PermissionError:
+        raise HTTPException(
+            status_code=403, detail=f"Permission denied: {request.path}"
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to write file: {str(e)}")
+
+
+@app.get("/search/files", response_model=FileSearchResponse)
+async def search_files(
+    root: str = Query(..., description="Root directory to search"),
+    pattern: str = Query("*", min_length=1, description="Glob pattern"),
+    limit: int = Query(100, ge=1, le=MAX_FILES_PER_PAGE, description="Maximum matches"),
+    content_query: Optional[str] = Query(
+        None, description="Optional text to search inside files"
+    ),
+    include_hidden: bool = Query(False, description="Include dotfiles and dotdirs"),
+):
+    """Search files by name and optionally by content."""
+    try:
+        safe_root = _ensure_allowed_path(
+            _safe_path(validate_path(root, operation="list"))
+        )
+        if not safe_root.exists():
+            raise HTTPException(
+                status_code=404, detail=f"Directory not found: {safe_root}"
+            )
+        if not safe_root.is_dir():
+            raise HTTPException(
+                status_code=400, detail=f"Path is not a directory: {safe_root}"
+            )
+
+        matches: List[SearchMatch] = []
+        truncated = False
+
+        for current_root, dirnames, filenames in os.walk(safe_root):
+            current_path = _ensure_allowed_path(Path(current_root))
+
+            if not include_hidden:
+                dirnames[:] = [name for name in dirnames if not name.startswith(".")]
+                filenames = [name for name in filenames if not name.startswith(".")]
+
+            for name in filenames:
+                if not fnmatch.fnmatch(name, pattern):
+                    continue
+
+                file_path = current_path / name
+                snippet = None
+                if content_query:
+                    try:
+                        if file_path.stat().st_size > MAX_FILE_SIZE:
+                            continue
+                        content = file_path.read_text(encoding="utf-8", errors="ignore")
+                    except (OSError, PermissionError):
+                        continue
+                    if content_query not in content:
+                        continue
+                    match_index = content.find(content_query)
+                    start = max(0, match_index - 40)
+                    end = min(len(content), match_index + len(content_query) + 40)
+                    snippet = content[start:end]
+
+                info = _build_file_info(file_path)
+                matches.append(
+                    SearchMatch(
+                        name=info.name,
+                        path=info.path,
+                        type=info.type,
+                        size=info.size,
+                        modified=info.modified,
+                        snippet=snippet,
+                    )
+                )
+
+                if len(matches) >= limit:
+                    truncated = True
+                    return FileSearchResponse(
+                        root=str(safe_root),
+                        matches=matches,
+                        count=len(matches),
+                        truncated=truncated,
+                    )
+
+        return FileSearchResponse(
+            root=str(safe_root),
+            matches=matches,
+            count=len(matches),
+            truncated=truncated,
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to search files: {str(e)}")
+
+
+@app.get("/analyze/{path:path}", response_model=FileAnalyzeResponse)
+async def analyze_file(
+    path: str,
+    max_preview: int = Query(4000, ge=1, le=10000, description="Maximum preview size"),
+):
+    """Return basic metadata and a bounded preview for a file or directory."""
+    try:
+        safe_path = _ensure_allowed_path(
+            _safe_path(validate_path(path, operation="read"))
+        )
+        if not safe_path.exists():
+            raise HTTPException(status_code=404, detail=f"Path not found: {safe_path}")
+
+        stat = safe_path.stat()
+        file_type = "directory" if safe_path.is_dir() else "file"
+        mime_guess, _ = mimetypes.guess_type(str(safe_path))
+        preview = None
+        line_count = None
+        truncated = False
+
+        if safe_path.is_file():
+            content = safe_path.read_text(encoding="utf-8", errors="ignore")
+            line_count = content.count("\n") + (
+                1 if content and not content.endswith("\n") else 0
+            )
+            preview = content[:max_preview]
+            truncated = len(content) > max_preview
+
+        return FileAnalyzeResponse(
+            path=str(safe_path),
+            exists=True,
+            type=file_type,
+            size=stat.st_size,
+            extension=safe_path.suffix,
+            line_count=line_count,
+            mime_guess=mime_guess,
+            preview=preview,
+            truncated=truncated,
+            timestamp=datetime.now().isoformat(),
+        )
+
+    except HTTPException:
+        raise
+    except PermissionError:
+        raise HTTPException(status_code=403, detail=f"Permission denied: {path}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to analyze file: {str(e)}")
 
 
 if __name__ == "__main__":

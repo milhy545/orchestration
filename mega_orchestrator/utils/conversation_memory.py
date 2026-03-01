@@ -138,8 +138,16 @@ class ConversationMemory:
                     service=row['service'],
                     mode=row['mode'],
                     timestamp=row['timestamp'],
-                    request_data=dict(row['request_data']),
-                    response_data=dict(row['response_data']) if row['response_data'] else None,
+                    request_data=self._normalize_json_object(
+                        row['request_data'],
+                        'request_data',
+                        row['context_id']
+                    ),
+                    response_data=self._normalize_json_object(
+                        row['response_data'],
+                        'response_data',
+                        row['context_id']
+                    ) if row['response_data'] else None,
                     file_hashes=list(row['file_hashes']) if row['file_hashes'] else [],
                     parent_context=row['parent_context']
                 )
@@ -382,12 +390,55 @@ class ConversationMemory:
                     service=row['service'],
                     mode=row['mode'],
                     timestamp=row['timestamp'],
-                    request_data=dict(row['request_data']),
-                    response_data=dict(row['response_data']) if row['response_data'] else None,
+                    request_data=self._normalize_json_object(
+                        row['request_data'],
+                        'request_data',
+                        row['context_id']
+                    ),
+                    response_data=self._normalize_json_object(
+                        row['response_data'],
+                        'response_data',
+                        row['context_id']
+                    ) if row['response_data'] else None,
                     file_hashes=list(row['file_hashes']) if row['file_hashes'] else [],
                     parent_context=row['parent_context']
                 )
         return None
+
+    def _normalize_json_object(self, value: Any, field_name: str,
+                              context_id: Optional[str] = None) -> Dict[str, Any]:
+        """Normalize JSON/JSONB values loaded from storage into dicts."""
+        if value is None:
+            return {}
+
+        if isinstance(value, dict):
+            return value
+
+        parsed = value
+        if isinstance(value, str):
+            try:
+                parsed = json.loads(value)
+            except json.JSONDecodeError:
+                logging.warning(
+                    "Invalid JSON in %s for context %s; preserving raw string",
+                    field_name,
+                    context_id or "unknown"
+                )
+                return {"value": value}
+
+        if isinstance(parsed, dict):
+            return parsed
+
+        if isinstance(parsed, list):
+            try:
+                return dict(parsed)
+            except (TypeError, ValueError):
+                return {"value": parsed}
+
+        try:
+            return dict(parsed)
+        except (TypeError, ValueError):
+            return {"value": parsed}
         
     async def _cleanup_expired_contexts(self):
         """Periodic cleanup of expired contexts"""

@@ -37,6 +37,19 @@ class StructuredResult(BaseModel):
     model_used: str
 
 
+@app.get("/health")
+async def health() -> Dict[str, Any]:
+    """Basic health endpoint for orchestration reachability checks."""
+    configured = bool(
+        PERPLEXITY_API_KEY and PERPLEXITY_API_KEY != "your_perplexity_api_key_here"
+    )
+    return {
+        "status": "healthy",
+        "service": "research-mcp",
+        "perplexity_configured": configured,
+    }
+
+
 # 1. Latest News Search
 
 

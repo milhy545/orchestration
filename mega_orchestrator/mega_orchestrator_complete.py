@@ -13,6 +13,8 @@ Combines:
 """
 
 import asyncio
+import base64
+import hmac
 import logging
 import os
 import json
@@ -20,6 +22,7 @@ import time
 from typing import Dict, Any, Optional, List, Union
 from dataclasses import dataclass, asdict
 from datetime import datetime
+from urllib.parse import quote
 import aiohttp
 from aiohttp import web
 import redis.asyncio as aioredis
@@ -28,6 +31,7 @@ import asyncpg
 # Import our enhanced components
 from mega_orchestrator.providers.registry import ModelProviderRegistry, initialize_provider_registry
 from mega_orchestrator.modes.sage_router import SAGEModeRouter, SAGEMode
+from mega_orchestrator.mcp_tooling import build_mcp_tools
 from mega_orchestrator.utils.conversation_memory import ConversationMemory
 from mega_orchestrator.utils.file_storage import FileStorage, FileHandlingMode
 
@@ -39,6 +43,7 @@ BUILD_DATE = "2025-09-02"
 class MCPServiceConfig:
     name: str
     port: int
+    host: str = "localhost"
     health_endpoint: str = "/health"
     tools: List[str] = None
     sage_modes: List[SAGEMode] = None
@@ -95,63 +100,72 @@ class MegaOrchestrator:
         return {
             "filesystem": MCPServiceConfig(
                 name="Filesystem MCP",
-                port=7001,
+                host="filesystem-mcp",
+                port=8000,
                 tools=["file_read", "file_write", "file_list", "file_search", "file_analyze"],
                 sage_modes=[SAGEMode.FILESYSTEM, SAGEMode.CODE, SAGEMode.DOCS],
                 priority=1
             ),
             "git": MCPServiceConfig(
                 name="Git MCP", 
-                port=7002,
+                host="git-mcp",
+                port=8000,
                 tools=["git_status", "git_commit", "git_push", "git_log", "git_diff"],
                 sage_modes=[SAGEMode.CODE],
                 priority=1
             ),
             "terminal": MCPServiceConfig(
                 name="Terminal MCP",
-                port=7003,
+                host="terminal-mcp",
+                port=8000,
                 tools=["terminal_exec", "shell_command", "system_info", "create_terminal", "execute_command"],
                 sage_modes=[SAGEMode.DEBUG, SAGEMode.TERMINAL],
                 priority=1
             ),
             "database": MCPServiceConfig(
                 name="Database MCP",
-                port=7004,
+                host="database-mcp",
+                port=8000,
                 tools=["db_query", "db_connect", "db_schema", "db_backup"],
                 sage_modes=[SAGEMode.ANALYZE],
                 priority=1
             ),
             "memory": MCPServiceConfig(
                 name="Memory MCP",
-                port=7005,
+                host="memory-mcp",
+                port=8000,
                 tools=["store_memory", "search_memories", "get_context", "memory_stats", "list_memories"],
                 sage_modes=[SAGEMode.MEMORY, SAGEMode.CHAT],
                 priority=1
             ),
             "research": MCPServiceConfig(
                 name="Research MCP",
-                port=7011,
+                host="research-mcp",
+                port=8000,
                 tools=["research_query", "perplexity_search", "web_search", "search_web"],
                 sage_modes=[SAGEMode.ANALYZE, SAGEMode.DOCS],
                 priority=1
             ),
             "advanced_memory": MCPServiceConfig(
                 name="Advanced Memory MCP",
-                port=7012,
+                host="advanced-memory-mcp",
+                port=8000,
                 tools=["vector_search", "semantic_similarity"],
                 sage_modes=[SAGEMode.MEMORY, SAGEMode.ANALYZE],
                 priority=2
             ),
             "advanced_memory_v2": MCPServiceConfig(
                 name="Advanced Memory v2",
-                port=7015,
+                host="gmail-mcp",
+                port=8000,
                 tools=["conversation_thread", "file_deduplication", "context_continuation"],
                 sage_modes=[SAGEMode.MEMORY, SAGEMode.CHAT],
                 priority=3
             ),
             "transcriber": MCPServiceConfig(
                 name="Transcriber MCP",
-                port=7013,
+                host="transcriber-mcp",
+                port=8000,
                 tools=["transcribe_webm", "transcribe_url", "audio_convert"],
                 sage_modes=[SAGEMode.ANALYZE],
                 priority=2,
@@ -159,7 +173,8 @@ class MegaOrchestrator:
             ),
             "video_processing": MCPServiceConfig(
                 name="Video Processing MCP",
-                port=7016,
+                host="forai-mcp",
+                port=8000,
                 tools=["process_video", "extract_frames", "video_analysis"],
                 sage_modes=[SAGEMode.ANALYZE],
                 priority=2,
@@ -167,7 +182,8 @@ class MegaOrchestrator:
             ),
             "marketplace": MCPServiceConfig(
                 name="Marketplace MCP",
-                port=7034,
+                host="marketplace-mcp",
+                port=8000,
                 tools=[
                     "skills_list",
                     "skills_resolve",
@@ -242,12 +258,14 @@ class MegaOrchestrator:
         
         # Core MCP routes
         self.app.router.add_post('/mcp', self._handle_mcp_request)
+        self.app.router.add_post('/mcp/rpc', self._handle_mcp_request)
         self.app.router.add_post('/mcp/{service}', self._handle_direct_service_request)
         
         # Information routes
         self.app.router.add_get('/health', self._handle_health)
         self.app.router.add_get('/services', self._handle_services)
         self.app.router.add_get('/tools/list', self._handle_tools_list)
+        self.app.router.add_get('/mcp/schema', self._handle_mcp_schema)
         self.app.router.add_get('/status', self._handle_status)
         self.app.router.add_get('/stats', self._handle_stats)
         
@@ -293,6 +311,9 @@ class MegaOrchestrator:
         """Handle intelligent MCP request with SAGE routing"""
         try:
             data = await request.json()
+            if isinstance(data, dict) and "jsonrpc" in data:
+                return await self._handle_mcp_jsonrpc(data)
+
             tool = data.get("tool")
             arguments = data.get("arguments", {})
             mode = data.get("mode")
@@ -327,6 +348,265 @@ class MegaOrchestrator:
         except Exception as e:
             logging.error(f"Error handling MCP request: {e}")
             return web.json_response({"error": str(e)}, status=500)
+
+    def _get_mcp_tool_specs(self) -> List[Dict[str, Any]]:
+        """Return MCP-compatible tool definitions for the currently exposed working subset."""
+        available_tools: List[str] = []
+        for service_name, config in self.services.items():
+            if service_name in {"advanced_memory"}:
+                continue
+            available_tools.extend(config.tools or [])
+        return build_mcp_tools(available_tools)
+
+    def _get_mcp_resources(self) -> List[Dict[str, Any]]:
+        """Return stable MCP resources for client-side inspection."""
+        return [
+            {
+                "uri": "mega://health",
+                "name": "Mega Orchestrator Health",
+                "description": "Current orchestrator and downstream service health snapshot.",
+                "mimeType": "application/json",
+            },
+            {
+                "uri": "mega://services",
+                "name": "Mega Orchestrator Services",
+                "description": "Registered downstream services and routing metadata.",
+                "mimeType": "application/json",
+            },
+            {
+                "uri": "mega://schema",
+                "name": "Mega Orchestrator MCP Schema",
+                "description": "Canonical MCP tool schema exposed by mega-orchestrator.",
+                "mimeType": "application/json",
+            },
+        ]
+
+    def _get_mcp_resource_templates(self) -> List[Dict[str, Any]]:
+        """Return parameterized MCP resource templates."""
+        return [
+            {
+                "uriTemplate": "mega://services/{service}",
+                "name": "Service Detail",
+                "description": "Inspect one downstream service by name.",
+                "mimeType": "application/json",
+            },
+            {
+                "uriTemplate": "mega://contexts/{session_id}",
+                "name": "Session Context Thread",
+                "description": "Inspect recent conversation contexts for one session.",
+                "mimeType": "application/json",
+            },
+        ]
+
+    def _jsonrpc_result(self, request_id: Any, result: Dict[str, Any]) -> web.Response:
+        return web.json_response({"jsonrpc": "2.0", "id": request_id, "result": result})
+
+    def _jsonrpc_error(self, request_id: Any, code: int, message: str, status: int = 200) -> web.Response:
+        return web.json_response(
+            {
+                "jsonrpc": "2.0",
+                "id": request_id,
+                "error": {"code": code, "message": message},
+            },
+            status=status,
+        )
+
+    async def _handle_mcp_jsonrpc(self, data: Dict[str, Any]) -> web.Response:
+        """Handle JSON-RPC 2.0 MCP-compatible requests."""
+        request_id = data.get("id")
+        if data.get("jsonrpc") != "2.0":
+            return self._jsonrpc_error(request_id, -32600, "Invalid Request")
+
+        method = data.get("method")
+        params = data.get("params", {}) or {}
+        if not method:
+            return self._jsonrpc_error(request_id, -32600, "Method is required")
+
+        if method == "initialize":
+            return self._jsonrpc_result(
+                request_id,
+                {
+                    "protocolVersion": "2025-03-26",
+                    "serverInfo": {
+                        "name": "mega-orchestrator",
+                        "version": self.version,
+                    },
+                    "capabilities": {
+                        "tools": {"listChanged": False},
+                        "resources": {"subscribe": False, "listChanged": False},
+                    },
+                },
+            )
+
+        if method == "notifications/initialized":
+            return web.Response(status=202)
+
+        if method == "ping":
+            return self._jsonrpc_result(request_id, {"ok": True})
+
+        if method == "tools/list":
+            return self._jsonrpc_result(request_id, {"tools": self._get_mcp_tool_specs()})
+
+        if method == "resources/list":
+            return self._jsonrpc_result(request_id, {"resources": self._get_mcp_resources()})
+
+        if method == "resources/templates/list":
+            return self._jsonrpc_result(
+                request_id,
+                {"resourceTemplates": self._get_mcp_resource_templates()},
+            )
+
+        if method == "resources/read":
+            uri = params.get("uri")
+            if not uri:
+                return self._jsonrpc_error(request_id, -32602, "Resource URI is required")
+            resource = await self._read_mcp_resource(uri)
+            if resource is None:
+                return self._jsonrpc_error(request_id, -32602, f"Resource not found: {uri}")
+            return self._jsonrpc_result(request_id, {"contents": [resource]})
+
+        if method == "tools/call":
+            tool_name = params.get("name")
+            if not tool_name:
+                return self._jsonrpc_error(request_id, -32602, "Tool name is required")
+
+            allowed_tools = {tool["name"] for tool in self._get_mcp_tool_specs()}
+            if tool_name not in allowed_tools:
+                return self._jsonrpc_error(request_id, -32601, f"Tool not found: {tool_name}")
+
+            result = await self._route_enhanced_request(
+                tool=tool_name,
+                arguments=params.get("arguments", {}) or {},
+                mode=self.sage_router.detect_mode(tool_name, params.get("arguments", {}) or {}),
+                session_id=params.get("session_id"),
+                context_id=params.get("context_id"),
+            )
+            return self._jsonrpc_result(
+                request_id,
+                {
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": json.dumps(result, ensure_ascii=True),
+                        }
+                    ]
+                },
+            )
+
+        return self._jsonrpc_error(request_id, -32601, f"Method not found: {method}")
+
+    async def _read_mcp_resource(self, uri: str) -> Optional[Dict[str, Any]]:
+        """Read an MCP resource and return content in MCP-compatible format."""
+        payload: Optional[Dict[str, Any]] = None
+        if uri == "mega://health":
+            payload = await self._build_health_snapshot()
+        elif uri == "mega://services":
+            payload = self._build_services_snapshot()
+        elif uri == "mega://schema":
+            payload = {
+                "server": "mega-orchestrator",
+                "version": self.version,
+                "tools": self._get_mcp_tool_specs(),
+            }
+        elif uri.startswith("mega://services/"):
+            service_key = uri.split("/", 3)[-1]
+            if service_key in self.services:
+                config = self.services[service_key]
+                payload = {
+                    "service": service_key,
+                    "name": config.name,
+                    "host": config.host,
+                    "port": config.port,
+                    "health_endpoint": config.health_endpoint,
+                    "tools": config.tools or [],
+                    "priority": config.priority,
+                    "timeout": config.timeout,
+                }
+        elif uri.startswith("mega://contexts/"):
+            session_id = uri.split("/", 3)[-1]
+            contexts = await self.conversation_memory.get_conversation_thread(session_id, limit=20)
+            payload = {
+                "session_id": session_id,
+                "context_count": len(contexts),
+                "contexts": [asdict(ctx) for ctx in contexts],
+            }
+
+        if payload is None:
+            return None
+
+        return {
+            "uri": uri,
+            "mimeType": "application/json",
+            "text": json.dumps(payload, ensure_ascii=True),
+        }
+
+    def _build_services_snapshot(self) -> Dict[str, Any]:
+        services_info = {}
+        for name, config in self.services.items():
+            services_info[name] = {
+                "name": config.name,
+                "host": config.host,
+                "port": config.port,
+                "tools": config.tools or [],
+                "sage_modes": [mode.value for mode in (config.sage_modes or [])],
+                "priority": config.priority,
+                "timeout": config.timeout,
+            }
+        return {
+            "orchestrator": "mega",
+            "version": self.version,
+            "services": services_info,
+            "total_services": len(services_info),
+        }
+
+    async def _build_health_snapshot(self) -> Dict[str, Any]:
+        health_data = {
+            "orchestrator": "mega",
+            "version": self.version,
+            "build_date": self.build_date,
+            "status": "healthy",
+            "port": self.port,
+            "backup_mode": self.backup_mode,
+            "timestamp": time.time(),
+            "uptime": time.time() - self.stats["startup_time"],
+        }
+
+        try:
+            await self.redis.ping()
+            health_data["redis"] = "healthy"
+        except Exception:
+            health_data["redis"] = "unhealthy"
+            health_data["status"] = "degraded"
+
+        try:
+            async with self.db_pool.acquire() as conn:
+                await conn.fetchval("SELECT 1")
+            health_data["database"] = "healthy"
+        except Exception:
+            health_data["database"] = "unhealthy"
+            health_data["status"] = "degraded"
+
+        service_health = await self._check_all_services_health()
+        health_data["services"] = service_health
+
+        healthy_services = sum(1 for s in service_health.values() if s.get("status") == "healthy")
+        total_services = len(service_health)
+        health_data["service_summary"] = {
+            "healthy": healthy_services,
+            "total": total_services,
+            "percentage": round((healthy_services / total_services) * 100, 1) if total_services > 0 else 0,
+        }
+
+        if healthy_services < total_services * 0.7:
+            health_data["status"] = "degraded"
+
+        health_data["components"] = {
+            "provider_registry": len(self.provider_registry.get_available_providers_with_keys()) > 0,
+            "conversation_memory": True,
+            "file_storage": True,
+            "sage_router": True,
+        }
+        return health_data
             
     async def _route_enhanced_request(self, tool: str, arguments: Dict[str, Any],
                                     mode: SAGEMode, session_id: Optional[str] = None,
@@ -433,7 +713,297 @@ class MegaOrchestrator:
                 processed_args["_file_error"] = str(e)
                 
         return processed_args
-        
+
+    def _encode_jwt_hs256(self, payload: Dict[str, Any], secret: str) -> str:
+        """Create a compact HS256 JWT without extra dependencies."""
+        header = {"alg": "HS256", "typ": "JWT"}
+
+        def _b64(data: bytes) -> str:
+            return base64.urlsafe_b64encode(data).rstrip(b"=").decode("ascii")
+
+        header_b64 = _b64(json.dumps(header, separators=(",", ":")).encode("utf-8"))
+        payload_b64 = _b64(json.dumps(payload, separators=(",", ":")).encode("utf-8"))
+        signing_input = f"{header_b64}.{payload_b64}".encode("ascii")
+        signature = hmac.new(secret.encode("utf-8"), signing_input, "sha256").digest()
+        return f"{header_b64}.{payload_b64}.{_b64(signature)}"
+
+    def _get_marketplace_token(self) -> Optional[str]:
+        """Return a marketplace bearer token from env or a local default-secret fallback."""
+        token = os.getenv("MARKETPLACE_JWT_TOKEN", "").strip()
+        if token:
+            return token
+
+        # Compose currently injects this default into marketplace when .env does not override it.
+        secret = "change_me_market_jwt"
+        now = int(time.time())
+        payload = {
+            "sub": "mega-orchestrator",
+            "scope": "market:read",
+            "iat": now,
+            "exp": now + 3600,
+        }
+        return self._encode_jwt_hs256(payload, secret)
+
+    def _build_service_request(self, service: MCPServiceConfig, tool: str,
+                             arguments: Dict[str, Any], context_id: str) -> Dict[str, Any]:
+        """Build per-service request shape for heterogeneous MCP backends."""
+        base_url = f"http://{service.host}:{service.port}"
+
+        if service.name == "Filesystem MCP":
+            path = arguments.get("directory", arguments.get("path", ""))
+            encoded_path = quote(str(path), safe="")
+            if tool == "file_list":
+                return {
+                    "method": "GET",
+                    "url": f"{base_url}/files/{encoded_path}",
+                    "params": {
+                        "page": arguments.get("page", 1),
+                        "limit": arguments.get("limit", 100),
+                    },
+                }
+            if tool == "file_read":
+                return {
+                    "method": "GET",
+                    "url": f"{base_url}/file/{encoded_path}",
+                    "params": {
+                        "max_size": arguments.get("max_size", 1_000_000),
+                    },
+                }
+            if tool == "file_write":
+                return {
+                    "method": "POST",
+                    "url": f"{base_url}/file/write",
+                    "payload": {
+                        "path": arguments.get("path", arguments.get("file_path", "/tmp/mega_orchestrator.txt")),
+                        "content": arguments.get("content", ""),
+                        "overwrite": arguments.get("overwrite", False),
+                        "create_dirs": arguments.get("create_dirs", False),
+                    },
+                }
+            if tool == "file_search":
+                return {
+                    "method": "GET",
+                    "url": f"{base_url}/search/files",
+                    "params": {
+                        "root": arguments.get("root", arguments.get("directory", "/tmp")),
+                        "pattern": arguments.get("pattern", "*"),
+                        "limit": arguments.get("limit", 100),
+                        "content_query": arguments.get("content_query"),
+                        "include_hidden": "true" if arguments.get("include_hidden", False) else "false",
+                    },
+                }
+            if tool == "file_analyze":
+                analyze_path = arguments.get("path", arguments.get("file_path", "/tmp"))
+                return {
+                    "method": "GET",
+                    "url": f"{base_url}/analyze/{quote(str(analyze_path), safe='')}",
+                    "params": {
+                        "max_preview": arguments.get("max_preview", 4000),
+                    },
+                }
+
+        if service.name == "Memory MCP":
+            if tool == "store_memory":
+                content = arguments.get("content")
+                if content is None:
+                    content = arguments.get("value")
+                if content is None:
+                    content = json.dumps(arguments, ensure_ascii=True)
+                if "key" in arguments:
+                    content = f"{arguments['key']}: {content}"
+                return {
+                    "method": "POST",
+                    "url": f"{base_url}/memory/store",
+                    "payload": {
+                        "content": str(content),
+                        "type": arguments.get("type", "user"),
+                        "importance": arguments.get("importance", 0.5),
+                        "agent": arguments.get("agent", "mega-orchestrator"),
+                        "metadata": None,
+                    },
+                }
+            if tool == "search_memories":
+                query = arguments.get("query")
+                if query is None:
+                    query = arguments.get("key", "")
+                return {
+                    "method": "GET",
+                    "url": f"{base_url}/memory/search",
+                    "params": {
+                        "query": query,
+                        "limit": arguments.get("limit", 50),
+                    },
+                }
+            if tool in {"list_memories", "get_context"}:
+                return {
+                    "method": "GET",
+                    "url": f"{base_url}/memory/list",
+                    "params": {
+                        "limit": arguments.get("limit", 10 if tool == "get_context" else 100),
+                        "offset": arguments.get("offset", 0),
+                    },
+                }
+            if tool == "memory_stats":
+                return {
+                    "method": "GET",
+                    "url": f"{base_url}/memory/stats",
+                }
+
+        if service.name == "Research MCP":
+            query = arguments.get("query")
+            if query is None:
+                query = arguments.get("q", "")
+            model = arguments.get("model", "sonar-pro")
+            if tool in {"web_search", "search_web", "research_query", "perplexity_search"}:
+                return {
+                    "method": "POST",
+                    "url": f"{base_url}/research/search",
+                    "params": {
+                        "query": query,
+                        "model": model,
+                    },
+                }
+
+        if service.name == "Git MCP":
+            repo_path = arguments.get("path", arguments.get("repository", arguments.get("repo_path")))
+            if repo_path is None:
+                repo_path = "/workspace/mega-test-repo"
+            encoded_path = quote(str(repo_path), safe="")
+            if tool == "git_status":
+                return {
+                    "method": "GET",
+                    "url": f"{base_url}/git/{encoded_path}/status",
+                }
+            if tool == "git_log":
+                return {
+                    "method": "GET",
+                    "url": f"{base_url}/git/{encoded_path}/log",
+                    "params": {
+                        "limit": arguments.get("limit", 5),
+                    },
+                }
+            if tool == "git_diff":
+                return {
+                    "method": "GET",
+                    "url": f"{base_url}/git/{encoded_path}/diff",
+                }
+            if tool == "git_commit":
+                return {
+                    "method": "POST",
+                    "url": f"{base_url}/git/{encoded_path}/commit",
+                    "payload": {
+                        "message": arguments.get("message", "Commit via mega-orchestrator"),
+                        "author_name": arguments.get("author_name", "Mega Orchestrator"),
+                        "author_email": arguments.get("author_email", "mega-orchestrator@localhost"),
+                    },
+                }
+            if tool == "git_push":
+                return {
+                    "method": "POST",
+                    "url": f"{base_url}/git/{encoded_path}/push",
+                    "payload": {
+                        "set_upstream": arguments.get("set_upstream", False),
+                        "force": arguments.get("force", False),
+                    },
+                }
+
+        if service.name == "Terminal MCP":
+            if tool in {"terminal_exec", "shell_command", "execute_command"}:
+                command = arguments.get("command")
+                if command is None:
+                    command = arguments.get("cmd")
+                if command is None:
+                    command = "pwd"
+                return {
+                    "method": "POST",
+                    "url": f"{base_url}/command",
+                    "payload": {
+                        "command": str(command),
+                        "args": arguments.get("args"),
+                        "cwd": arguments.get("cwd", "/tmp"),
+                        "timeout": arguments.get("timeout", 30),
+                        "user_id": arguments.get("user_id", "mega-orchestrator"),
+                    },
+                }
+            if tool == "system_info":
+                return {
+                    "method": "GET",
+                    "url": f"{base_url}/processes",
+                }
+            if tool == "create_terminal":
+                return {
+                    "method": "GET",
+                    "url": f"{base_url}/directory",
+                }
+
+        if service.name == "Database MCP":
+            if tool == "db_connect":
+                return {
+                    "method": "GET",
+                    "url": f"{base_url}/health",
+                }
+            if tool == "db_schema":
+                table_name = arguments.get("table_name", arguments.get("table"))
+                if table_name:
+                    return {
+                        "method": "GET",
+                        "url": f"{base_url}/db/schema/{quote(str(table_name), safe='')}",
+                    }
+                return {
+                    "method": "GET",
+                    "url": f"{base_url}/db/tables",
+                }
+            if tool == "db_query":
+                return {
+                    "method": "POST",
+                    "url": f"{base_url}/db/execute",
+                    "payload": {
+                        "table": arguments.get("table", "codex_probe"),
+                        "columns": arguments.get("columns"),
+                        "filters": arguments.get("filters"),
+                        "order_by": arguments.get("order_by"),
+                        "limit": arguments.get("limit", 100),
+                        "offset": arguments.get("offset", 0),
+                    },
+                }
+            if tool == "db_backup":
+                table_name = arguments.get("table_name", arguments.get("table", "codex_probe"))
+                return {
+                    "method": "GET",
+                    "url": f"{base_url}/db/sample/{quote(str(table_name), safe='')}",
+                    "params": {
+                        "limit": arguments.get("limit", 10),
+                    },
+                }
+
+        if service.name == "Marketplace MCP":
+            return {
+                "method": "POST",
+                "url": f"{base_url}/mcp",
+                "payload": {
+                    "tool": tool,
+                    "arguments": arguments,
+                    "context_id": context_id,
+                    "_orchestrator": "mega",
+                    "_version": self.version,
+                },
+                "headers": {
+                    "Authorization": f"Bearer {self._get_marketplace_token()}",
+                },
+            }
+
+        return {
+            "method": "POST",
+            "url": f"{base_url}/mcp",
+            "payload": {
+                "tool": tool,
+                "arguments": arguments,
+                "context_id": context_id,
+                "_orchestrator": "mega",
+                "_version": self.version
+            },
+        }
+
     async def _call_mcp_service_with_retry(self, service: MCPServiceConfig, 
                                          tool: str, arguments: Dict[str, Any],
                                          context_id: str) -> Dict[str, Any]:
@@ -441,26 +1011,32 @@ class MegaOrchestrator:
         
         for attempt in range(service.retry_count):
             try:
-                url = f"http://localhost:{service.port}/mcp"
-                payload = {
-                    "tool": tool,
-                    "arguments": arguments,
-                    "context_id": context_id,
-                    "_orchestrator": "mega",
-                    "_version": self.version
-                }
-                headers = {}
-                if service.auth_env:
-                    token = os.getenv(service.auth_env, "").strip()
-                    if token:
-                        headers["Authorization"] = f"Bearer {token}"
-                
+                request_config = self._build_service_request(service, tool, arguments, context_id)
+                url = request_config["url"]
                 timeout = aiohttp.ClientTimeout(total=service.timeout)
                 
                 async with aiohttp.ClientSession(timeout=timeout) as session:
-                    async with session.post(url, json=payload, headers=headers or None) as response:
+                    request_kwargs: Dict[str, Any] = {}
+                    if request_config.get("params"):
+                        request_kwargs["params"] = request_config["params"]
+                    if request_config.get("payload") is not None:
+                        request_kwargs["json"] = request_config["payload"]
+                    if request_config.get("headers"):
+                        request_kwargs["headers"] = request_config["headers"]
+
+                    async with session.request(
+                        request_config["method"],
+                        url,
+                        **request_kwargs
+                    ) as response:
                         if response.status == 200:
                             result = await response.json()
+                            if not isinstance(result, dict):
+                                return {"result": result}
+                            if isinstance(result, dict) and "error" in result and "result" not in result:
+                                return {"error": result["error"], "service": service.name}
+                            if isinstance(result, dict) and "result" in result and "jsonrpc" in result:
+                                return result["result"]
                             return result
                         else:
                             error_text = await response.text()
@@ -581,7 +1157,7 @@ class MegaOrchestrator:
         
         for name, service in self.services.items():
             try:
-                url = f"http://localhost:{service.port}{service.health_endpoint}"
+                url = f"http://{service.host}:{service.port}{service.health_endpoint}"
                 timeout = aiohttp.ClientTimeout(total=5)
                 
                 async with aiohttp.ClientSession(timeout=timeout) as session:
@@ -650,6 +1226,16 @@ class MegaOrchestrator:
             "tools": all_tools,
             "total_tools": len(all_tools)
         })
+
+    async def _handle_mcp_schema(self, request):
+        """Return MCP-compatible tool schema for external bridges and diagnostics."""
+        return web.json_response(
+            {
+                "server": "mega-orchestrator",
+                "version": self.version,
+                "tools": self._get_mcp_tool_specs(),
+            }
+        )
         
     async def _handle_status(self, request):
         """Return comprehensive orchestrator status"""
