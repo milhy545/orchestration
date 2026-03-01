@@ -1,3 +1,4 @@
+import logging
 import json
 import os
 from pathlib import Path
@@ -253,7 +254,12 @@ async def _probe_vault() -> dict[str, Any]:
         async with httpx.AsyncClient(timeout=10.0, trust_env=False) as client:
             resp = await client.get(f"{VAULT_ADDR}/v1/sys/health", headers=headers)
     except httpx.HTTPError as exc:
-        return {"token_ready": True, "vault_reachable": False, "detail": str(exc)}
+        logging.warning("Vault health probe failed: %s", exc)
+        return {
+            "token_ready": True,
+            "vault_reachable": False,
+            "detail": "Vault probe failed",
+        }
 
     return {
         "token_ready": True,
