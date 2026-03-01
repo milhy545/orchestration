@@ -327,7 +327,9 @@ async def read_file(
 async def write_file(request: FileWriteRequest):
     """Write a UTF-8 text file within the allowed directory sandbox."""
     try:
-        safe_path = _ensure_allowed_path(_safe_path(validate_path(request.path, operation="write")))
+        safe_path = _ensure_allowed_path(
+            _safe_path(validate_path(request.path, operation="write"))
+        )
         parent = _ensure_allowed_path(safe_path.parent)
 
         if not parent.exists():
@@ -341,9 +343,13 @@ async def write_file(request: FileWriteRequest):
 
         existed = safe_path.exists()
         if existed and safe_path.is_dir():
-            raise HTTPException(status_code=400, detail=f"Path is a directory: {safe_path}")
+            raise HTTPException(
+                status_code=400, detail=f"Path is a directory: {safe_path}"
+            )
         if existed and not request.overwrite:
-            raise HTTPException(status_code=409, detail=f"File already exists: {safe_path}")
+            raise HTTPException(
+                status_code=409, detail=f"File already exists: {safe_path}"
+            )
 
         safe_path.write_text(request.content, encoding="utf-8")
 
@@ -358,7 +364,9 @@ async def write_file(request: FileWriteRequest):
     except HTTPException:
         raise
     except PermissionError:
-        raise HTTPException(status_code=403, detail=f"Permission denied: {request.path}")
+        raise HTTPException(
+            status_code=403, detail=f"Permission denied: {request.path}"
+        )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to write file: {str(e)}")
 
@@ -368,16 +376,24 @@ async def search_files(
     root: str = Query(..., description="Root directory to search"),
     pattern: str = Query("*", min_length=1, description="Glob pattern"),
     limit: int = Query(100, ge=1, le=MAX_FILES_PER_PAGE, description="Maximum matches"),
-    content_query: Optional[str] = Query(None, description="Optional text to search inside files"),
+    content_query: Optional[str] = Query(
+        None, description="Optional text to search inside files"
+    ),
     include_hidden: bool = Query(False, description="Include dotfiles and dotdirs"),
 ):
     """Search files by name and optionally by content."""
     try:
-        safe_root = _ensure_allowed_path(_safe_path(validate_path(root, operation="list")))
+        safe_root = _ensure_allowed_path(
+            _safe_path(validate_path(root, operation="list"))
+        )
         if not safe_root.exists():
-            raise HTTPException(status_code=404, detail=f"Directory not found: {safe_root}")
+            raise HTTPException(
+                status_code=404, detail=f"Directory not found: {safe_root}"
+            )
         if not safe_root.is_dir():
-            raise HTTPException(status_code=400, detail=f"Path is not a directory: {safe_root}")
+            raise HTTPException(
+                status_code=400, detail=f"Path is not a directory: {safe_root}"
+            )
 
         matches: List[SearchMatch] = []
         truncated = False
@@ -450,7 +466,9 @@ async def analyze_file(
 ):
     """Return basic metadata and a bounded preview for a file or directory."""
     try:
-        safe_path = _ensure_allowed_path(_safe_path(validate_path(path, operation="read")))
+        safe_path = _ensure_allowed_path(
+            _safe_path(validate_path(path, operation="read"))
+        )
         if not safe_path.exists():
             raise HTTPException(status_code=404, detail=f"Path not found: {safe_path}")
 
@@ -463,7 +481,9 @@ async def analyze_file(
 
         if safe_path.is_file():
             content = safe_path.read_text(encoding="utf-8", errors="ignore")
-            line_count = content.count("\n") + (1 if content and not content.endswith("\n") else 0)
+            line_count = content.count("\n") + (
+                1 if content and not content.endswith("\n") else 0
+            )
             preview = content[:max_preview]
             truncated = len(content) > max_preview
 

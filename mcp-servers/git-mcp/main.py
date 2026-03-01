@@ -297,7 +297,9 @@ async def git_commit(path: str, request: GitCommitRequest):
 
         commit_hash = head_result.stdout.strip()
         if not commit_hash:
-            raise HTTPException(status_code=500, detail="Commit succeeded but hash is unavailable")
+            raise HTTPException(
+                status_code=500, detail="Commit succeeded but hash is unavailable"
+            )
 
         return GitCommitResponse(
             success=True,
@@ -314,7 +316,9 @@ async def git_commit(path: str, request: GitCommitRequest):
         stderr = (e.stderr or "").strip()
         raise HTTPException(status_code=500, detail=f"Git command failed: {stderr}")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to create git commit: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to create git commit: {str(e)}"
+        )
 
 
 @app.post("/git/{path:path}/push", response_model=GitPushResponse)
@@ -359,21 +363,35 @@ async def git_push(path: str, request: GitPushRequest):
 
         try:
             upstream_result = subprocess.run(
-                ["git", "-C", validated_path, "rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}"],
+                [
+                    "git",
+                    "-C",
+                    validated_path,
+                    "rev-parse",
+                    "--abbrev-ref",
+                    "--symbolic-full-name",
+                    "@{u}",
+                ],
                 capture_output=True,
                 text=True,
                 check=True,
                 timeout=GIT_TIMEOUT,
             )
         except subprocess.CalledProcessError:
-            raise HTTPException(status_code=400, detail="Upstream branch is not configured")
+            raise HTTPException(
+                status_code=400, detail="Upstream branch is not configured"
+            )
 
         upstream = upstream_result.stdout.strip()
         if not upstream or "/" not in upstream:
-            raise HTTPException(status_code=400, detail="Upstream branch is not configured")
+            raise HTTPException(
+                status_code=400, detail="Upstream branch is not configured"
+            )
         remote, _, upstream_branch = upstream.partition("/")
         if not remote or not upstream_branch:
-            raise HTTPException(status_code=400, detail="Upstream branch is not configured")
+            raise HTTPException(
+                status_code=400, detail="Upstream branch is not configured"
+            )
 
         push_result = subprocess.run(
             ["git", "-C", validated_path, "push"],
@@ -401,4 +419,6 @@ async def git_push(path: str, request: GitPushRequest):
         stderr = (e.stderr or "").strip()
         raise HTTPException(status_code=500, detail=f"Git command failed: {stderr}")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to push git branch: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to push git branch: {str(e)}"
+        )
