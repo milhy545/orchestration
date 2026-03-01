@@ -1053,4 +1053,4 @@ First-wave runtime consumers:
 - `security-mcp`
 - `marketplace-mcp`
 
-For additional support, see the [troubleshooting guide](TROUBLESHOOTING.md) or [GitHub issues](https://github.com/milhy545/orchestration/issues).
+For additional support, see the [troubleshooting guide](../operations/TROUBLESHOOTING.md) or [GitHub issues](https://github.com/milhy545/orchestration/issues).

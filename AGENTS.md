@@ -5,7 +5,7 @@
 - `mega_orchestrator/`, `claude-agent/`, `claude-agent-env/`: core orchestrace a agentní komponenty.
 - `config/`: sdílená konfigurace (včetně `config/requirements.txt` a `config/Dockerfile`).
 - `monitoring/`: konfigurace Prometheus, Grafana, Loki, Promtail.
-- `docs/`: dokumentace (viz `docs/MONITORING.md`).
+- `docs/`: dokumentace (viz `docs/operations/MONITORING.md`).
 - `scripts/`: údržbové a health‑check skripty.
 - `tests/`: cross‑service testy a utilitky.
 

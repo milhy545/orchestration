@@ -102,7 +102,7 @@ The `docker-compose.yml` file defines the following services, which are organize
 -   **`backup-service` (Port 7029):** Performs automated backups.
 -   **`message-queue` (Port 7030):** A Redis-based message queue for task queuing.
 
-**📊 Full observability stack** - See [MONITORING.md](docs/MONITORING.md) for complete monitoring documentation.
+**📊 Full observability stack** - See [MONITORING.md](docs/operations/MONITORING.md) for complete monitoring documentation.
 
 ## Hybrid Marketplace (Skills + MCP Registry)
 
@@ -221,7 +221,7 @@ Validate monitoring stack configuration (requires `python3` + `PyYAML`):
 ./scripts/monitoring-health-check.sh
 ```
 
-**📊 For detailed monitoring documentation, see [MONITORING.md](docs/MONITORING.md)**
+**📊 For detailed monitoring documentation, see [MONITORING.md](docs/operations/MONITORING.md)**
 
 ## Vault Variant B
 
@@ -237,7 +237,7 @@ Start it with:
 docker compose -f docker-compose.yml -f docker-compose.vault.yml up -d --build
 ```
 
-The first functional version is restart-based: save secrets in the Web UI, then restart the affected service so it reloads the rendered env file from `/vault/runtime`. See [docs/VAULT_VARIANT_B.md](docs/VAULT_VARIANT_B.md) for the full operator workflow.
+The first functional version is restart-based: save secrets in the Web UI, then restart the affected service so it reloads the rendered env file from `/vault/runtime`. See [docs/architecture/VAULT_VARIANT_B.md](docs/architecture/VAULT_VARIANT_B.md) for the full operator workflow.
 
 ## MCP Client Compatibility
 
@@ -247,7 +247,30 @@ The first functional version is restart-based: save secrets in the Web UI, then 
 - Native MCP JSON-RPC via `POST /mcp` or `POST /mcp/rpc`
 - MCP stdio bridge via `python -m mega_orchestrator.mcp_stdio_bridge`
 
-For client-specific examples, see [docs/MEGA_MCP_COMPATIBILITY.md](docs/MEGA_MCP_COMPATIBILITY.md).
+For client-specific examples, see [docs/architecture/MEGA_MCP_COMPATIBILITY.md](docs/architecture/MEGA_MCP_COMPATIBILITY.md).
+
+## Repository Structure
+
+- `mcp-servers/`: MCP microservices and service-local tests.
+- `mega_orchestrator/`: central orchestration and MCP compatibility layer.
+- `config/`: shared configuration, Docker build context, and service glue.
+- `services/`: non-MCP supporting applications such as the Vault Web UI.
+- `scripts/`: operational scripts, diagnostics, and maintenance helpers.
+- `tests/`: cross-service tests and shared test utilities.
+- `docs/`: categorized documentation by architecture, operations, API, reports, and archive.
+- `archive/`: retained non-runtime artifacts such as backups, migration snapshots, legacy configs, and scratch material.
+
+## Documentation Map
+
+- Start at [docs/README.md](docs/README.md) for the docs front door.
+- Architecture and system design live in [docs/architecture/](docs/architecture/).
+- Operational runbooks live in [docs/operations/](docs/operations/).
+- API and service references live in [docs/api/](docs/api/).
+- Reports and audits live in [docs/reports/](docs/reports/).
+- Historical planning and superseded documentation live in [docs/archive/](docs/archive/).
+
+Archive note:
+- The top-level `archive/` folder is a retention zone for historical artifacts and is not part of the active runtime path.
 
 ## Contributing
 

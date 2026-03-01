@@ -608,7 +608,7 @@ services:
 
 Pro GUI deployment použijte Portainer:
 
-1. Import docs/PORTAINER_DEPLOYMENT.md návod
+1. Import docs/operations/PORTAINER_DEPLOYMENT.md návod
 2. Upload docker-compose.yml
 3. Configure environment variables
 4. Deploy stack
