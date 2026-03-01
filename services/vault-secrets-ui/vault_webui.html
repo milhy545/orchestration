@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VAULT_OS // PIP-INTERFACE</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+
+        /* --- THEME 1: PIP-BOY (FALLOUT GREEN) --- */
+        :root {
+            --bg-color: #051005;
+            --primary: #10ff00;
+            --primary-dim: rgba(16, 255, 0, 0.15);
+            --danger: #ff3333;
+            --font-main: 'VT323', monospace;
+            --border-radius: 20px;
+            --glass-opacity: 0.6;
+            --casing-bg: #111;
+            --input-bg: rgba(0, 0, 0, 0.3);
+        }
+
+        /* --- THEME 2: CYBERPUNK (NEON CYAN/PINK) --- */
+        body.theme-cyberpunk {
+            --bg-color: #050510;
+            --primary: #00f3ff;
+            --primary-dim: rgba(0, 243, 255, 0.15);
+            --danger: #ff0055;
+            --font-main: 'Share Tech Mono', monospace;
+            --border-radius: 2px;
+            --glass-opacity: 0.3;
+            --casing-bg: #0a0a0a;
+            --input-bg: rgba(0, 20, 40, 0.6);
+        }
+
+        body.theme-cyberpunk .accent-text {
+            color: #ff0099;
+            text-shadow: 0 0 8px #ff0099;
+        }
+
+        body.theme-cyberpunk .pip-input {
+            border-bottom: 1px solid #ff0099;
+        }
+
+        body.theme-cyberpunk .monitor-casing {
+            border: 1px solid #00f3ff;
+            box-shadow: 0 0 15px rgba(0, 243, 255, 0.2);
+        }
+
+        /* --- THEME 3: VIBE AGENT (SLATE/INDIGO - PROJECT COLORS) --- */
+        body.theme-vibe {
+            --bg-color: #0f172a;
+            --primary: #818cf8;
+            --primary-dim: rgba(99, 102, 241, 0.15);
+            --danger: #f43f5e;
+            --font-main: 'Rajdhani', sans-serif;
+            --border-radius: 8px;
+            --glass-opacity: 0.05;
+            --casing-bg: #020617;
+            --input-bg: rgba(30, 41, 59, 0.5);
+        }
+
+        body.theme-vibe .accent-text {
+            color: #c084fc;
+            text-shadow: 0 0 15px rgba(192, 132, 252, 0.4);
+        }
+
+        body.theme-vibe .pip-input {
+            border-bottom: 1px solid #8b5cf6;
+        }
+
+        body.theme-vibe .monitor-casing {
+            border: 1px solid #334155;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+        }
+
+        body.theme-vibe .pip-btn {
+            background: rgba(99, 102, 241, 0.1);
+            border-color: #6366f1;
+        }
+
+        body {
+            background-color: #000;
+            color: var(--primary);
+            font-family: var(--font-main);
+            margin: 0;
+            min-height: 100vh;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: all 0.5s ease;
+        }
+
+        .monitor-casing {
+            width: min(95vw, 980px);
+            height: min(92vh, 900px);
+            background: var(--casing-bg);
+            border-radius: var(--border-radius);
+            padding: 14px;
+            box-shadow: inset 0 0 40px #000, 0 0 50px rgba(0, 0, 0, 0.9);
+            border: 2px solid #222;
+            transition: all 0.5s ease;
+        }
+
+        .screen-glass {
+            width: 100%;
+            height: 100%;
+            background-color: var(--bg-color);
+            border-radius: var(--border-radius);
+            position: relative;
+            overflow: hidden;
+            border: 2px solid var(--primary-dim);
+            box-shadow: 0 0 15px var(--primary-dim), inset 0 0 80px rgba(0, 0, 0, 0.8);
+            padding: clamp(16px, 3vh, 30px);
+            display: flex;
+            flex-direction: column;
+            transition: all 0.5s ease;
+        }
+
+        .scanlines {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(to bottom, rgba(0, 0, 0, 0) 50%, rgba(0, 0, 0, 0.3) 50%);
+            background-size: 100% 4px;
+            pointer-events: none;
+            z-index: 50;
+            opacity: var(--glass-opacity);
+            animation: flicker 0.15s infinite;
+        }
+
+        .glow-overlay {
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(circle, rgba(0, 0, 0, 0) 50%, rgba(0, 0, 0, 0.5) 100%);
+            pointer-events: none;
+            z-index: 40;
+        }
+
+        .pip-text {
+            text-shadow: 0 0 5px var(--primary);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .pip-input,
+        .pip-textarea {
+            background: var(--input-bg);
+            border: none;
+            border-bottom: 2px solid var(--primary);
+            color: var(--primary);
+            font-family: var(--font-main);
+            outline: none;
+            width: 100%;
+            text-shadow: 0 0 3px var(--primary);
+            padding: 8px;
+            transition: all 0.3s;
+        }
+
+        .pip-input {
+            font-size: 1.15rem;
+        }
+
+        .pip-textarea {
+            resize: vertical;
+            min-height: 180px;
+            font-size: 1rem;
+        }
+
+        .pip-input:focus,
+        .pip-textarea:focus {
+            background: var(--primary-dim);
+            box-shadow: 0 0 20px var(--primary-dim);
+        }
+
+        .pip-btn {
+            border: 1px solid var(--primary);
+            background: rgba(0, 0, 0, 0.5);
+            color: var(--primary);
+            font-family: var(--font-main);
+            cursor: pointer;
+            text-transform: uppercase;
+            padding: 8px 20px;
+            font-size: 1.05rem;
+            transition: all 0.2s;
+        }
+
+        .pip-btn:hover {
+            background: var(--primary);
+            color: #000;
+            box-shadow: 0 0 15px var(--primary);
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #020202;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--primary);
+        }
+
+        @keyframes flicker {
+            0% { opacity: var(--glass-opacity); }
+            50% { opacity: calc(var(--glass-opacity) + 0.05); }
+            100% { opacity: var(--glass-opacity); }
+        }
+
+        @media (max-width: 768px) {
+            body {
+                align-items: stretch;
+            }
+
+            .monitor-casing {
+                width: 100vw;
+                height: 100vh;
+                border-radius: 0;
+                padding: 8px;
+            }
+
+            .screen-glass {
+                border-radius: 0;
+                padding: 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="monitor-casing">
+        <div class="screen-glass">
+            <div class="scanlines"></div>
+            <div class="glow-overlay"></div>
+
+            <header class="flex justify-between items-start border-b-2 pb-2 mb-6 z-10 shrink-0 relative" style="border-color: var(--primary);">
+                <h1 class="text-4xl md:text-6xl font-bold pip-text tracking-widest">VAULT_OS</h1>
+                <div class="flex flex-col items-end gap-1 mt-2">
+                    <div class="flex gap-2 text-base md:text-lg">
+                        <button onclick="toggleLang()" class="hover:underline opacity-80 hover:opacity-100">[ <span id="lang-label">EN</span> ]</button>
+                        <button onclick="toggleTheme()" class="hover:underline opacity-80 hover:opacity-100">[ <span id="theme-label">PIP-BOY</span> ]</button>
+                    </div>
+                </div>
+            </header>
+
+            <main class="flex-grow flex flex-col relative z-10">
+                <div class="border-l-4 pl-4 py-4 mb-6" style="border-color: var(--primary);">
+                    <h2 class="text-2xl md:text-3xl pip-text mb-1 accent-text" data-translate="title">SECRET INJECTION</h2>
+                    <div class="text-xs md:text-sm opacity-60 tracking-widest">SECURE UPLINK // V2</div>
+                </div>
+
+                <div class="grid grid-cols-1 gap-6 mb-4">
+                    <div class="relative group">
+                        <label class="block text-lg mb-1 opacity-80 group-hover:opacity-100 transition-opacity" data-translate="target">TARGET SERVICE</label>
+                        <select id="target-service" class="pip-input cursor-pointer">
+{{SERVICE_OPTIONS}}
+                        </select>
+                    </div>
+
+                    <div class="relative group">
+                        <label class="block text-lg mb-1 opacity-80 group-hover:opacity-100 transition-opacity" data-translate="editor">SECRET PAYLOAD (JSON)</label>
+                        <textarea id="secret-json" class="pip-textarea font-mono" spellcheck="false">{}</textarea>
+                    </div>
+                </div>
+
+                <div class="flex flex-wrap justify-end gap-4 mt-2">
+                    <button onclick="loadSecrets()" class="pip-btn" data-translate="reload">SYNC FROM VAULT</button>
+                    <button onclick="formatJson()" class="pip-btn border-dashed opacity-80" data-translate="format">ALIGN BUFFER</button>
+                    <button onclick="saveSecrets()" class="pip-btn font-bold px-8" data-translate="inject">UPLOAD</button>
+                </div>
+            </main>
+
+            <footer class="mt-6 z-10 border-t pt-2" style="border-color: var(--primary);">
+                <div class="h-32 bg-black/50 p-2 overflow-y-auto font-mono text-base md:text-lg" id="console">
+                    <div class="opacity-50">&gt; System Online.</div>
+                    <div class="opacity-50">&gt; Connected to Vault (Active).</div>
+                    <div class="opacity-50">&gt; Ready for injection...</div>
+                </div>
+            </footer>
+        </div>
+    </div>
+
+    <script>
+        let lang = "EN";
+        let themeIndex = 0;
+
+        const themes = [
+            { short: "PIP-BOY", full: "PIP-BOY", class: "" },
+            { short: "CYBER", full: "CYBERPUNK", class: "theme-cyberpunk" },
+            { short: "VIBE", full: "VIBE AGENT", class: "theme-vibe" }
+        ];
+
+        const translations = {
+            EN: {
+                title: "SECRET INJECTION",
+                target: "TARGET SERVICE",
+                editor: "SECRET PAYLOAD (JSON)",
+                inject: "UPLOAD",
+                reload: "SYNC FROM VAULT",
+                format: "ALIGN BUFFER"
+            },
+            CS: {
+                title: "VKLADANI KLICU",
+                target: "CILOVA SLUZBA",
+                editor: "SECRET PAYLOAD (JSON)",
+                inject: "NAHRAT",
+                reload: "NACIST Z VAULTU",
+                format: "SROVNAT BUFFER"
+            }
+        };
+
+        function logLine(message, isError) {
+            const consoleEl = document.getElementById("console");
+            const row = document.createElement("div");
+            row.textContent = "> " + message;
+            if (isError) {
+                row.style.color = "var(--danger)";
+            } else {
+                row.style.opacity = "0.9";
+            }
+            consoleEl.appendChild(row);
+            consoleEl.scrollTop = consoleEl.scrollHeight;
+        }
+
+        function applyTheme() {
+            document.body.className = themes[themeIndex].class;
+            document.getElementById("theme-label").textContent = themes[themeIndex].short;
+            logLine("Theme set: " + themes[themeIndex].full, false);
+        }
+
+        function toggleTheme() {
+            themeIndex = (themeIndex + 1) % themes.length;
+            applyTheme();
+        }
+
+        function applyLanguage() {
+            document.getElementById("lang-label").textContent = lang;
+            document.querySelectorAll("[data-translate]").forEach((node) => {
+                const key = node.getAttribute("data-translate");
+                node.textContent = translations[lang][key];
+            });
+        }
+
+        function toggleLang() {
+            lang = lang === "EN" ? "CS" : "EN";
+            applyLanguage();
+            logLine("Language set: " + lang, false);
+        }
+
+        function currentService() {
+            return document.getElementById("target-service").value;
+        }
+
+        function formatJson() {
+            const input = document.getElementById("secret-json");
+            try {
+                input.value = JSON.stringify(JSON.parse(input.value || "{}"), null, 2);
+                logLine("Buffer aligned.", false);
+            } catch (error) {
+                logLine("Invalid JSON: " + error.message, true);
+            }
+        }
+
+        async function loadSecrets() {
+            const service = currentService();
+            try {
+                const response = await fetch("/api/secrets/" + encodeURIComponent(service));
+                if (!response.ok) {
+                    throw new Error(await response.text());
+                }
+                const payload = await response.json();
+                document.getElementById("secret-json").value = JSON.stringify(payload.data || {}, null, 2);
+                logLine("Synced " + service + " from Vault.", false);
+            } catch (error) {
+                logLine("Sync failed for " + service + ": " + error.message, true);
+            }
+        }
+
+        async function saveSecrets() {
+            const service = currentService();
+            const input = document.getElementById("secret-json");
+            let data;
+
+            try {
+                data = JSON.parse(input.value || "{}");
+            } catch (error) {
+                logLine("Cannot upload invalid JSON: " + error.message, true);
+                return;
+            }
+
+            try {
+                const response = await fetch("/api/secrets/" + encodeURIComponent(service), {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ data })
+                });
+
+                if (!response.ok) {
+                    throw new Error(await response.text());
+                }
+
+                logLine("Uploaded payload for " + service + ".", false);
+            } catch (error) {
+                logLine("Upload failed for " + service + ": " + error.message, true);
+            }
+        }
+
+        document.getElementById("target-service").addEventListener("change", loadSecrets);
+
+        applyTheme();
+        applyLanguage();
+        loadSecrets();
+    </script>
+</body>
+</html>
