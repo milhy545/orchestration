@@ -13,6 +13,8 @@ Combines:
 """
 
 import asyncio
+import base64
+import hmac
 import logging
 import os
 import json
@@ -20,6 +22,7 @@ import time
 from typing import Dict, Any, Optional, List, Union
 from dataclasses import dataclass, asdict
 from datetime import datetime
+from urllib.parse import quote
 import aiohttp
 from aiohttp import web
 import redis.asyncio as aioredis
@@ -39,6 +42,7 @@ BUILD_DATE = "2025-09-02"
 class MCPServiceConfig:
     name: str
     port: int
+    host: str = "localhost"
     health_endpoint: str = "/health"
     tools: List[str] = None
     sage_modes: List[SAGEMode] = None
@@ -95,63 +99,72 @@ class MegaOrchestrator:
         return {
             "filesystem": MCPServiceConfig(
                 name="Filesystem MCP",
-                port=7001,
+                host="filesystem-mcp",
+                port=8000,
                 tools=["file_read", "file_write", "file_list", "file_search", "file_analyze"],
                 sage_modes=[SAGEMode.FILESYSTEM, SAGEMode.CODE, SAGEMode.DOCS],
                 priority=1
             ),
             "git": MCPServiceConfig(
                 name="Git MCP", 
-                port=7002,
+                host="git-mcp",
+                port=8000,
                 tools=["git_status", "git_commit", "git_push", "git_log", "git_diff"],
                 sage_modes=[SAGEMode.CODE],
                 priority=1
             ),
             "terminal": MCPServiceConfig(
                 name="Terminal MCP",
-                port=7003,
+                host="terminal-mcp",
+                port=8000,
                 tools=["terminal_exec", "shell_command", "system_info", "create_terminal", "execute_command"],
                 sage_modes=[SAGEMode.DEBUG, SAGEMode.TERMINAL],
                 priority=1
             ),
             "database": MCPServiceConfig(
                 name="Database MCP",
-                port=7004,
+                host="database-mcp",
+                port=8000,
                 tools=["db_query", "db_connect", "db_schema", "db_backup"],
                 sage_modes=[SAGEMode.ANALYZE],
                 priority=1
             ),
             "memory": MCPServiceConfig(
                 name="Memory MCP",
-                port=7005,
+                host="memory-mcp",
+                port=8000,
                 tools=["store_memory", "search_memories", "get_context", "memory_stats", "list_memories"],
                 sage_modes=[SAGEMode.MEMORY, SAGEMode.CHAT],
                 priority=1
             ),
             "research": MCPServiceConfig(
                 name="Research MCP",
-                port=7011,
+                host="research-mcp",
+                port=8000,
                 tools=["research_query", "perplexity_search", "web_search", "search_web"],
                 sage_modes=[SAGEMode.ANALYZE, SAGEMode.DOCS],
                 priority=1
             ),
             "advanced_memory": MCPServiceConfig(
                 name="Advanced Memory MCP",
-                port=7012,
+                host="advanced-memory-mcp",
+                port=8000,
                 tools=["vector_search", "semantic_similarity"],
                 sage_modes=[SAGEMode.MEMORY, SAGEMode.ANALYZE],
                 priority=2
             ),
             "advanced_memory_v2": MCPServiceConfig(
                 name="Advanced Memory v2",
-                port=7015,
+                host="gmail-mcp",
+                port=8000,
                 tools=["conversation_thread", "file_deduplication", "context_continuation"],
                 sage_modes=[SAGEMode.MEMORY, SAGEMode.CHAT],
                 priority=3
             ),
             "transcriber": MCPServiceConfig(
                 name="Transcriber MCP",
-                port=7013,
+                host="transcriber-mcp",
+                port=8000,
                 tools=["transcribe_webm", "transcribe_url", "audio_convert"],
                 sage_modes=[SAGEMode.ANALYZE],
                 priority=2,
@@ -159,7 +172,8 @@ class MegaOrchestrator:
             ),
             "video_processing": MCPServiceConfig(
                 name="Video Processing MCP",
-                port=7016,
+                host="forai-mcp",
+                port=8000,
                 tools=["process_video", "extract_frames", "video_analysis"],
                 sage_modes=[SAGEMode.ANALYZE],
                 priority=2,
@@ -167,7 +181,8 @@ class MegaOrchestrator:
             ),
             "marketplace": MCPServiceConfig(
                 name="Marketplace MCP",
-                port=7034,
+                host="marketplace-mcp",
+                port=8000,
                 tools=[
                     "skills_list",
                     "skills_resolve",
@@ -433,7 +448,297 @@ class MegaOrchestrator:
                 processed_args["_file_error"] = str(e)
                 
         return processed_args
-        
+
+    def _encode_jwt_hs256(self, payload: Dict[str, Any], secret: str) -> str:
+        """Create a compact HS256 JWT without extra dependencies."""
+        header = {"alg": "HS256", "typ": "JWT"}
+
+        def _b64(data: bytes) -> str:
+            return base64.urlsafe_b64encode(data).rstrip(b"=").decode("ascii")
+
+        header_b64 = _b64(json.dumps(header, separators=(",", ":")).encode("utf-8"))
+        payload_b64 = _b64(json.dumps(payload, separators=(",", ":")).encode("utf-8"))
+        signing_input = f"{header_b64}.{payload_b64}".encode("ascii")
+        signature = hmac.new(secret.encode("utf-8"), signing_input, "sha256").digest()
+        return f"{header_b64}.{payload_b64}.{_b64(signature)}"
+
+    def _get_marketplace_token(self) -> Optional[str]:
+        """Return a marketplace bearer token from env or a local default-secret fallback."""
+        token = os.getenv("MARKETPLACE_JWT_TOKEN", "").strip()
+        if token:
+            return token
+
+        # Compose currently injects this default into marketplace when .env does not override it.
+        secret = "change_me_market_jwt"
+        now = int(time.time())
+        payload = {
+            "sub": "mega-orchestrator",
+            "scope": "market:read",
+            "iat": now,
+            "exp": now + 3600,
+        }
+        return self._encode_jwt_hs256(payload, secret)
+
+    def _build_service_request(self, service: MCPServiceConfig, tool: str,
+                             arguments: Dict[str, Any], context_id: str) -> Dict[str, Any]:
+        """Build per-service request shape for heterogeneous MCP backends."""
+        base_url = f"http://{service.host}:{service.port}"
+
+        if service.name == "Filesystem MCP":
+            path = arguments.get("directory", arguments.get("path", ""))
+            encoded_path = quote(str(path), safe="")
+            if tool == "file_list":
+                return {
+                    "method": "GET",
+                    "url": f"{base_url}/files/{encoded_path}",
+                    "params": {
+                        "page": arguments.get("page", 1),
+                        "limit": arguments.get("limit", 100),
+                    },
+                }
+            if tool == "file_read":
+                return {
+                    "method": "GET",
+                    "url": f"{base_url}/file/{encoded_path}",
+                    "params": {
+                        "max_size": arguments.get("max_size", 1_000_000),
+                    },
+                }
+            if tool == "file_write":
+                return {
+                    "method": "POST",
+                    "url": f"{base_url}/file/write",
+                    "payload": {
+                        "path": arguments.get("path", arguments.get("file_path", "/tmp/mega_orchestrator.txt")),
+                        "content": arguments.get("content", ""),
+                        "overwrite": arguments.get("overwrite", False),
+                        "create_dirs": arguments.get("create_dirs", False),
+                    },
+                }
+            if tool == "file_search":
+                return {
+                    "method": "GET",
+                    "url": f"{base_url}/search/files",
+                    "params": {
+                        "root": arguments.get("root", arguments.get("directory", "/tmp")),
+                        "pattern": arguments.get("pattern", "*"),
+                        "limit": arguments.get("limit", 100),
+                        "content_query": arguments.get("content_query"),
+                        "include_hidden": "true" if arguments.get("include_hidden", False) else "false",
+                    },
+                }
+            if tool == "file_analyze":
+                analyze_path = arguments.get("path", arguments.get("file_path", "/tmp"))
+                return {
+                    "method": "GET",
+                    "url": f"{base_url}/analyze/{quote(str(analyze_path), safe='')}",
+                    "params": {
+                        "max_preview": arguments.get("max_preview", 4000),
+                    },
+                }
+
+        if service.name == "Memory MCP":
+            if tool == "store_memory":
+                content = arguments.get("content")
+                if content is None:
+                    content = arguments.get("value")
+                if content is None:
+                    content = json.dumps(arguments, ensure_ascii=True)
+                if "key" in arguments:
+                    content = f"{arguments['key']}: {content}"
+                return {
+                    "method": "POST",
+                    "url": f"{base_url}/memory/store",
+                    "payload": {
+                        "content": str(content),
+                        "type": arguments.get("type", "user"),
+                        "importance": arguments.get("importance", 0.5),
+                        "agent": arguments.get("agent", "mega-orchestrator"),
+                        "metadata": None,
+                    },
+                }
+            if tool == "search_memories":
+                query = arguments.get("query")
+                if query is None:
+                    query = arguments.get("key", "")
+                return {
+                    "method": "GET",
+                    "url": f"{base_url}/memory/search",
+                    "params": {
+                        "query": query,
+                        "limit": arguments.get("limit", 50),
+                    },
+                }
+            if tool in {"list_memories", "get_context"}:
+                return {
+                    "method": "GET",
+                    "url": f"{base_url}/memory/list",
+                    "params": {
+                        "limit": arguments.get("limit", 10 if tool == "get_context" else 100),
+                        "offset": arguments.get("offset", 0),
+                    },
+                }
+            if tool == "memory_stats":
+                return {
+                    "method": "GET",
+                    "url": f"{base_url}/memory/stats",
+                }
+
+        if service.name == "Research MCP":
+            query = arguments.get("query")
+            if query is None:
+                query = arguments.get("q", "")
+            model = arguments.get("model", "sonar-pro")
+            if tool in {"web_search", "search_web", "research_query", "perplexity_search"}:
+                return {
+                    "method": "POST",
+                    "url": f"{base_url}/research/search",
+                    "params": {
+                        "query": query,
+                        "model": model,
+                    },
+                }
+
+        if service.name == "Git MCP":
+            repo_path = arguments.get("path", arguments.get("repository", arguments.get("repo_path")))
+            if repo_path is None:
+                repo_path = "/workspace/mega-test-repo"
+            encoded_path = quote(str(repo_path), safe="")
+            if tool == "git_status":
+                return {
+                    "method": "GET",
+                    "url": f"{base_url}/git/{encoded_path}/status",
+                }
+            if tool == "git_log":
+                return {
+                    "method": "GET",
+                    "url": f"{base_url}/git/{encoded_path}/log",
+                    "params": {
+                        "limit": arguments.get("limit", 5),
+                    },
+                }
+            if tool == "git_diff":
+                return {
+                    "method": "GET",
+                    "url": f"{base_url}/git/{encoded_path}/diff",
+                }
+            if tool == "git_commit":
+                return {
+                    "method": "POST",
+                    "url": f"{base_url}/git/{encoded_path}/commit",
+                    "payload": {
+                        "message": arguments.get("message", "Commit via mega-orchestrator"),
+                        "author_name": arguments.get("author_name", "Mega Orchestrator"),
+                        "author_email": arguments.get("author_email", "mega-orchestrator@localhost"),
+                    },
+                }
+            if tool == "git_push":
+                return {
+                    "method": "POST",
+                    "url": f"{base_url}/git/{encoded_path}/push",
+                    "payload": {
+                        "set_upstream": arguments.get("set_upstream", False),
+                        "force": arguments.get("force", False),
+                    },
+                }
+
+        if service.name == "Terminal MCP":
+            if tool in {"terminal_exec", "shell_command", "execute_command"}:
+                command = arguments.get("command")
+                if command is None:
+                    command = arguments.get("cmd")
+                if command is None:
+                    command = "pwd"
+                return {
+                    "method": "POST",
+                    "url": f"{base_url}/command",
+                    "payload": {
+                        "command": str(command),
+                        "args": arguments.get("args"),
+                        "cwd": arguments.get("cwd", "/tmp"),
+                        "timeout": arguments.get("timeout", 30),
+                        "user_id": arguments.get("user_id", "mega-orchestrator"),
+                    },
+                }
+            if tool == "system_info":
+                return {
+                    "method": "GET",
+                    "url": f"{base_url}/processes",
+                }
+            if tool == "create_terminal":
+                return {
+                    "method": "GET",
+                    "url": f"{base_url}/directory",
+                }
+
+        if service.name == "Database MCP":
+            if tool == "db_connect":
+                return {
+                    "method": "GET",
+                    "url": f"{base_url}/health",
+                }
+            if tool == "db_schema":
+                table_name = arguments.get("table_name", arguments.get("table"))
+                if table_name:
+                    return {
+                        "method": "GET",
+                        "url": f"{base_url}/db/schema/{quote(str(table_name), safe='')}",
+                    }
+                return {
+                    "method": "GET",
+                    "url": f"{base_url}/db/tables",
+                }
+            if tool == "db_query":
+                return {
+                    "method": "POST",
+                    "url": f"{base_url}/db/execute",
+                    "payload": {
+                        "table": arguments.get("table", "codex_probe"),
+                        "columns": arguments.get("columns"),
+                        "filters": arguments.get("filters"),
+                        "order_by": arguments.get("order_by"),
+                        "limit": arguments.get("limit", 100),
+                        "offset": arguments.get("offset", 0),
+                    },
+                }
+            if tool == "db_backup":
+                table_name = arguments.get("table_name", arguments.get("table", "codex_probe"))
+                return {
+                    "method": "GET",
+                    "url": f"{base_url}/db/sample/{quote(str(table_name), safe='')}",
+                    "params": {
+                        "limit": arguments.get("limit", 10),
+                    },
+                }
+
+        if service.name == "Marketplace MCP":
+            return {
+                "method": "POST",
+                "url": f"{base_url}/mcp",
+                "payload": {
+                    "tool": tool,
+                    "arguments": arguments,
+                    "context_id": context_id,
+                    "_orchestrator": "mega",
+                    "_version": self.version,
+                },
+                "headers": {
+                    "Authorization": f"Bearer {self._get_marketplace_token()}",
+                },
+            }
+
+        return {
+            "method": "POST",
+            "url": f"{base_url}/mcp",
+            "payload": {
+                "tool": tool,
+                "arguments": arguments,
+                "context_id": context_id,
+                "_orchestrator": "mega",
+                "_version": self.version
+            },
+        }
+
     async def _call_mcp_service_with_retry(self, service: MCPServiceConfig, 
                                          tool: str, arguments: Dict[str, Any],
                                          context_id: str) -> Dict[str, Any]:
@@ -441,26 +746,32 @@ class MegaOrchestrator:
         
         for attempt in range(service.retry_count):
             try:
-                url = f"http://localhost:{service.port}/mcp"
-                payload = {
-                    "tool": tool,
-                    "arguments": arguments,
-                    "context_id": context_id,
-                    "_orchestrator": "mega",
-                    "_version": self.version
-                }
-                headers = {}
-                if service.auth_env:
-                    token = os.getenv(service.auth_env, "").strip()
-                    if token:
-                        headers["Authorization"] = f"Bearer {token}"
-                
+                request_config = self._build_service_request(service, tool, arguments, context_id)
+                url = request_config["url"]
                 timeout = aiohttp.ClientTimeout(total=service.timeout)
                 
                 async with aiohttp.ClientSession(timeout=timeout) as session:
-                    async with session.post(url, json=payload, headers=headers or None) as response:
+                    request_kwargs: Dict[str, Any] = {}
+                    if request_config.get("params"):
+                        request_kwargs["params"] = request_config["params"]
+                    if request_config.get("payload") is not None:
+                        request_kwargs["json"] = request_config["payload"]
+                    if request_config.get("headers"):
+                        request_kwargs["headers"] = request_config["headers"]
+
+                    async with session.request(
+                        request_config["method"],
+                        url,
+                        **request_kwargs
+                    ) as response:
                         if response.status == 200:
                             result = await response.json()
+                            if not isinstance(result, dict):
+                                return {"result": result}
+                            if isinstance(result, dict) and "error" in result and "result" not in result:
+                                return {"error": result["error"], "service": service.name}
+                            if isinstance(result, dict) and "result" in result and "jsonrpc" in result:
+                                return result["result"]
                             return result
                         else:
                             error_text = await response.text()
@@ -581,7 +892,7 @@ class MegaOrchestrator:
         
         for name, service in self.services.items():
             try:
-                url = f"http://localhost:{service.port}{service.health_endpoint}"
+                url = f"http://{service.host}:{service.port}{service.health_endpoint}"
                 timeout = aiohttp.ClientTimeout(total=5)
                 
                 async with aiohttp.ClientSession(timeout=timeout) as session:

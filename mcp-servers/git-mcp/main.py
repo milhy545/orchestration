@@ -6,7 +6,7 @@ from typing import List, Optional
 
 from fastapi import FastAPI, HTTPException, Query
 from prometheus_fastapi_instrumentator import Instrumentator
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 app = FastAPI(
     title="Git MCP API",
@@ -87,6 +87,33 @@ class GitDiff(BaseModel):
     diff: str
     truncated: bool = False
     repository: str
+
+
+class GitCommitRequest(BaseModel):
+    message: str = Field(..., min_length=1, max_length=200)
+    author_name: Optional[str] = Field("Mega Orchestrator", max_length=100)
+    author_email: Optional[str] = Field("mega-orchestrator@localhost", max_length=200)
+
+
+class GitCommitResponse(BaseModel):
+    success: bool
+    commit: str
+    repository: str
+    message: str
+
+
+class GitPushRequest(BaseModel):
+    set_upstream: bool = False
+    force: bool = False
+
+
+class GitPushResponse(BaseModel):
+    success: bool
+    repository: str
+    remote: str
+    branch: str
+    pushed: bool
+    details: str
 
 
 @app.get("/health")
@@ -212,3 +239,166 @@ async def git_diff(path: str):
         raise HTTPException(status_code=500, detail=f"Git command failed: {e.stderr}")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to get git diff: {str(e)}")
+
+
+@app.post("/git/{path:path}/commit", response_model=GitCommitResponse)
+async def git_commit(path: str, request: GitCommitRequest):
+    """
+    Create a commit for already staged changes in a validated repository.
+    """
+    try:
+        validated_path = validate_repository_path(path)
+
+        status_result = subprocess.run(
+            ["git", "-C", validated_path, "status", "--porcelain"],
+            capture_output=True,
+            text=True,
+            check=True,
+            timeout=GIT_TIMEOUT,
+        )
+
+        if not status_result.stdout.strip():
+            raise HTTPException(status_code=400, detail="No changes to commit")
+
+        subprocess.run(
+            ["git", "-C", validated_path, "add", "-A"],
+            capture_output=True,
+            text=True,
+            check=True,
+            timeout=GIT_TIMEOUT,
+        )
+
+        commit_result = subprocess.run(
+            [
+                "git",
+                "-c",
+                f"user.name={request.author_name}",
+                "-c",
+                f"user.email={request.author_email}",
+                "-C",
+                validated_path,
+                "commit",
+                "-m",
+                request.message,
+            ],
+            capture_output=True,
+            text=True,
+            check=True,
+            timeout=GIT_TIMEOUT,
+        )
+
+        head_result = subprocess.run(
+            ["git", "-C", validated_path, "rev-parse", "HEAD"],
+            capture_output=True,
+            text=True,
+            check=True,
+            timeout=GIT_TIMEOUT,
+        )
+
+        commit_hash = head_result.stdout.strip()
+        if not commit_hash:
+            raise HTTPException(status_code=500, detail="Commit succeeded but hash is unavailable")
+
+        return GitCommitResponse(
+            success=True,
+            commit=commit_hash,
+            repository=validated_path,
+            message=request.message,
+        )
+
+    except HTTPException:
+        raise
+    except subprocess.TimeoutExpired:
+        raise HTTPException(status_code=408, detail="Git command timed out")
+    except subprocess.CalledProcessError as e:
+        stderr = (e.stderr or "").strip()
+        raise HTTPException(status_code=500, detail=f"Git command failed: {stderr}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to create git commit: {str(e)}")
+
+
+@app.post("/git/{path:path}/push", response_model=GitPushResponse)
+async def git_push(path: str, request: GitPushRequest):
+    """
+    Push the current branch to its configured upstream.
+    """
+    try:
+        if request.force:
+            raise HTTPException(status_code=400, detail="Force push is not allowed")
+        if request.set_upstream:
+            raise HTTPException(
+                status_code=400,
+                detail="Automatic upstream setup is not supported in this version",
+            )
+
+        validated_path = validate_repository_path(path)
+
+        status_result = subprocess.run(
+            ["git", "-C", validated_path, "status", "--porcelain"],
+            capture_output=True,
+            text=True,
+            check=True,
+            timeout=GIT_TIMEOUT,
+        )
+        if status_result.stdout.strip():
+            raise HTTPException(
+                status_code=400,
+                detail="Working tree is not clean; commit or stash before push",
+            )
+
+        branch_result = subprocess.run(
+            ["git", "-C", validated_path, "rev-parse", "--abbrev-ref", "HEAD"],
+            capture_output=True,
+            text=True,
+            check=True,
+            timeout=GIT_TIMEOUT,
+        )
+        branch = branch_result.stdout.strip()
+        if not branch:
+            raise HTTPException(status_code=500, detail="Current branch is unavailable")
+
+        try:
+            upstream_result = subprocess.run(
+                ["git", "-C", validated_path, "rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}"],
+                capture_output=True,
+                text=True,
+                check=True,
+                timeout=GIT_TIMEOUT,
+            )
+        except subprocess.CalledProcessError:
+            raise HTTPException(status_code=400, detail="Upstream branch is not configured")
+
+        upstream = upstream_result.stdout.strip()
+        if not upstream or "/" not in upstream:
+            raise HTTPException(status_code=400, detail="Upstream branch is not configured")
+        remote, _, upstream_branch = upstream.partition("/")
+        if not remote or not upstream_branch:
+            raise HTTPException(status_code=400, detail="Upstream branch is not configured")
+
+        push_result = subprocess.run(
+            ["git", "-C", validated_path, "push"],
+            capture_output=True,
+            text=True,
+            check=True,
+            timeout=GIT_TIMEOUT,
+        )
+
+        details = (push_result.stdout or push_result.stderr or "").strip()
+        return GitPushResponse(
+            success=True,
+            repository=validated_path,
+            remote=remote,
+            branch=branch,
+            pushed=True,
+            details=details or f"Pushed {branch} to {remote}/{upstream_branch}",
+        )
+
+    except HTTPException:
+        raise
+    except subprocess.TimeoutExpired:
+        raise HTTPException(status_code=408, detail="Git command timed out")
+    except subprocess.CalledProcessError as e:
+        stderr = (e.stderr or "").strip()
+        raise HTTPException(status_code=500, detail=f"Git command failed: {stderr}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to push git branch: {str(e)}")

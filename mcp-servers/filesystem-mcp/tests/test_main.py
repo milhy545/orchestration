@@ -175,6 +175,101 @@ class TestReadFile:
         assert data["size"] <= 10000
 
 
+class TestWriteFile:
+    """Test file writing functionality"""
+
+    def test_write_file_success(self, tmp_path):
+        """Test writing a new file"""
+        target = tmp_path / "test.txt"
+        response = client.post(
+            "/file/write",
+            json={"path": str(target), "content": "hello", "overwrite": False},
+        )
+        assert response.status_code == 200
+        assert target.read_text(encoding="utf-8") == "hello"
+
+    def test_write_file_conflict(self, tmp_path):
+        """Test overwrite protection"""
+        target = tmp_path / "existing.txt"
+        target.write_text("old", encoding="utf-8")
+        response = client.post(
+            "/file/write",
+            json={"path": str(target), "content": "new", "overwrite": False},
+        )
+        assert response.status_code == 409
+
+    def test_write_file_with_create_dirs(self, tmp_path):
+        """Test recursive directory creation"""
+        target = tmp_path / "nested" / "path" / "file.txt"
+        response = client.post(
+            "/file/write",
+            json={
+                "path": str(target),
+                "content": "hello",
+                "overwrite": False,
+                "create_dirs": True,
+            },
+        )
+        assert response.status_code == 200
+        assert target.read_text(encoding="utf-8") == "hello"
+
+
+class TestSearchAndAnalyze:
+    """Test search and analyze endpoints"""
+
+    def test_search_files_by_name(self, tmp_path):
+        """Test filename search"""
+        (tmp_path / "alpha.txt").write_text("hello", encoding="utf-8")
+        (tmp_path / "beta.log").write_text("world", encoding="utf-8")
+
+        response = client.get(
+            "/search/files",
+            params={"root": str(tmp_path), "pattern": "*.txt", "limit": 10},
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["count"] == 1
+        assert data["matches"][0]["name"] == "alpha.txt"
+
+    def test_search_files_by_content(self, tmp_path):
+        """Test content search"""
+        (tmp_path / "alpha.txt").write_text("needle in haystack", encoding="utf-8")
+
+        response = client.get(
+            "/search/files",
+            params={
+                "root": str(tmp_path),
+                "pattern": "*.txt",
+                "content_query": "needle",
+                "limit": 10,
+            },
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["count"] == 1
+        assert "needle" in data["matches"][0]["snippet"]
+
+    def test_analyze_file_success(self, tmp_path):
+        """Test file analysis"""
+        target = tmp_path / "note.txt"
+        target.write_text("line1\nline2\n", encoding="utf-8")
+
+        response = client.get(f"/analyze{target}")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["type"] == "file"
+        assert data["line_count"] == 2
+        assert "line1" in data["preview"]
+
+    def test_analyze_directory_success(self, tmp_path):
+        """Test directory analysis"""
+        response = client.get(f"/analyze{tmp_path}")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["type"] == "directory"
+        assert data["preview"] is None
+
+
 class TestSecurityVulnerabilities:
     """Test security vulnerabilities and protections"""
 

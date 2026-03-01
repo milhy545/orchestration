@@ -141,6 +141,120 @@ class TestGitDiff:
         assert data["diff"] == ""
 
 
+class TestGitCommit:
+    """Test git commit functionality"""
+
+    @patch(f"{MODULE_NAME}.validate_repository_path", return_value="/tmp/repo")
+    @patch('subprocess.run')
+    def test_git_commit_success(self, mock_run, mock_validate_repo):
+        """Test successful git commit"""
+        status_result = MagicMock()
+        status_result.stdout = "M file1.txt\n"
+        status_result.stderr = ""
+
+        add_result = MagicMock()
+        add_result.stdout = ""
+        add_result.stderr = ""
+
+        commit_result = MagicMock()
+        commit_result.stdout = "[main abc1234] test commit"
+        commit_result.stderr = ""
+
+        head_result = MagicMock()
+        head_result.stdout = "abc1234def5678\n"
+        head_result.stderr = ""
+
+        mock_run.side_effect = [status_result, add_result, commit_result, head_result]
+
+        response = client.post(
+            "/git/tmp/repo/commit",
+            json={"message": "test commit"},
+        )
+        assert response.status_code == 200
+
+        data = response.json()
+        assert data["success"] is True
+        assert data["commit"] == "abc1234def5678"
+        assert data["message"] == "test commit"
+
+    @patch(f"{MODULE_NAME}.validate_repository_path", return_value="/tmp/repo")
+    @patch('subprocess.run')
+    def test_git_commit_no_changes(self, mock_run, mock_validate_repo):
+        """Test commit rejection when repository is clean"""
+        status_result = MagicMock()
+        status_result.stdout = ""
+        status_result.stderr = ""
+        mock_run.return_value = status_result
+
+        response = client.post(
+            "/git/tmp/repo/commit",
+            json={"message": "test commit"},
+        )
+        assert response.status_code == 400
+        assert "no changes to commit" in response.json()["detail"].lower()
+
+
+class TestGitPush:
+    """Test git push functionality"""
+
+    @patch(f"{MODULE_NAME}.validate_repository_path", return_value="/tmp/repo")
+    @patch('subprocess.run')
+    def test_git_push_success(self, mock_run, mock_validate_repo):
+        """Test successful git push"""
+        status_result = MagicMock(stdout="", stderr="")
+        branch_result = MagicMock(stdout="main\n", stderr="")
+        upstream_result = MagicMock(stdout="origin/main\n", stderr="")
+        push_result = MagicMock(stdout="Everything up-to-date\n", stderr="")
+        mock_run.side_effect = [status_result, branch_result, upstream_result, push_result]
+
+        response = client.post("/git/tmp/repo/push", json={})
+        assert response.status_code == 200
+
+        data = response.json()
+        assert data["success"] is True
+        assert data["remote"] == "origin"
+        assert data["branch"] == "main"
+
+    @patch(f"{MODULE_NAME}.validate_repository_path", return_value="/tmp/repo")
+    @patch('subprocess.run')
+    def test_git_push_dirty_tree_rejected(self, mock_run, mock_validate_repo):
+        """Test push rejection with dirty tree"""
+        status_result = MagicMock(stdout=" M file.txt\n", stderr="")
+        mock_run.return_value = status_result
+
+        response = client.post("/git/tmp/repo/push", json={})
+        assert response.status_code == 400
+        assert "working tree is not clean" in response.json()["detail"].lower()
+
+    @patch(f"{MODULE_NAME}.validate_repository_path", return_value="/tmp/repo")
+    @patch('subprocess.run')
+    def test_git_push_missing_upstream(self, mock_run, mock_validate_repo):
+        """Test push rejection when upstream is missing"""
+        status_result = MagicMock(stdout="", stderr="")
+        branch_result = MagicMock(stdout="main\n", stderr="")
+        mock_run.side_effect = [
+            status_result,
+            branch_result,
+            subprocess.CalledProcessError(128, ["git"], stderr="no upstream"),
+        ]
+
+        response = client.post("/git/tmp/repo/push", json={})
+        assert response.status_code == 400
+        assert "upstream branch is not configured" in response.json()["detail"].lower()
+
+    def test_git_push_force_rejected(self):
+        """Test force push rejection"""
+        response = client.post("/git/tmp/repo/push", json={"force": True})
+        assert response.status_code == 400
+        assert "force push" in response.json()["detail"].lower()
+
+    def test_git_push_set_upstream_rejected(self):
+        """Test upstream setup rejection"""
+        response = client.post("/git/tmp/repo/push", json={"set_upstream": True})
+        assert response.status_code == 400
+        assert "upstream setup" in response.json()["detail"].lower()
+
+
 class TestSecurityValidation:
     """Test security validations"""
 
