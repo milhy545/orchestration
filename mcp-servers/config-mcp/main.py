@@ -124,9 +124,9 @@ class ConfigValidateRequest(BaseModel):
     """Configuration validation request"""
 
     config_data: Dict[str, Any]
-    schema: Optional[Dict[str, Any]] = None
-    required_keys: Optional[List[str]] = []
-    value_types: Optional[Dict[str, str]] = {}  # key -> type mapping
+    schema_definition: Dict[str, Any] | None = None
+    required_keys: List[str] = Field(default_factory=list)
+    value_types: Dict[str, str] = Field(default_factory=dict)  # key -> type mapping
 
 
 class ConfigBackupRequest(BaseModel):
@@ -487,9 +487,9 @@ async def validate_tool(request: ConfigValidateRequest) -> Dict[str, Any]:
 
         # Schema validation if provided
         schema_errors = []
-        if request.schema:
+        if request.schema_definition:
             # Basic schema validation (simplified)
-            for schema_key, schema_def in request.schema.items():
+            for schema_key, schema_def in request.schema_definition.items():
                 if isinstance(schema_def, dict) and "required" in schema_def:
                     if schema_def["required"] and schema_key not in request.config_data:
                         schema_errors.append(f"Schema requires key '{schema_key}'")

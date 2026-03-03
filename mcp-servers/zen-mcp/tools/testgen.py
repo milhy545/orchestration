@@ -28,6 +28,7 @@ logger = logging.getLogger(__name__)
 
 
 class TestGenRequest(ToolRequest):
+    __test__ = False
     """
     Request model for the test generation tool.
 
@@ -56,6 +57,7 @@ class TestGenRequest(ToolRequest):
 
 
 class TestGenTool(BaseTool):
+    __test__ = False
     """
     Test generation tool implementation.
 

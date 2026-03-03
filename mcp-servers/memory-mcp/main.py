@@ -1,3 +1,4 @@
+import logging
 import os
 from contextlib import contextmanager
 from datetime import datetime
@@ -7,7 +8,7 @@ import psycopg2
 import psycopg2.extras
 from fastapi import FastAPI, HTTPException, Query
 from prometheus_fastapi_instrumentator import Instrumentator
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 
 app = FastAPI(
     title="Memory MCP API",
@@ -32,6 +33,8 @@ MAX_LIST_LIMIT = 1000
 MAX_SEARCH_LIMIT = 500
 DEFAULT_LIST_LIMIT = 100
 DEFAULT_SEARCH_LIMIT = 50
+
+logger = logging.getLogger(__name__)
 
 
 def get_memory_connection():
@@ -72,8 +75,8 @@ def ensure_table_exists():
     finally:
         try:
             conn.close()
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.debug("Failed to close memory connection: %s", exc)
 
 
 class MemoryEntry(BaseModel):
@@ -81,10 +84,11 @@ class MemoryEntry(BaseModel):
     type: Optional[str] = Field("user", max_length=50)
     importance: Optional[float] = Field(0.5, ge=0.0, le=1.0)
     agent: Optional[str] = Field("claude-code", max_length=100)
-    metadata: Optional[Dict[str, Any]] = {}
+    metadata: Dict[str, Any] = Field(default_factory=dict)
 
-    @validator("content")
-    def validate_content_size(cls, v):
+    @field_validator("content")
+    @classmethod
+    def validate_content_size(cls, v: str) -> str:
         if len(v) > MAX_CONTENT_SIZE:
             raise ValueError(
                 f"Content too large. Maximum size: {MAX_CONTENT_SIZE} bytes"
@@ -108,8 +112,8 @@ async def startup_event():
     # Tests and CI runs may not have a DB available; don't fail app startup.
     try:
         ensure_table_exists()
-    except Exception:
-        pass
+    except Exception as exc:
+        logger.warning("Memory table initialization skipped: %s", exc)
 
 
 @app.get("/health")
@@ -133,8 +137,8 @@ async def health_check():
         if conn is not None:
             try:
                 conn.close()
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.debug("Failed to close memory connection: %s", exc)
 
 
 @app.post("/memory/store", response_model=Dict[str, Any])
@@ -170,8 +174,8 @@ async def store_memory(entry: MemoryEntry):
     finally:
         try:
             conn.close()
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.debug("Failed to close memory connection: %s", exc)
 
 
 @app.get("/memory/list", response_model=List[MemoryResponse])
@@ -220,8 +224,8 @@ async def list_memories(
     finally:
         try:
             conn.close()
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.debug("Failed to close memory connection: %s", exc)
 
 
 @app.get("/memory/search")
@@ -272,8 +276,8 @@ async def search_memories(
     finally:
         try:
             conn.close()
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.debug("Failed to close memory connection: %s", exc)
 
 
 @app.delete("/memory/{memory_id}")
@@ -297,8 +301,8 @@ async def delete_memory(memory_id: int):
     finally:
         try:
             conn.close()
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.debug("Failed to close memory connection: %s", exc)
 
 
 @app.get("/memory/stats")
@@ -329,8 +333,8 @@ async def memory_stats():
     finally:
         try:
             conn.close()
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.debug("Failed to close memory connection: %s", exc)
 
 
 if __name__ == "__main__":
