@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 
 
-PROJECT_ROOT = Path("/home/orchestration")
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 
 def _import_module(module_name: str, path: Path):

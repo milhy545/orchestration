@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 
 
-PROJECT_ROOT = Path("/home/orchestration")
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 
 def _import_module(module_name: str, path: Path):
@@ -55,8 +55,10 @@ async def test_ollama_embedding_parses_modern_response(monkeypatch) -> None:
     config.embedding_provider = "ollama"
     client = providers.ProviderClient(config)
     client._post_json = lambda url, payload, headers=None: {"embeddings": [[0.1, 0.2, 0.3]]}
+
     async def immediate_to_thread(func, *args, **kwargs):
         return func(*args, **kwargs)
+
     monkeypatch.setattr(providers.asyncio, "to_thread", immediate_to_thread)
 
     vector = await client.embed_query("hello")
@@ -73,8 +75,10 @@ async def test_inception_generation_parses_chat_response(monkeypatch) -> None:
     client._post_json = lambda url, payload, headers=None: {
         "choices": [{"message": {"content": "answer from mercury"}}]
     }
+
     async def immediate_to_thread(func, *args, **kwargs):
         return func(*args, **kwargs)
+
     monkeypatch.setattr(providers.asyncio, "to_thread", immediate_to_thread)
 
     answer = await client.generate_answer("What happened?", [{"content": "Stored fact"}])
