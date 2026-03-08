@@ -259,11 +259,7 @@ def _read_secret_from_vault(vault_path: str, key: str) -> Optional[str]:
     except urllib.error.HTTPError as exc:
         if exc.code == 404:
             return None
-        logger.error(
-            "Vault secret read failed for %s with HTTP %s",
-            vault_path,
-            exc.code,
-        )
+        logger.error("Vault secret read failed with HTTP %s", exc.code)
         raise HTTPException(status_code=502, detail="Vault secret read failed") from exc
     except urllib.error.URLError as exc:
         logger.error("Vault secret endpoint unreachable: %s", exc)
