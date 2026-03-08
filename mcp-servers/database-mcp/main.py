@@ -265,9 +265,11 @@ async def health():
             cursor.execute("SELECT 1")
             return {
                 "status": "healthy",
-                "service": "Database MCP",
-                "database": "SQLite",
+                "service": "database-mcp",
+                "version": "1.0.0",
+                "database": "sqlite",
                 "timestamp": datetime.now().isoformat(),
+                "checks": {"query_select_1": True},
             }
     except Exception:
         raise HTTPException(status_code=503, detail="Database unavailable")

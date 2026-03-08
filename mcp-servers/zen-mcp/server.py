@@ -51,6 +51,13 @@ from tools import (
     TracerTool,
 )
 from tools.models import ToolOutput
+from utils.secrets import load_env
+
+def _is_real_secret(value: str | None) -> bool:
+    if not value:
+        return False
+    return not value.strip().lower().startswith("your_")
+
 
 # Configure logging for server operations
 # Can be controlled via LOG_LEVEL environment variable (DEBUG, INFO, WARNING, ERROR)
@@ -182,42 +189,42 @@ def configure_providers():
     has_custom = False
 
     # Check for Gemini API key
-    gemini_key = os.getenv("GEMINI_API_KEY")
-    if gemini_key and gemini_key != "your_gemini_api_key_here":
+    gemini_key = load_env("GEMINI_API_KEY")
+    if _is_real_secret(gemini_key):
         valid_providers.append("Gemini")
         has_native_apis = True
         logger.info("Gemini API key found - Gemini models available")
 
     # Check for OpenAI API key
-    openai_key = os.getenv("OPENAI_API_KEY")
-    if openai_key and openai_key != "your_openai_api_key_here":
+    openai_key = load_env("OPENAI_API_KEY")
+    if _is_real_secret(openai_key):
         valid_providers.append("OpenAI (o3)")
         has_native_apis = True
         logger.info("OpenAI API key found - o3 model available")
 
     # Check for X.AI API key
-    xai_key = os.getenv("XAI_API_KEY")
-    if xai_key and xai_key != "your_xai_api_key_here":
+    xai_key = load_env("XAI_API_KEY")
+    if _is_real_secret(xai_key):
         valid_providers.append("X.AI (GROK)")
         has_native_apis = True
         logger.info("X.AI API key found - GROK models available")
 
     # Check for OpenRouter API key
-    openrouter_key = os.getenv("OPENROUTER_API_KEY")
-    if openrouter_key and openrouter_key != "your_openrouter_api_key_here":
+    openrouter_key = load_env("OPENROUTER_API_KEY")
+    if _is_real_secret(openrouter_key):
         valid_providers.append("OpenRouter")
         has_openrouter = True
         logger.info("OpenRouter API key found - Multiple models available via OpenRouter")
 
     # Check for custom API endpoint (Ollama, vLLM, etc.)
-    custom_url = os.getenv("CUSTOM_API_URL")
+    custom_url = load_env("CUSTOM_API_URL")
     if custom_url:
         # IMPORTANT: Always read CUSTOM_API_KEY even if empty
         # - Some providers (vLLM, LM Studio, enterprise APIs) require authentication
         # - Others (Ollama) work without authentication (empty key)
         # - DO NOT remove this variable - it's needed for provider factory function
-        custom_key = os.getenv("CUSTOM_API_KEY", "")  # Default to empty (Ollama doesn't need auth)
-        custom_model = os.getenv("CUSTOM_MODEL_NAME", "llama3.2")
+        custom_key = load_env("CUSTOM_API_KEY", "")  # Default to empty (Ollama doesn't need auth)
+        custom_model = load_env("CUSTOM_MODEL_NAME", "llama3.2")
         valid_providers.append(f"Custom API ({custom_url})")
         has_custom = True
         logger.info(f"Custom API endpoint found: {custom_url} with model {custom_model}")
@@ -229,11 +236,11 @@ def configure_providers():
     # Register providers in priority order:
     # 1. Native APIs first (most direct and efficient)
     if has_native_apis:
-        if gemini_key and gemini_key != "your_gemini_api_key_here":
+        if _is_real_secret(gemini_key):
             ModelProviderRegistry.register_provider(ProviderType.GOOGLE, GeminiModelProvider)
-        if openai_key and openai_key != "your_openai_api_key_here":
+        if _is_real_secret(openai_key):
             ModelProviderRegistry.register_provider(ProviderType.OPENAI, OpenAIModelProvider)
-        if xai_key and xai_key != "your_xai_api_key_here":
+        if _is_real_secret(xai_key):
             ModelProviderRegistry.register_provider(ProviderType.XAI, XAIModelProvider)
 
     # 2. Custom provider second (for local/private models)
@@ -241,7 +248,7 @@ def configure_providers():
         # Factory function that creates CustomProvider with proper parameters
         def custom_provider_factory(api_key=None):
             # api_key is CUSTOM_API_KEY (can be empty for Ollama), base_url from CUSTOM_API_URL
-            base_url = os.getenv("CUSTOM_API_URL", "")
+            base_url = load_env("CUSTOM_API_URL", "") or ""
             return CustomProvider(api_key=api_key or "", base_url=base_url)  # Use provided API key or empty string
 
         ModelProviderRegistry.register_provider(ProviderType.CUSTOM, custom_provider_factory)

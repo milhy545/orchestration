@@ -302,7 +302,9 @@ async def health():
     return {
         "status": "healthy",
         "service": "forai-mcp",
+        "version": "1.0.0",
         "timestamp": datetime.utcnow().isoformat(),
+        "checks": {"workspace_readonly_mount": True},
     }
 
 

@@ -15,8 +15,15 @@ from mcp.types import TextContent
 from tools.models import ToolModelCategory, ToolOutput
 from tools.shared.base_models import ToolRequest
 from tools.shared.base_tool import BaseTool
+from utils.secrets import load_env
 
 logger = logging.getLogger(__name__)
+
+def _is_real_secret(value: str | None) -> bool:
+    if not value:
+        return False
+    return not value.strip().lower().startswith("your_")
+
 
 
 class ListModelsTool(BaseTool):
@@ -154,8 +161,8 @@ class ListModelsTool(BaseTool):
             output_lines.append("")
 
         # Check OpenRouter
-        openrouter_key = os.getenv("OPENROUTER_API_KEY")
-        is_openrouter_configured = openrouter_key and openrouter_key != "your_openrouter_api_key_here"
+        openrouter_key = load_env("OPENROUTER_API_KEY")
+        is_openrouter_configured = _is_real_secret(openrouter_key)
 
         output_lines.append(f"## OpenRouter {'✅' if is_openrouter_configured else '❌'}")
 

@@ -88,7 +88,7 @@ class BackupCoordinator:
                 tools=["store_memory", "search_memories"]
             ),
             "research": BasicMCPService(
-                name="Research MCP",
+                name="Perplexity HUB",
                 port=7011,
                 tools=["web_search", "search_web"]
             )
@@ -131,7 +131,7 @@ class BackupCoordinator:
         try:
             # Try PostgreSQL connection
             self.db_pool = await asyncpg.create_pool(
-                "postgresql://mcp_admin:change_me_in_production@localhost:7021/mcp_unified",
+                os.getenv("MCP_DATABASE_URL", ""),
                 min_size=1, max_size=3
             )
             logging.info("✅ PostgreSQL connection established")

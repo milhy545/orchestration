@@ -23,7 +23,7 @@ logger = logging.getLogger("code-graph-mcp")
 WORKSPACE = os.getenv("WORKSPACE_PATH", "/workspace")
 NEO4J_URL = os.getenv("NEO4J_URL", "bolt://neo4j:7687")
 NEO4J_USER = os.getenv("NEO4J_USER", "neo4j")
-NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD", "neo4j_password")
+NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD", "").strip()
 
 # ---------------------------------------------------------------------------
 # Neo4j driver (lazy init)
@@ -37,7 +37,8 @@ def _get_driver():
         try:
             from neo4j import GraphDatabase
 
-            _driver = GraphDatabase.driver(NEO4J_URL, auth=(NEO4J_USER, NEO4J_PASSWORD))
+            auth = (NEO4J_USER, NEO4J_PASSWORD) if NEO4J_PASSWORD else None
+            _driver = GraphDatabase.driver(NEO4J_URL, auth=auth)
         except Exception as exc:
             logger.warning(f"Neo4j connection failed: {exc}")
             return None

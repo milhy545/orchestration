@@ -14,6 +14,7 @@ import socket
 import ssl
 import subprocess
 from datetime import datetime, timedelta
+from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import bcrypt
@@ -40,8 +41,18 @@ Instrumentator().instrument(app).expose(app)
 
 security = HTTPBearer(auto_error=False)
 
+
+def _load_secret(name: str) -> str | None:
+    file_path = os.getenv(f"{name}_FILE", "").strip()
+    if file_path:
+        value = Path(file_path).read_text(encoding="utf-8").strip()
+        return value or None
+
+    value = os.getenv(name, "").strip()
+    return value or None
+
 # Security configuration
-SECRET_KEY = os.getenv("JWT_SECRET_KEY") or secrets.token_urlsafe(32)
+SECRET_KEY = _load_secret("JWT_SECRET_KEY") or secrets.token_urlsafe(32)
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
@@ -106,7 +117,8 @@ async def health_check():
     """Health check endpoint"""
     return {
         "status": "healthy",
-        "service": "Security MCP",
+        "service": "security-mcp",
+        "version": "1.0.0",
         "port": 7008,
         "timestamp": datetime.now().isoformat(),
         "features": ["jwt_token", "password_hash", "encryption", "ssl_check"],

@@ -4,6 +4,7 @@ Health check script for Zen MCP Server Docker container
 """
 
 import os
+from importlib.util import find_spec
 import subprocess
 import sys
 
@@ -18,17 +19,16 @@ def check_process():
 
 
 def check_python_imports():
-    """Check if critical Python modules can be imported"""
+    """Check if critical Python modules are installed without importing them."""
     critical_modules = ["mcp", "google.genai", "openai", "pydantic", "dotenv"]
 
     for module in critical_modules:
         try:
-            __import__(module)
-        except ImportError as e:
-            print(f"Critical module {module} cannot be imported: {e}", file=sys.stderr)
-            return False
+            if find_spec(module) is None:
+                print(f"Critical module {module} is not installed", file=sys.stderr)
+                return False
         except Exception as e:
-            print(f"Error importing {module}: {e}", file=sys.stderr)
+            print(f"Error checking module {module}: {e}", file=sys.stderr)
             return False
     return True
 

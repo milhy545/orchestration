@@ -51,8 +51,7 @@ class MQTTMCPServer:
         )  # Docker service name
         self.mqtt_port = int(os.getenv("MQTT_PORT", "1883"))
         self.mqtt_username = os.getenv("MQTT_USERNAME", "mcp_admin")
-        # lgtm[py/hardcoded-credentials] - Default for development; use MQTT_PASSWORD env var in production
-        self.mqtt_password = os.getenv("MQTT_PASSWORD", "mcp_secure_mqtt_2024")
+        self.mqtt_password = os.getenv("MQTT_PASSWORD", "").strip()
         self.subscribed_topics = {}
         self.connected = False
 
@@ -60,9 +59,12 @@ class MQTTMCPServer:
         """Connect to MQTT broker"""
         try:
             self.mqtt_client = gmqtt.Client("mcp-mqtt-server")
-            self.mqtt_client.set_auth_credentials(
-                self.mqtt_username, self.mqtt_password
-            )
+            if self.mqtt_password:
+                self.mqtt_client.set_auth_credentials(
+                    self.mqtt_username, self.mqtt_password
+                )
+            else:
+                logger.warning("MQTT_PASSWORD is not configured; attempting anonymous connection")
 
             # Set event handlers
             self.mqtt_client.on_connect = self.on_mqtt_connect
@@ -201,11 +203,27 @@ async def startup_event():
 
 @app.get("/")
 async def root():
-    """Health check endpoint"""
+    """Basic service info endpoint"""
     return {
         "service": "MQTT MCP Server",
         "status": "running",
         "connected": mqtt_server.connected,
+    }
+
+
+@app.get("/health")
+async def health():
+    """Orchestration health endpoint"""
+    return {
+        "status": "healthy" if mqtt_server.connected else "degraded",
+        "service": "mqtt-mcp",
+        "version": "1.0.0",
+        "timestamp": datetime.utcnow().isoformat(),
+        "checks": {
+            "broker_connected": mqtt_server.connected,
+            "broker": f"{mqtt_server.mqtt_broker}:{mqtt_server.mqtt_port}",
+            "subscribed_topics": len(mqtt_server.subscribed_topics),
+        },
     }
 
 

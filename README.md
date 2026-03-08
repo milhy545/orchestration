@@ -74,10 +74,10 @@ The `docker-compose.yml` file defines the following services, which are organize
 
 ### AI/Enhanced Services
 
--   **`research-mcp` (Port 7011):** Facilitates AI research tasks.
+-   **`perplexity-hub` (Port 7011):** Canonical research runtime for cited Perplexity retrieval with optional OpenAI synthesis.
 -   **`advanced-memory-mcp` (Port 7012):** Provides AI-powered memory with vector search and semantic similarity.
--   **`transcriber-mcp` (Port 7013):** Handles audio processing and transcription. On this host it is currently treated as a template target only; production routing should be moved to stronger hardware.
--   **`vision-mcp` (Port 7014):** (Placeholder) Intended for vision-related tasks.
+-   **`transcriber-mcp` (Port 7013):** Handles audio processing and transcription. On this host it is disabled by default and treated as a template target only; production routing should be moved to stronger hardware.
+-   **`vision-mcp` (Port 7014):** (Placeholder) Intended for vision-related tasks. On this host it is disabled by default.
 -   **`zen-mcp-server` (Port 7017):** MCP tool orchestration gateway for multi-model usage.
 
 ### Service Wrappers
@@ -120,10 +120,10 @@ The stack now includes a Dockerized hybrid marketplace service:
 
 ### Quick start
 
-1. Set a shared JWT secret in `.env`:
+1. Set a shared long random JWT secret in `.env`:
 
 ```bash
-JWT_SECRET=change_me_market_jwt
+JWT_SECRET=$(openssl rand -hex 32)
 MARKET_BASE_URL=http://localhost:7034
 ```
 

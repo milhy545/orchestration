@@ -10,6 +10,8 @@ import logging
 import os
 import shutil
 import tempfile
+import urllib.error
+import urllib.request
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
@@ -17,7 +19,7 @@ from typing import Any, Dict, List, Optional, Union
 import yaml
 from fastapi import FastAPI, HTTPException
 from prometheus_fastapi_instrumentator import Instrumentator
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -34,6 +36,41 @@ Instrumentator().instrument(app).expose(app)
 
 # Configuration storage paths
 CONFIG_BASE_PATH = Path(os.environ.get("CONFIG_BASE_PATH", "/app/configs"))
+VAULT_ADDR = os.environ.get("VAULT_ADDR", "http://vault:8200").rstrip("/")
+VAULT_TOKEN_FILE = os.environ.get("VAULT_TOKEN_FILE", "/vault/runtime/read.token")
+SECRET_PATHS = {
+    "mega-orchestrator": "orchestration/mega-orchestrator",
+    "advanced-memory-mcp": "orchestration/advanced-memory-mcp",
+    "zen-mcp-server": "orchestration/zen-mcp-server",
+    "gmail-mcp": "orchestration/gmail-mcp",
+    "security-mcp": "orchestration/internal-auth",
+    "marketplace-mcp": "orchestration/internal-auth",
+    "common-mcp": "orchestration/common-mcp",
+    "perplexity-hub": "orchestration/perplexity-hub",
+    "gemini-cli": "orchestration/common-mcp",
+}
+SENSITIVE_ENV_TOKENS = (
+    "KEY",
+    "SECRET",
+    "TOKEN",
+    "PASSWORD",
+    "AUTH",
+    "CREDENTIAL",
+    "COOKIE",
+)
+PROTECTED_ENV_PREFIXES = (
+    "VAULT_",
+    "AWS_",
+    "GCP_",
+)
+PROTECTED_ENV_EXACT = {
+    "PATH",
+    "PYTHONPATH",
+    "HOME",
+    "HOSTNAME",
+    "PWD",
+    "SHLVL",
+}
 try:
     CONFIG_BASE_PATH.mkdir(parents=True, exist_ok=True)
 except OSError as exc:
@@ -123,10 +160,12 @@ class ConfigFileRequest(BaseModel):
 class ConfigValidateRequest(BaseModel):
     """Configuration validation request"""
 
+    model_config = ConfigDict(populate_by_name=True)
+
     config_data: Dict[str, Any]
-    schema: Optional[Dict[str, Any]] = None
-    required_keys: Optional[List[str]] = []
-    value_types: Optional[Dict[str, str]] = {}  # key -> type mapping
+    schema_definition: Optional[Dict[str, Any]] = Field(default=None, alias="schema")
+    required_keys: Optional[List[str]] = Field(default_factory=list)
+    value_types: Optional[Dict[str, str]] = Field(default_factory=dict)  # key -> type mapping
 
 
 class ConfigBackupRequest(BaseModel):
@@ -137,18 +176,119 @@ class ConfigBackupRequest(BaseModel):
     file_patterns: Optional[List[str]] = ["*.json", "*.yaml", "*.yml", "*.ini", "*.env"]
 
 
+class SecretReadRequest(BaseModel):
+    """Vault-backed secret read request."""
+
+    service: str = Field(
+        ...,
+        description="Allowed Vault scope or alias such as common-mcp or gemini-cli",
+    )
+    key: str = Field(..., description="Secret key to read from the selected scope")
+    reveal: bool = Field(
+        default=False,
+        description="Return the raw value when true, otherwise return masked metadata only",
+    )
+
+
+def _load_vault_token() -> str:
+    token = os.environ.get("VAULT_TOKEN", "").strip()
+    if token:
+        return token
+
+    try:
+        token = Path(VAULT_TOKEN_FILE).read_text(encoding="utf-8").strip()
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=500, detail="Vault token file missing") from exc
+
+    if not token:
+        raise HTTPException(status_code=500, detail="Vault token file is empty")
+    return token
+
+
+def _resolve_secret_scope(service: str) -> str:
+    try:
+        return SECRET_PATHS[service]
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="Unknown secret scope") from exc
+
+
+def _mask_secret(value: str) -> str:
+    if not value:
+        return ""
+    if len(value) <= 4:
+        return "*" * len(value)
+    return f"{value[:2]}{'*' * (len(value) - 4)}{value[-2:]}"
+
+
+def _is_sensitive_env_key(key: str) -> bool:
+    upper_key = key.upper()
+    if upper_key.endswith("_FILE"):
+        return True
+    return any(token in upper_key for token in SENSITIVE_ENV_TOKENS)
+
+
+def _is_protected_env_key(key: str) -> bool:
+    upper_key = key.upper()
+    if upper_key in PROTECTED_ENV_EXACT:
+        return True
+    if _is_sensitive_env_key(upper_key):
+        return True
+    return any(upper_key.startswith(prefix) for prefix in PROTECTED_ENV_PREFIXES)
+
+
+def _serialize_env_value(key: str, value: Optional[str]) -> Optional[str]:
+    if value is None:
+        return None
+    if _is_sensitive_env_key(key):
+        return _mask_secret(value)
+    return value
+
+
+def _read_secret_from_vault(vault_path: str, key: str) -> Optional[str]:
+    request = urllib.request.Request(
+        f"{VAULT_ADDR}/v1/secret/data/{vault_path}",
+        headers={"X-Vault-Token": _load_vault_token()},
+        method="GET",
+    )
+
+    try:
+        with urllib.request.urlopen(request, timeout=10) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+    except urllib.error.HTTPError as exc:
+        detail = exc.read().decode("utf-8", errors="replace")
+        if exc.code == 404:
+            return None
+        logger.error("Vault secret read failed for %s: %s", vault_path, detail)
+        raise HTTPException(status_code=502, detail="Vault secret read failed") from exc
+    except urllib.error.URLError as exc:
+        logger.error("Vault secret endpoint unreachable: %s", exc)
+        raise HTTPException(status_code=502, detail="Vault is unreachable") from exc
+
+    data = payload.get("data", {}).get("data", {})
+    value = data.get(key)
+    if value is None:
+        return None
+    return value if isinstance(value, str) else str(value)
+
+
 @app.get("/health")
 async def health_check():
     """Health check endpoint"""
     return {
         "status": "healthy",
-        "service": "Config MCP",
+        "service": "config-mcp",
+        "version": "1.0.0",
         "port": 7009,
         "timestamp": datetime.now().isoformat(),
-        "features": ["env_vars", "config_files", "validation", "backup"],
+        "features": ["env_vars", "config_files", "validation", "backup", "secrets"],
         "storage": {
             "config_path": str(CONFIG_BASE_PATH),
             "writable": os.access(CONFIG_BASE_PATH, os.W_OK),
+        },
+        "vault": {
+            "configured": bool(VAULT_ADDR and VAULT_TOKEN_FILE),
+            "reachable": True,
+            "scope_count": len(SECRET_PATHS),
         },
     }
 
@@ -172,7 +312,8 @@ async def env_vars_tool(request: EnvVarRequest) -> Dict[str, Any]:
             return {
                 "operation": "get",
                 "key": request.key,
-                "value": value,
+                "value": _serialize_env_value(request.key, value),
+                "masked": bool(value is not None and _is_sensitive_env_key(request.key)),
                 "found": value is not None,
                 "timestamp": datetime.now().isoformat(),
             }
@@ -182,6 +323,8 @@ async def env_vars_tool(request: EnvVarRequest) -> Dict[str, Any]:
                 raise HTTPException(
                     status_code=400, detail="Key and value required for set operation"
                 )
+            if _is_protected_env_key(request.key):
+                raise HTTPException(status_code=403, detail="Protected environment variable")
 
             old_value = os.environ.get(request.key)
             os.environ[request.key] = request.value
@@ -189,8 +332,9 @@ async def env_vars_tool(request: EnvVarRequest) -> Dict[str, Any]:
             return {
                 "operation": "set",
                 "key": request.key,
-                "new_value": request.value,
-                "old_value": old_value,
+                "new_value": _serialize_env_value(request.key, request.value),
+                "old_value": _serialize_env_value(request.key, old_value),
+                "masked": _is_sensitive_env_key(request.key),
                 "timestamp": datetime.now().isoformat(),
             }
 
@@ -202,11 +346,16 @@ async def env_vars_tool(request: EnvVarRequest) -> Dict[str, Any]:
                     k: v for k, v in env_vars.items() if k.startswith(request.prefix)
                 }
 
+            serialized_vars = {
+                key: _serialize_env_value(key, value)
+                for key, value in env_vars.items()
+            }
+
             return {
                 "operation": "list",
-                "count": len(env_vars),
+                "count": len(serialized_vars),
                 "prefix_filter": request.prefix,
-                "variables": env_vars,
+                "variables": serialized_vars,
                 "timestamp": datetime.now().isoformat(),
             }
 
@@ -215,6 +364,8 @@ async def env_vars_tool(request: EnvVarRequest) -> Dict[str, Any]:
                 raise HTTPException(
                     status_code=400, detail="Key required for delete operation"
                 )
+            if _is_protected_env_key(request.key):
+                raise HTTPException(status_code=403, detail="Protected environment variable")
 
             old_value = os.environ.get(request.key)
             if old_value is not None:
@@ -224,7 +375,8 @@ async def env_vars_tool(request: EnvVarRequest) -> Dict[str, Any]:
                 "operation": "delete",
                 "key": request.key,
                 "deleted": old_value is not None,
-                "old_value": old_value,
+                "old_value": _serialize_env_value(request.key, old_value),
+                "masked": bool(old_value is not None and _is_sensitive_env_key(request.key)),
                 "timestamp": datetime.now().isoformat(),
             }
 
@@ -487,9 +639,9 @@ async def validate_tool(request: ConfigValidateRequest) -> Dict[str, Any]:
 
         # Schema validation if provided
         schema_errors = []
-        if request.schema:
+        if request.schema_definition:
             # Basic schema validation (simplified)
-            for schema_key, schema_def in request.schema.items():
+            for schema_key, schema_def in request.schema_definition.items():
                 if isinstance(schema_def, dict) and "required" in schema_def:
                     if schema_def["required"] and schema_key not in request.config_data:
                         schema_errors.append(f"Schema requires key '{schema_key}'")
@@ -665,6 +817,28 @@ async def backup_tool(request: ConfigBackupRequest) -> Dict[str, Any]:
         raise HTTPException(status_code=500, detail="Backup operation failed")
 
 
+@app.post("/tools/get_secret")
+async def get_secret_tool(request: SecretReadRequest) -> Dict[str, Any]:
+    """Read a single secret from an allowed Vault namespace."""
+    vault_path = _resolve_secret_scope(request.service)
+    value = _read_secret_from_vault(vault_path, request.key)
+    found = value is not None
+
+    response: Dict[str, Any] = {
+        "service": request.service,
+        "vault_path": vault_path,
+        "key": request.key,
+        "found": found,
+        "timestamp": datetime.now().isoformat(),
+    }
+    if found:
+        response["masked_value"] = _mask_secret(value or "")
+        response["length"] = len(value or "")
+        if request.reveal:
+            response["value"] = value
+    return response
+
+
 @app.get("/tools/list")
 async def list_tools():
     """List all available MCP tools"""
@@ -708,6 +882,15 @@ async def list_tools():
                     "operation": "string (required: create|restore|list|delete)",
                     "backup_name": "string (optional, backup name)",
                     "file_patterns": "array (optional, file patterns to backup)",
+                },
+            },
+            {
+                "name": "get_secret",
+                "description": "Read one allowed secret from Vault-backed orchestration storage",
+                "parameters": {
+                    "service": "string (required, allowed scope like common-mcp or gemini-cli)",
+                    "key": "string (required, secret key to read)",
+                    "reveal": "boolean (optional, return raw value when true)",
                 },
             },
         ]

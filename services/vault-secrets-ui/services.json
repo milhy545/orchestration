@@ -1,0 +1,555 @@
+{
+  "services": [
+    {
+      "id": "mega-orchestrator",
+      "label": "MEGA ORCHESTRATOR",
+      "vault_path": "orchestration/mega-orchestrator",
+      "env_file": "/vault/runtime/mega-orchestrator.env",
+      "restart_target": "mega-orchestrator",
+      "delivery_mode": "file",
+      "description": "Primary orchestrator provider keys and shared marketplace token.",
+      "fields": [
+        {
+          "name": "OPENAI_API_KEY",
+          "label": "OpenAI API Key",
+          "target_env": "OPENAI_API_KEY",
+          "input_type": "password",
+          "secret": true,
+          "placeholder": "sk-...",
+          "default": "",
+          "validation": { "validator": "openai", "base_url": "https://api.openai.com/v1" }
+        },
+        {
+          "name": "ANTHROPIC_API_KEY",
+          "label": "Anthropic API Key",
+          "target_env": "ANTHROPIC_API_KEY",
+          "input_type": "password",
+          "secret": true,
+          "placeholder": "anth-...",
+          "default": "",
+          "validation": { "validator": "anthropic" }
+        },
+        {
+          "name": "GEMINI_API_KEY",
+          "label": "Gemini API Key",
+          "target_env": "GEMINI_API_KEY",
+          "input_type": "password",
+          "secret": true,
+          "placeholder": "AIza...",
+          "default": "",
+          "validation": { "validator": "gemini" }
+        },
+        {
+          "name": "GOOGLE_API_KEY",
+          "label": "Google API Key",
+          "target_env": "GOOGLE_API_KEY",
+          "input_type": "password",
+          "secret": true,
+          "placeholder": "AIza...",
+          "default": "",
+          "validation": { "validator": "google_ai_studio" }
+        },
+        {
+          "name": "PERPLEXITY_API_KEY",
+          "label": "Perplexity API Key",
+          "target_env": "PERPLEXITY_API_KEY",
+          "input_type": "password",
+          "secret": true,
+          "placeholder": "pplx-...",
+          "default": "",
+          "validation": { "validator": "perplexity" }
+        },
+        {
+          "name": "MARKETPLACE_JWT_TOKEN",
+          "label": "Marketplace Token",
+          "target_env": "MARKETPLACE_JWT_TOKEN",
+          "input_type": "password",
+          "secret": true,
+          "placeholder": "jwt-...",
+          "default": ""
+        }
+      ]
+    },
+    {
+      "id": "perplexity-hub",
+      "label": "PERPLEXITY HUB",
+      "vault_path": "orchestration/perplexity-hub",
+      "env_file": "/vault/runtime/perplexity-hub.env",
+      "restart_target": "perplexity-hub",
+      "delivery_mode": "file",
+      "description": "Perplexity retrieval and OpenAI synthesis keys used by the Perplexity HUB runtime.",
+      "fields": [
+        {
+          "name": "PERPLEXITY_API_KEY",
+          "label": "Perplexity API Key",
+          "target_env": "PERPLEXITY_API_KEY",
+          "input_type": "password",
+          "secret": true,
+          "placeholder": "pplx-...",
+          "default": "",
+          "validation": { "validator": "perplexity" }
+        },
+        {
+          "name": "OPENAI_API_KEY",
+          "label": "OpenAI API Key",
+          "target_env": "OPENAI_API_KEY",
+          "input_type": "password",
+          "secret": true,
+          "placeholder": "sk-...",
+          "default": "",
+          "validation": { "validator": "openai", "base_url": "https://api.openai.com/v1" }
+        }
+      ]
+    },
+    {
+      "id": "advanced-memory-mcp",
+      "label": "ADVANCED MEMORY MCP",
+      "vault_path": "orchestration/advanced-memory-mcp",
+      "env_file": "/vault/runtime/advanced-memory-mcp.env",
+      "restart_target": "advanced-memory-mcp",
+      "delivery_mode": "file",
+      "description": "Vector memory with selectable embedding backends and optional context-answer synthesis.",
+      "fields": [
+        {
+          "name": "EMBEDDING_PROVIDER",
+          "label": "Embedding Provider",
+          "target_env": "EMBEDDING_PROVIDER",
+          "input_type": "text",
+          "secret": false,
+          "placeholder": "local|gemini|ollama|openai_compatible",
+          "default": "local"
+        },
+        {
+          "name": "GENERATION_PROVIDER",
+          "label": "Generation Provider",
+          "target_env": "GENERATION_PROVIDER",
+          "input_type": "text",
+          "secret": false,
+          "placeholder": "none|inception|ollama|openai_compatible",
+          "default": "none"
+        },
+        {
+          "name": "LOCAL_EMBEDDING_MODEL",
+          "label": "Local Embedding Model",
+          "target_env": "LOCAL_EMBEDDING_MODEL",
+          "input_type": "text",
+          "secret": false,
+          "placeholder": "all-MiniLM-L6-v2",
+          "default": "all-MiniLM-L6-v2"
+        },
+        {
+          "name": "GEMINI_API_KEY",
+          "label": "Gemini API Key",
+          "target_env": "GEMINI_API_KEY",
+          "input_type": "password",
+          "secret": true,
+          "placeholder": "AIza...",
+          "default": "",
+          "validation": { "validator": "gemini" }
+        },
+        {
+          "name": "GEMINI_EMBED_MODEL",
+          "label": "Gemini Embed Model",
+          "target_env": "GEMINI_EMBED_MODEL",
+          "input_type": "text",
+          "secret": false,
+          "placeholder": "gemini-embedding-001",
+          "default": "gemini-embedding-001"
+        },
+        {
+          "name": "OLLAMA_BASE_URL",
+          "label": "Ollama Base URL",
+          "target_env": "OLLAMA_BASE_URL",
+          "input_type": "text",
+          "secret": false,
+          "placeholder": "http://192.168.0.10:11434",
+          "default": "http://127.0.0.1:11434"
+        },
+        {
+          "name": "OLLAMA_EMBED_MODEL",
+          "label": "Ollama Embed Model",
+          "target_env": "OLLAMA_EMBED_MODEL",
+          "input_type": "text",
+          "secret": false,
+          "placeholder": "nomic-embed-text",
+          "default": "nomic-embed-text"
+        },
+        {
+          "name": "OLLAMA_CHAT_MODEL",
+          "label": "Ollama Chat Model",
+          "target_env": "OLLAMA_CHAT_MODEL",
+          "input_type": "text",
+          "secret": false,
+          "placeholder": "llama3.2",
+          "default": "llama3.2"
+        },
+        {
+          "name": "OPENAI_COMPAT_BASE_URL",
+          "label": "OpenAI Compat URL",
+          "target_env": "OPENAI_COMPAT_BASE_URL",
+          "input_type": "text",
+          "secret": false,
+          "placeholder": "http://192.168.0.20:1234/v1",
+          "default": ""
+        },
+        {
+          "name": "OPENAI_COMPAT_API_KEY",
+          "label": "OpenAI Compat Key",
+          "target_env": "OPENAI_COMPAT_API_KEY",
+          "input_type": "password",
+          "secret": true,
+          "placeholder": "sk-...",
+          "default": "",
+          "validation": { "validator": "openai_compatible", "base_url_field": "OPENAI_COMPAT_BASE_URL" }
+        },
+        {
+          "name": "OPENAI_COMPAT_EMBED_MODEL",
+          "label": "Compat Embed Model",
+          "target_env": "OPENAI_COMPAT_EMBED_MODEL",
+          "input_type": "text",
+          "secret": false,
+          "placeholder": "text-embedding-model",
+          "default": ""
+        },
+        {
+          "name": "OPENAI_COMPAT_CHAT_MODEL",
+          "label": "Compat Chat Model",
+          "target_env": "OPENAI_COMPAT_CHAT_MODEL",
+          "input_type": "text",
+          "secret": false,
+          "placeholder": "model-name",
+          "default": ""
+        },
+        {
+          "name": "INCEPTION_API_KEY",
+          "label": "Inception API Key",
+          "target_env": "INCEPTION_API_KEY",
+          "input_type": "password",
+          "secret": true,
+          "placeholder": "inception-...",
+          "default": "",
+          "validation": { "validator": "inception", "base_url": "https://api.inceptionlabs.ai/v1" }
+        },
+        {
+          "name": "INCEPTION_BASE_URL",
+          "label": "Inception Base URL",
+          "target_env": "INCEPTION_BASE_URL",
+          "input_type": "text",
+          "secret": false,
+          "placeholder": "https://api.inceptionlabs.ai/v1",
+          "default": "https://api.inceptionlabs.ai/v1"
+        },
+        {
+          "name": "INCEPTION_MODEL",
+          "label": "Inception Model",
+          "target_env": "INCEPTION_MODEL",
+          "input_type": "text",
+          "secret": false,
+          "placeholder": "mercury",
+          "default": "mercury"
+        }
+      ]
+    },
+    {
+      "id": "zen-mcp-server",
+      "label": "ZEN MCP SERVER",
+      "vault_path": "orchestration/zen-mcp-server",
+      "env_file": "/vault/runtime/zen-mcp-server.env",
+      "restart_target": "zen-mcp-server",
+      "delivery_mode": "file",
+      "description": "Provider keys and model defaults for the Zen MCP runtime.",
+      "fields": [
+        {
+          "name": "DEFAULT_MODEL",
+          "label": "Default Model",
+          "target_env": "DEFAULT_MODEL",
+          "input_type": "text",
+          "secret": false,
+          "placeholder": "gpt-5",
+          "default": "gpt-5"
+        },
+        {
+          "name": "OPENAI_API_KEY",
+          "label": "OpenAI API Key",
+          "target_env": "OPENAI_API_KEY",
+          "input_type": "password",
+          "secret": true,
+          "placeholder": "sk-...",
+          "default": "",
+          "validation": { "validator": "openai", "base_url": "https://api.openai.com/v1" }
+        },
+        {
+          "name": "ANTHROPIC_API_KEY",
+          "label": "Anthropic API Key",
+          "target_env": "ANTHROPIC_API_KEY",
+          "input_type": "password",
+          "secret": true,
+          "placeholder": "anth-...",
+          "default": "",
+          "validation": { "validator": "anthropic" }
+        },
+        {
+          "name": "GEMINI_API_KEY",
+          "label": "Gemini API Key",
+          "target_env": "GEMINI_API_KEY",
+          "input_type": "password",
+          "secret": true,
+          "placeholder": "AIza...",
+          "default": "",
+          "validation": { "validator": "gemini" }
+        },
+        {
+          "name": "GOOGLE_API_KEY",
+          "label": "Google API Key",
+          "target_env": "GOOGLE_API_KEY",
+          "input_type": "password",
+          "secret": true,
+          "placeholder": "AIza...",
+          "default": "",
+          "validation": { "validator": "google_ai_studio" }
+        },
+        {
+          "name": "XAI_API_KEY",
+          "label": "xAI API Key",
+          "target_env": "XAI_API_KEY",
+          "input_type": "password",
+          "secret": true,
+          "placeholder": "xai-...",
+          "default": "",
+          "validation": { "validator": "xai", "base_url": "https://api.x.ai/v1" }
+        },
+        {
+          "name": "OPENROUTER_API_KEY",
+          "label": "OpenRouter API Key",
+          "target_env": "OPENROUTER_API_KEY",
+          "input_type": "password",
+          "secret": true,
+          "placeholder": "sk-or-...",
+          "default": "",
+          "validation": { "validator": "openrouter" }
+        },
+        {
+          "name": "DIAL_API_KEY",
+          "label": "DIAL API Key",
+          "target_env": "DIAL_API_KEY",
+          "input_type": "password",
+          "secret": true,
+          "placeholder": "dial-...",
+          "default": "",
+          "validation": { "validator": "dial", "base_url_field": "DIAL_API_HOST", "extra_state_fields": ["DIAL_API_VERSION"] }
+        },
+        {
+          "name": "DIAL_API_HOST",
+          "label": "DIAL API Host",
+          "target_env": "DIAL_API_HOST",
+          "input_type": "text",
+          "secret": false,
+          "placeholder": "https://...",
+          "default": ""
+        },
+        {
+          "name": "DIAL_API_VERSION",
+          "label": "DIAL API Version",
+          "target_env": "DIAL_API_VERSION",
+          "input_type": "text",
+          "secret": false,
+          "placeholder": "2024-01-01",
+          "default": ""
+        },
+        {
+          "name": "CUSTOM_API_URL",
+          "label": "Custom API URL",
+          "target_env": "CUSTOM_API_URL",
+          "input_type": "text",
+          "secret": false,
+          "placeholder": "https://...",
+          "default": ""
+        },
+        {
+          "name": "CUSTOM_API_KEY",
+          "label": "Custom API Key",
+          "target_env": "CUSTOM_API_KEY",
+          "input_type": "password",
+          "secret": true,
+          "placeholder": "custom-...",
+          "default": "",
+          "validation": { "validator": "custom_openai_compatible", "base_url_field": "CUSTOM_API_URL" }
+        },
+        {
+          "name": "CUSTOM_MODEL_NAME",
+          "label": "Custom Model Name",
+          "target_env": "CUSTOM_MODEL_NAME",
+          "input_type": "text",
+          "secret": false,
+          "placeholder": "model-name",
+          "default": ""
+        },
+        {
+          "name": "DISABLED_TOOLS",
+          "label": "Disabled Tools",
+          "target_env": "DISABLED_TOOLS",
+          "input_type": "text",
+          "secret": false,
+          "placeholder": "tool-a,tool-b",
+          "default": ""
+        },
+        {
+          "name": "MAX_MCP_OUTPUT_TOKENS",
+          "label": "Max MCP Output Tokens",
+          "target_env": "MAX_MCP_OUTPUT_TOKENS",
+          "input_type": "text",
+          "secret": false,
+          "placeholder": "4096",
+          "default": ""
+        }
+      ]
+    },
+    {
+      "id": "gmail-mcp",
+      "label": "GMAIL MCP",
+      "vault_path": "orchestration/gmail-mcp",
+      "env_file": "/vault/runtime/gmail-mcp.env",
+      "restart_target": "gmail-mcp",
+      "delivery_mode": "file",
+      "description": "Email credentials and transport settings for the Gmail MCP runtime.",
+      "fields": [
+        {
+          "name": "EMAIL_ADDRESS",
+          "label": "Email Address",
+          "target_env": "EMAIL_ADDRESS",
+          "input_type": "text",
+          "secret": false,
+          "placeholder": "user@example.com",
+          "default": ""
+        },
+        {
+          "name": "EMAIL_PASSWORD",
+          "label": "Email Password",
+          "target_env": "EMAIL_PASSWORD",
+          "input_type": "password",
+          "secret": true,
+          "placeholder": "app-password",
+          "default": ""
+        },
+        {
+          "name": "IMAP_SERVER",
+          "label": "IMAP Server",
+          "target_env": "IMAP_SERVER",
+          "input_type": "text",
+          "secret": false,
+          "placeholder": "imap.gmail.com",
+          "default": "imap.gmail.com"
+        },
+        {
+          "name": "SMTP_SERVER",
+          "label": "SMTP Server",
+          "target_env": "SMTP_SERVER",
+          "input_type": "text",
+          "secret": false,
+          "placeholder": "smtp.gmail.com",
+          "default": "smtp.gmail.com"
+        },
+        {
+          "name": "SMTP_PORT",
+          "label": "SMTP Port",
+          "target_env": "SMTP_PORT",
+          "input_type": "text",
+          "secret": false,
+          "placeholder": "587",
+          "default": "587"
+        }
+      ]
+    },
+    {
+      "id": "security-mcp",
+      "label": "SECURITY MCP",
+      "vault_path": "orchestration/internal-auth",
+      "env_file": "/vault/runtime/security-mcp.env",
+      "restart_target": "security-mcp",
+      "delivery_mode": "file",
+      "description": "Shared internal JWT secret mapped as JWT_SECRET_KEY.",
+      "fields": [
+        {
+          "name": "JWT_SECRET",
+          "label": "JWT Secret",
+          "target_env": "JWT_SECRET_KEY",
+          "input_type": "password",
+          "secret": true,
+          "placeholder": "super-secret",
+          "default": ""
+        }
+      ]
+    },
+    {
+      "id": "marketplace-mcp",
+      "label": "MARKETPLACE MCP",
+      "vault_path": "orchestration/internal-auth",
+      "env_file": "/vault/runtime/marketplace-mcp.env",
+      "restart_target": "marketplace-mcp",
+      "delivery_mode": "file",
+      "description": "Shared internal JWT secret mapped as JWT_SECRET.",
+      "fields": [
+        {
+          "name": "JWT_SECRET",
+          "label": "JWT Secret",
+          "target_env": "JWT_SECRET",
+          "input_type": "password",
+          "secret": true,
+          "placeholder": "super-secret",
+          "default": ""
+        }
+      ]
+    },
+    {
+      "id": "common-mcp",
+      "label": "COMMON MCP",
+      "vault_path": "orchestration/common-mcp",
+      "env_file": "/vault/runtime/common-mcp.env",
+      "restart_target": "vault-agent-common",
+      "delivery_mode": "file",
+      "description": "Shared namespace for orchestration-wide secrets, including Notion for Gemini CLI.",
+      "fields": [
+        {
+          "name": "OPENAI_API_KEY",
+          "label": "OpenAI API Key",
+          "target_env": "OPENAI_API_KEY",
+          "input_type": "password",
+          "secret": true,
+          "placeholder": "sk-...",
+          "default": "",
+          "validation": { "validator": "openai", "base_url": "https://api.openai.com/v1" }
+        },
+        {
+          "name": "ANTHROPIC_API_KEY",
+          "label": "Anthropic API Key",
+          "target_env": "ANTHROPIC_API_KEY",
+          "input_type": "password",
+          "secret": true,
+          "placeholder": "anth-...",
+          "default": "",
+          "validation": { "validator": "anthropic" }
+        },
+        {
+          "name": "GEMINI_API_KEY",
+          "label": "Gemini API Key",
+          "target_env": "GEMINI_API_KEY",
+          "input_type": "password",
+          "secret": true,
+          "placeholder": "AIza...",
+          "default": "",
+          "validation": { "validator": "gemini" }
+        },
+        {
+          "name": "NOTION_API_KEY",
+          "label": "Notion API Key",
+          "target_env": "NOTION_API_KEY",
+          "input_type": "password",
+          "secret": true,
+          "placeholder": "secret_...",
+          "default": "NOTION_PLACEHOLDER",
+          "validation": { "validator": "notion" }
+        }
+      ]
+    }
+  ]
+}

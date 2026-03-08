@@ -2,13 +2,17 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-COPY requirements.txt ./
+COPY requirements.txt ./requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY app.py ./
-COPY vault_webui.html ./
+COPY pyproject.toml ./pyproject.toml
+COPY README.md ./README.md
+COPY app.py ./app.py
+COPY services.json ./services.json
+COPY src ./src
 
-ENV WEBUI_PORT=10000
+ENV PYTHONPATH=/app/src
+
 EXPOSE 10000
 
 CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "10000"]

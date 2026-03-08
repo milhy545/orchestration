@@ -181,7 +181,15 @@ def _build_file_info(item_path: Path) -> FileInfo:
 
 @app.get("/health")
 async def health():
-    return {"status": "ok", "timestamp": datetime.now().isoformat()}
+    return {
+        "status": "healthy",
+        "service": "filesystem-mcp",
+        "version": "1.0.0",
+        "timestamp": datetime.now().isoformat(),
+        "checks": {
+            "allowed_directories_count": len(ALLOWED_DIRECTORIES),
+        },
+    }
 
 
 @app.get("/files/{path:path}", response_model=DirectoryResponse)

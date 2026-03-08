@@ -123,9 +123,10 @@ async def health_check():
         return {
             "status": "healthy",
             "service": "memory-mcp",
-            "database": "PostgreSQL",
+            "database": "postgresql",
             "version": "2.1.0",
             "timestamp": datetime.now().isoformat(),
+            "checks": {"query_select_1": True},
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Health check failed: {str(e)}")

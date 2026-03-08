@@ -52,7 +52,7 @@ networks:
     ports:
       - "7021:8000"
     environment:
-      - DATABASE_URL=postgresql://mcp_admin:change_me_in_production@postgresql:5432/mcp_unified
+      - DATABASE_URL=${MCP_DATABASE_URL:-}
     depends_on:
       - postgresql
     networks:

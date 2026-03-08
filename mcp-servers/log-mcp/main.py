@@ -137,6 +137,23 @@ def validate_command(command_str: str) -> List[str]:
     return parts
 
 
+def _compile_bounded_pattern(pattern: str, ignore_case: bool = False):
+    """Compile a regex using the safer engine when available, otherwise fall back to stdlib re."""
+    flags = 0
+    if ignore_case:
+        flags |= re.IGNORECASE
+    if safe_re is not None:
+        return safe_re.compile(pattern, flags), True
+    return re.compile(pattern, flags), False
+
+
+def _search_bounded(pattern_obj: Any, text: str, supports_timeout: bool):
+    """Search a line with timeout when supported by the regex backend."""
+    if supports_timeout:
+        return pattern_obj.search(text, timeout=0.05)
+    return pattern_obj.search(text)
+
+
 app = FastAPI(
     title="Log MCP Service",
     description="Log aggregation, analysis, and monitoring tools",
@@ -211,7 +228,8 @@ async def health_check():
     """Health check endpoint"""
     return {
         "status": "healthy",
-        "service": "Log MCP",
+        "service": "log-mcp",
+        "version": "1.0.0",
         "port": 7010,
         "timestamp": datetime.now().isoformat(),
         "features": ["log_analysis", "log_monitor", "log_aggregate", "log_search"],
@@ -343,20 +361,15 @@ async def _analyze_patterns(
 
     if pattern:
         # Custom pattern (safe regex with timeout)
-        if safe_re is None:
-            raise HTTPException(
-                status_code=500,
-                detail="Safe regex engine not available on server",
-            )
         if len(pattern) > MAX_REGEX_LENGTH:
             raise HTTPException(
                 status_code=400,
                 detail=f"Regex too long (max {MAX_REGEX_LENGTH} chars)",
             )
-        regex_pattern = safe_re.compile(pattern)
+        regex_pattern, supports_timeout = _compile_bounded_pattern(pattern)
         for i, line in enumerate(lines):
             # lgtm[py/regex-injection] - regex execution is length-limited and timed out
-            match = regex_pattern.search(line, timeout=0.05)
+            match = _search_bounded(regex_pattern, line, supports_timeout)
             if match:
                 matches.append(
                     {
@@ -576,24 +589,19 @@ async def log_search_tool(request: LogSearchRequest) -> Dict[str, Any]:
             # Search based on type
             source_matches = []
             if request.search_type == "regex":
-                if safe_re is None:
-                    raise HTTPException(
-                        status_code=500,
-                        detail="Safe regex engine not available on server",
-                    )
                 if len(request.query) > MAX_REGEX_LENGTH:
                     raise HTTPException(
                         status_code=400,
                         detail=f"Regex too long (max {MAX_REGEX_LENGTH} chars)",
                     )
                 try:
-                    pattern = safe_re.compile(
+                    pattern, supports_timeout = _compile_bounded_pattern(
                         request.query,
-                        safe_re.IGNORECASE if not request.case_sensitive else 0,
+                        ignore_case=not request.case_sensitive,
                     )
                     for i, line in enumerate(lines):
                         # lgtm[py/regex-injection] - regex execution is length-limited and timed out
-                        if pattern.search(line, timeout=0.05):
+                        if _search_bounded(pattern, line, supports_timeout):
                             context_start = max(0, i - request.context_lines)
                             context_end = min(len(lines), i + request.context_lines + 1)
                             source_matches.append(
