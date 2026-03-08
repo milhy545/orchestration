@@ -154,6 +154,11 @@ def _search_bounded(pattern_obj: Any, text: str, supports_timeout: bool):
     return pattern_obj.search(text)
 
 
+def _compile_literal_pattern(text: str, ignore_case: bool = False):
+    """Compile a literal search pattern to avoid user-controlled regex execution."""
+    return _compile_bounded_pattern(re.escape(text), ignore_case=ignore_case)
+
+
 app = FastAPI(
     title="Log MCP Service",
     description="Log aggregation, analysis, and monitoring tools",
@@ -360,15 +365,14 @@ async def _analyze_patterns(
     matches = []
 
     if pattern:
-        # Custom pattern (safe regex with timeout)
+        # Treat user-provided patterns as literal text to avoid regex injection.
         if len(pattern) > MAX_REGEX_LENGTH:
             raise HTTPException(
                 status_code=400,
                 detail=f"Regex too long (max {MAX_REGEX_LENGTH} chars)",
             )
-        regex_pattern, supports_timeout = _compile_bounded_pattern(pattern)
+        regex_pattern, supports_timeout = _compile_literal_pattern(pattern)
         for i, line in enumerate(lines):
-            # lgtm[py/regex-injection] - regex execution is length-limited and timed out
             match = _search_bounded(regex_pattern, line, supports_timeout)
             if match:
                 matches.append(
@@ -595,12 +599,11 @@ async def log_search_tool(request: LogSearchRequest) -> Dict[str, Any]:
                         detail=f"Regex too long (max {MAX_REGEX_LENGTH} chars)",
                     )
                 try:
-                    pattern, supports_timeout = _compile_bounded_pattern(
+                    pattern, supports_timeout = _compile_literal_pattern(
                         request.query,
                         ignore_case=not request.case_sensitive,
                     )
                     for i, line in enumerate(lines):
-                        # lgtm[py/regex-injection] - regex execution is length-limited and timed out
                         if _search_bounded(pattern, line, supports_timeout):
                             context_start = max(0, i - request.context_lines)
                             context_end = min(len(lines), i + request.context_lines + 1)

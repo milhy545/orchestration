@@ -257,10 +257,13 @@ def _read_secret_from_vault(vault_path: str, key: str) -> Optional[str]:
         with urllib.request.urlopen(request, timeout=10) as response:
             payload = json.loads(response.read().decode("utf-8"))
     except urllib.error.HTTPError as exc:
-        detail = exc.read().decode("utf-8", errors="replace")
         if exc.code == 404:
             return None
-        logger.error("Vault secret read failed for %s: %s", vault_path, detail)
+        logger.error(
+            "Vault secret read failed for %s with HTTP %s",
+            vault_path,
+            exc.code,
+        )
         raise HTTPException(status_code=502, detail="Vault secret read failed") from exc
     except urllib.error.URLError as exc:
         logger.error("Vault secret endpoint unreachable: %s", exc)

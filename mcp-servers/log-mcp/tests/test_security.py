@@ -334,15 +334,17 @@ class TestLogSearchEndpoint:
         assert response.status_code == 200
 
     def test_log_search_invalid_regex(self):
-        """Test that invalid regex is rejected"""
+        """Test that unsafe regex input is treated as literal search text."""
         log_file = _create_test_log()
         response = client.post("/tools/log_search", json={
             "query": "[invalid(regex",
             "sources": [str(log_file)],
             "search_type": "regex"
         })
-        # 400 or 500 - both indicate error was caught
-        assert response.status_code in [400, 500]
+        assert response.status_code == 200
+        payload = response.json()
+        assert payload["search_type"] == "regex"
+        assert payload["total_matches"] == 0
 
 
 class TestHealthEndpoint:
