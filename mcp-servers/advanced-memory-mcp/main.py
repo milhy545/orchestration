@@ -75,28 +75,38 @@ class HttpQdrantClient:
         self.url = url.rstrip("/")
         self.timeout = timeout
 
-    def _request(self, method: str, path: str, payload: dict[str, Any] | None = None) -> dict[str, Any]:
+    def _request(
+        self, method: str, path: str, payload: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
         data = None
         headers = {"Content-Type": "application/json"}
         if payload is not None:
             data = json.dumps(payload).encode("utf-8")
-        request = urllib.request.Request(f"{self.url}{path}", data=data, headers=headers, method=method)
+        request = urllib.request.Request(
+            f"{self.url}{path}", data=data, headers=headers, method=method
+        )
         try:
             with urllib.request.urlopen(request, timeout=self.timeout) as response:
                 raw = response.read().decode("utf-8")
                 return json.loads(raw) if raw else {}
         except urllib.error.HTTPError as exc:
             detail = exc.read().decode("utf-8", errors="ignore")
-            raise RuntimeError(f"Qdrant HTTP {exc.code}: {detail or exc.reason}") from exc
+            raise RuntimeError(
+                f"Qdrant HTTP {exc.code}: {detail or exc.reason}"
+            ) from exc
         except urllib.error.URLError as exc:
             raise RuntimeError(f"Qdrant unreachable: {exc.reason}") from exc
 
     def get_collections(self) -> CollectionsResponse:
         payload = self._request("GET", "/collections")
         items = payload.get("result", {}).get("collections", [])
-        return CollectionsResponse(collections=[CollectionInfo(name=item["name"]) for item in items])
+        return CollectionsResponse(
+            collections=[CollectionInfo(name=item["name"]) for item in items]
+        )
 
-    def create_collection(self, collection_name: str, vectors_config: VectorParams) -> None:
+    def create_collection(
+        self, collection_name: str, vectors_config: VectorParams
+    ) -> None:
         self._request(
             "PUT",
             f"/collections/{collection_name}",
@@ -138,7 +148,9 @@ class HttpQdrantClient:
                     for condition in query_filter.must
                 ]
             }
-        response = self._request("POST", f"/collections/{collection_name}/points/search", payload)
+        response = self._request(
+            "POST", f"/collections/{collection_name}/points/search", payload
+        )
         hits = response.get("result", [])
         return [
             SearchHit(
@@ -170,8 +182,7 @@ def get_provider_client() -> ProviderClient:
 
 async def ensure_pg_table() -> None:
     async with db_pool.acquire() as conn:
-        await conn.execute(
-            """
+        await conn.execute("""
             CREATE TABLE IF NOT EXISTS advanced_memories (
                 id SERIAL PRIMARY KEY,
                 content TEXT NOT NULL,
@@ -180,8 +191,7 @@ async def ensure_pg_table() -> None:
                 embedding_id TEXT NOT NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
-            """
-        )
+            """)
 
 
 def ensure_qdrant_collection(vector_size: int) -> None:
@@ -363,7 +373,9 @@ async def call_tool(request: ToolCallRequest) -> Dict[str, Any]:
     except ProviderError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"Tool execution failed: {str(exc)}") from exc
+        raise HTTPException(
+            status_code=500, detail=f"Tool execution failed: {str(exc)}"
+        ) from exc
 
 
 async def handle_store_memory(args: Dict[str, Any]) -> Dict[str, Any]:
@@ -448,7 +460,9 @@ async def handle_search_memories(args: Dict[str, Any]) -> List[Dict[str, Any]]:
             "id": row["id"],
             "content": row["content"],
             "category": row["category"],
-            "metadata": json.loads(row["metadata_json"]) if row["metadata_json"] else {},
+            "metadata": (
+                json.loads(row["metadata_json"]) if row["metadata_json"] else {}
+            ),
             "created_at": row["created_at"].isoformat(),
         }
         for row in rows
