@@ -97,6 +97,15 @@ jobs:
           echo "No tests found for ${{ matrix.service }}, skipping pytest."
         fi
 
+    - name: Check Codecov availability
+      id: codecov_check
+      run: |
+        if [ -n "${{ secrets.CODECOV_TOKEN }}" ]; then
+          echo "enabled=true" >> "$GITHUB_OUTPUT"
+        else
+          echo "enabled=false" >> "$GITHUB_OUTPUT"
+        fi
+
     - name: Run pytest with coverage for ${{ matrix.service }}
       if: steps.test_check.outputs.has_tests == 'true'
       run: |
@@ -113,7 +122,7 @@ jobs:
           mcp-servers/${{ matrix.service }}/tests/
 
     - name: Upload coverage to Codecov
-      if: steps.test_check.outputs.has_tests == 'true' && secrets.CODECOV_TOKEN != ''
+      if: steps.test_check.outputs.has_tests == 'true' && steps.codecov_check.outputs.enabled == 'true'
       continue-on-error: true
       uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de # v5.5.2
       with:
