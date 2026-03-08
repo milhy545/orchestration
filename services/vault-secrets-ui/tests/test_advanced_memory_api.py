@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from urllib.parse import urlparse
 
 import httpx
 from fastapi.testclient import TestClient
@@ -86,13 +87,13 @@ def test_provider_discovery_endpoint(monkeypatch, tmp_path: Path) -> None:
             return False
 
         async def get(self, url: str, headers=None):
-            if "generativelanguage.googleapis.com" in url:
+            if urlparse(url).netloc == "generativelanguage.googleapis.com":
                 return httpx.Response(
                     status_code=200,
                     request=httpx.Request("GET", url),
                     json={"models": [{"name": "models/gemini-embedding-001", "supportedGenerationMethods": ["embedContent"]}]},
                 )
-            if "api.inceptionlabs.ai" in url:
+            if urlparse(url).netloc == "api.inceptionlabs.ai":
                 return httpx.Response(
                     status_code=200,
                     request=httpx.Request("GET", url),
