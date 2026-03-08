@@ -10,6 +10,8 @@ from pathlib import Path
 
 import pytest
 
+pytest.importorskip("google.genai")
+
 # Ensure the parent directory is in the Python path for imports
 parent_dir = Path(__file__).resolve().parent.parent
 if str(parent_dir) not in sys.path:
