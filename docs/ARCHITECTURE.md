@@ -182,9 +182,9 @@ zen_mcp_server.py (408 lines, 16.4KB)
 - Embeddings: sentence-transformers
 - Database: PostgreSQL for metadata
 
-#### 6. Research MCP (Port 7011)
-**Container**: `mcp-research`
-**Purpose**: Research and web search operations
+#### 6. Perplexity HUB (Port 7011)
+**Container**: `mcp-perplexity-hub`
+**Purpose**: Research, cited retrieval, and optional synthesis operations
 **Tools**: 3 tools
 - `research_query`: Research queries
 - `perplexity_search`: Perplexity AI integration
@@ -482,7 +482,7 @@ services:
 | Terminal MCP | 512MB | 0.5 CPU | 500MB | Limited |
 | Database MCP | 512MB | 0.5 CPU | 500MB | Horizontal |
 | Memory MCP | 1GB | 0.5 CPU | 2GB | Vertical |
-| Research MCP | 512MB | 0.5 CPU | 1GB | Horizontal |
+| Perplexity HUB | 512MB | 0.5 CPU | 1GB | Horizontal |
 | Transcriber MCP | 2GB | 1.0 CPU | 3GB | Vertical |
 | PostgreSQL | 1GB | 0.5 CPU | 10GB | Vertical |
 | Redis | 512MB | 0.25 CPU | 2GB | Horizontal |
@@ -545,7 +545,7 @@ MEMORY_EMBEDDING_MODEL=sentence-transformers/all-MiniLM-L6-v2
 MEMORY_MAX_CONTEXT_SIZE=4096
 MEMORY_SIMILARITY_THRESHOLD=0.7
 
-# Research MCP
+# Perplexity HUB
 PERPLEXITY_API_KEY=your_perplexity_key
 WEB_SEARCH_ENGINE=google
 SEARCH_RESULT_LIMIT=20

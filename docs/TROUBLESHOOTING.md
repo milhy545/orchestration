@@ -99,7 +99,7 @@ docker logs mcp-git --tail=20
 docker logs mcp-terminal --tail=20
 docker logs mcp-database --tail=20
 docker logs mcp-memory --tail=20
-docker logs mcp-research --tail=20
+docker logs mcp-perplexity-hub --tail=20
 docker logs mcp-transcriber --tail=20
 
 # Database logs

@@ -52,7 +52,7 @@ MCP_SERVICES = {
     },
     'research': {
         'port': 8011,
-        'container': 'mcp-research',
+        'container': 'mcp-perplexity-hub',
         'tools': ['research_query', 'web_search'],
         'ai_enhanced': True
     }

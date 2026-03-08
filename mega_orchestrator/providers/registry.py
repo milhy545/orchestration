@@ -18,9 +18,9 @@ from typing import Dict, List, Optional, Any, Union, Tuple
 from dataclasses import dataclass
 from enum import Enum
 import json
-from pathlib import Path
 import aiohttp
 import asyncpg
+from mega_orchestrator.utils.secrets import load_secret
 
 class ProviderType(Enum):
     """Types of AI providers"""
@@ -89,14 +89,16 @@ class ModelProviderRegistry:
         
     async def _detect_provider_keys(self):
         """Automatická detekce API klíčů z prostředí"""
+
+        def _is_real_secret(value: Optional[str]) -> bool:
+            if not value:
+                return False
+            normalized = value.strip().lower()
+            return normalized != "" and not normalized.startswith("your_")
         
         # Anthropic detection
-        anthropic_key = (
-            os.getenv("ANTHROPIC_API_KEY") or 
-            self._read_key_from_file("anthropic") or
-            self._read_key_from_config("ANTHROPIC_API_KEY")
-        )
-        if anthropic_key and anthropic_key != "your_anthropic_api_key_here":
+        anthropic_key = load_secret("ANTHROPIC_API_KEY")
+        if _is_real_secret(anthropic_key):
             self.providers["anthropic"] = ProviderConfig(
                 name="Anthropic",
                 type=ProviderType.ANTHROPIC,
@@ -108,12 +110,8 @@ class ModelProviderRegistry:
             )
             
         # OpenAI detection  
-        openai_key = (
-            os.getenv("OPENAI_API_KEY") or
-            self._read_key_from_file("openai") or
-            self._read_key_from_config("OPENAI_API_KEY")
-        )
-        if openai_key and openai_key != "your_openai_api_key_here":
+        openai_key = load_secret("OPENAI_API_KEY")
+        if _is_real_secret(openai_key):
             self.providers["openai"] = ProviderConfig(
                 name="OpenAI",
                 type=ProviderType.OPENAI,
@@ -125,13 +123,8 @@ class ModelProviderRegistry:
             )
             
         # Google/Gemini detection
-        gemini_key = (
-            os.getenv("GEMINI_API_KEY") or
-            os.getenv("GOOGLE_API_KEY") or
-            self._read_key_from_file("gemini") or
-            self._read_key_from_config("GEMINI_API_KEY")
-        )
-        if gemini_key and gemini_key != "your_gemini_api_key_here":
+        gemini_key = load_secret("GEMINI_API_KEY") or load_secret("GOOGLE_API_KEY")
+        if _is_real_secret(gemini_key):
             self.providers["google"] = ProviderConfig(
                 name="Google",
                 type=ProviderType.GOOGLE,
@@ -143,12 +136,8 @@ class ModelProviderRegistry:
             )
             
         # OpenRouter detection (fallback provider)
-        openrouter_key = (
-            os.getenv("OPENROUTER_API_KEY") or
-            self._read_key_from_file("openrouter") or
-            self._read_key_from_config("OPENROUTER_API_KEY")
-        )
-        if openrouter_key and openrouter_key != "your_openrouter_api_key_here":
+        openrouter_key = load_secret("OPENROUTER_API_KEY")
+        if _is_real_secret(openrouter_key):
             self.providers["openrouter"] = ProviderConfig(
                 name="OpenRouter", 
                 type=ProviderType.OPENROUTER,
@@ -171,32 +160,6 @@ class ModelProviderRegistry:
                 health_endpoint="http://192.168.0.41:11434/api/tags"
             )
             
-    def _read_key_from_file(self, provider: str) -> Optional[str]:
-        """Read API key from config/keys file"""
-        try:
-            keys_file = Path("/home/milhy777/Develop/temp-orchestration/config/keys")
-            if keys_file.exists():
-                with open(keys_file) as f:
-                    for line in f:
-                        if f"{provider.upper()}_API_KEY=" in line:
-                            return line.split('=')[1].strip()
-        except Exception as e:
-            logging.debug(f"Could not read {provider} key from file: {e}")
-        return None
-        
-    def _read_key_from_config(self, key_name: str) -> Optional[str]:
-        """Read API key from HAS orchestration config"""
-        try:
-            env_file = Path("/tmp/has_env_backup") 
-            if env_file.exists():
-                with open(env_file) as f:
-                    for line in f:
-                        if f"{key_name}=" in line:
-                            return line.split('=')[1].strip()
-        except Exception as e:
-            logging.debug(f"Could not read {key_name} from HAS config: {e}")
-        return None
-        
     async def _test_ollama_connection(self) -> bool:
         """Test OLLAMA server connectivity"""
         try:

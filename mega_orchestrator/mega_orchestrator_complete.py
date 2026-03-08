@@ -32,12 +32,45 @@ import asyncpg
 from mega_orchestrator.providers.registry import ModelProviderRegistry, initialize_provider_registry
 from mega_orchestrator.modes.sage_router import SAGEModeRouter, SAGEMode
 from mega_orchestrator.mcp_tooling import build_mcp_tools
+from mega_orchestrator.utils.secrets import load_secret
 from mega_orchestrator.utils.conversation_memory import ConversationMemory
 from mega_orchestrator.utils.file_storage import FileStorage, FileHandlingMode
 
 # Version and build info
 VERSION = "1.0.0"
 BUILD_DATE = "2025-09-02"
+
+DEFAULT_EXPOSED_SERVICES = [
+    "filesystem",
+    "git",
+    "terminal",
+    "database",
+    "memory",
+    "security",
+    "config",
+    "log",
+    "research",
+    "marketplace",
+    "forai",
+    "mqtt",
+]
+
+COMPACT_TOOL_ALLOWLIST = {
+    "file_read",
+    "file_write",
+    "file_list",
+    "git_status",
+    "git_log",
+    "execute_command",
+    "db_query",
+    "store_memory",
+    "search_memories",
+    "research_query",
+    "get_secret",
+    "skills_list",
+    "forai_query",
+    "get_mqtt_status",
+}
 
 @dataclass
 class MCPServiceConfig:
@@ -75,6 +108,16 @@ class MegaOrchestrator:
         
         # Core components
         self.services = self._init_mcp_services()
+        profile = os.getenv("MEGA_ENDPOINT_PROFILE", "compact").strip().lower()
+        self.endpoint_profile = profile if profile in {"compact", "full"} else "compact"
+        configured_services = [
+            item.strip()
+            for item in os.getenv(
+                "MEGA_EXPOSED_SERVICES", ",".join(DEFAULT_EXPOSED_SERVICES)
+            ).split(",")
+            if item.strip()
+        ]
+        self.exposed_services = set(configured_services)
         self.provider_registry = None
         self.conversation_memory = ConversationMemory()
         self.file_storage = FileStorage()
@@ -100,7 +143,7 @@ class MegaOrchestrator:
         return {
             "filesystem": MCPServiceConfig(
                 name="Filesystem MCP",
-                host="filesystem-mcp",
+                host="mcp-filesystem",
                 port=8000,
                 tools=["file_read", "file_write", "file_list", "file_search", "file_analyze"],
                 sage_modes=[SAGEMode.FILESYSTEM, SAGEMode.CODE, SAGEMode.DOCS],
@@ -108,7 +151,7 @@ class MegaOrchestrator:
             ),
             "git": MCPServiceConfig(
                 name="Git MCP", 
-                host="git-mcp",
+                host="mcp-git",
                 port=8000,
                 tools=["git_status", "git_commit", "git_push", "git_log", "git_diff"],
                 sage_modes=[SAGEMode.CODE],
@@ -116,7 +159,7 @@ class MegaOrchestrator:
             ),
             "terminal": MCPServiceConfig(
                 name="Terminal MCP",
-                host="terminal-mcp",
+                host="mcp-terminal",
                 port=8000,
                 tools=["terminal_exec", "shell_command", "system_info", "create_terminal", "execute_command"],
                 sage_modes=[SAGEMode.DEBUG, SAGEMode.TERMINAL],
@@ -124,7 +167,7 @@ class MegaOrchestrator:
             ),
             "database": MCPServiceConfig(
                 name="Database MCP",
-                host="database-mcp",
+                host="mcp-database",
                 port=8000,
                 tools=["db_query", "db_connect", "db_schema", "db_backup"],
                 sage_modes=[SAGEMode.ANALYZE],
@@ -132,57 +175,63 @@ class MegaOrchestrator:
             ),
             "memory": MCPServiceConfig(
                 name="Memory MCP",
-                host="memory-mcp",
+                host="mcp-memory",
                 port=8000,
                 tools=["store_memory", "search_memories", "get_context", "memory_stats", "list_memories"],
                 sage_modes=[SAGEMode.MEMORY, SAGEMode.CHAT],
                 priority=1
             ),
             "research": MCPServiceConfig(
-                name="Research MCP",
-                host="research-mcp",
+                name="Perplexity HUB",
+                host="perplexity-hub",
                 port=8000,
                 tools=["research_query", "perplexity_search", "web_search", "search_web"],
                 sage_modes=[SAGEMode.ANALYZE, SAGEMode.DOCS],
                 priority=1
             ),
-            "advanced_memory": MCPServiceConfig(
-                name="Advanced Memory MCP",
-                host="advanced-memory-mcp",
+            "security": MCPServiceConfig(
+                name="Security MCP",
+                host="mcp-security",
                 port=8000,
-                tools=["vector_search", "semantic_similarity"],
-                sage_modes=[SAGEMode.MEMORY, SAGEMode.ANALYZE],
-                priority=2
+                tools=["jwt_token", "password_hash", "encrypt_data", "decrypt_data", "ssl_check", "security_audit"],
+                sage_modes=[SAGEMode.DEBUG, SAGEMode.ANALYZE],
+                priority=1
             ),
-            "advanced_memory_v2": MCPServiceConfig(
-                name="Advanced Memory v2",
-                host="gmail-mcp",
+            "config": MCPServiceConfig(
+                name="Config MCP",
+                host="mcp-config",
                 port=8000,
-                tools=["conversation_thread", "file_deduplication", "context_continuation"],
-                sage_modes=[SAGEMode.MEMORY, SAGEMode.CHAT],
-                priority=3
+                tools=["env_vars", "config_file", "validate", "backup", "get_secret"],
+                sage_modes=[SAGEMode.DEBUG, SAGEMode.DOCS],
+                priority=1
             ),
-            "transcriber": MCPServiceConfig(
-                name="Transcriber MCP",
-                host="transcriber-mcp",
+            "log": MCPServiceConfig(
+                name="Log MCP",
+                host="mcp-log",
                 port=8000,
-                tools=["transcribe_webm", "transcribe_url", "audio_convert"],
-                sage_modes=[SAGEMode.ANALYZE],
-                priority=2,
-                timeout=60  # Longer timeout for transcription
+                tools=["log_analysis", "log_monitor", "log_aggregate", "log_search"],
+                sage_modes=[SAGEMode.DEBUG, SAGEMode.ANALYZE],
+                priority=1
             ),
-            "video_processing": MCPServiceConfig(
-                name="Video Processing MCP",
-                host="forai-mcp",
+            "forai": MCPServiceConfig(
+                name="FORAI MCP",
+                host="mcp-forai",
                 port=8000,
-                tools=["process_video", "extract_frames", "video_analysis"],
-                sage_modes=[SAGEMode.ANALYZE],
-                priority=2,
-                timeout=120
+                tools=["forai_analyze", "forai_process", "forai_query"],
+                sage_modes=[SAGEMode.CODE, SAGEMode.ANALYZE],
+                priority=1
+            ),
+            "mqtt": MCPServiceConfig(
+                name="MQTT MCP",
+                host="mcp-mqtt",
+                port=8000,
+                tools=["publish_message", "subscribe_topic", "get_mqtt_status", "list_messages"],
+                sage_modes=[SAGEMode.ANALYZE, SAGEMode.TERMINAL],
+                priority=1
             ),
             "marketplace": MCPServiceConfig(
                 name="Marketplace MCP",
-                host="marketplace-mcp",
+                host="mcp-marketplace",
                 port=8000,
                 tools=[
                     "skills_list",
@@ -233,7 +282,7 @@ class MegaOrchestrator:
         logging.info(f"✅ Redis connection established: {redis_url}")
         
         # Connect to PostgreSQL
-        db_url = os.getenv("MCP_DATABASE_URL", "postgresql://mcp_admin:change_me_in_production@postgresql:5432/mcp_unified")
+        db_url = os.getenv("MCP_DATABASE_URL", "")
         
         self.db_pool = await asyncpg.create_pool(db_url, min_size=2, max_size=10)
         logging.info("✅ PostgreSQL connection pool established")
@@ -352,11 +401,17 @@ class MegaOrchestrator:
     def _get_mcp_tool_specs(self) -> List[Dict[str, Any]]:
         """Return MCP-compatible tool definitions for the currently exposed working subset."""
         available_tools: List[str] = []
-        for service_name, config in self.services.items():
-            if service_name in {"advanced_memory"}:
-                continue
+        for _service_name, config in self._iter_exposed_services():
             available_tools.extend(config.tools or [])
-        return build_mcp_tools(available_tools)
+        specs = build_mcp_tools(available_tools)
+        if self.endpoint_profile == "compact":
+            specs = [tool for tool in specs if tool["name"] in COMPACT_TOOL_ALLOWLIST]
+        return specs
+
+    def _iter_exposed_services(self):
+        for service_name, config in self.services.items():
+            if service_name in self.exposed_services:
+                yield service_name, config
 
     def _get_mcp_resources(self) -> List[Dict[str, Any]]:
         """Return stable MCP resources for client-side inspection."""
@@ -510,7 +565,7 @@ class MegaOrchestrator:
             }
         elif uri.startswith("mega://services/"):
             service_key = uri.split("/", 3)[-1]
-            if service_key in self.services:
+            if service_key in self.services and service_key in self.exposed_services:
                 config = self.services[service_key]
                 payload = {
                     "service": service_key,
@@ -542,7 +597,7 @@ class MegaOrchestrator:
 
     def _build_services_snapshot(self) -> Dict[str, Any]:
         services_info = {}
-        for name, config in self.services.items():
+        for name, config in self._iter_exposed_services():
             services_info[name] = {
                 "name": config.name,
                 "host": config.host,
@@ -565,6 +620,7 @@ class MegaOrchestrator:
             "version": self.version,
             "build_date": self.build_date,
             "status": "healthy",
+            "endpoint_profile": self.endpoint_profile,
             "port": self.port,
             "backup_mode": self.backup_mode,
             "timestamp": time.time(),
@@ -671,12 +727,12 @@ class MegaOrchestrator:
     def _get_service_for_tool(self, tool: str, mode: SAGEMode) -> Optional[str]:
         """Find appropriate service based on tool and SAGE mode"""
         # Primary: tool + mode match
-        for service_name, config in self.services.items():
+        for service_name, config in self._iter_exposed_services():
             if tool in (config.tools or []) and mode in (config.sage_modes or []):
                 return service_name
                 
         # Fallback: tool match only
-        for service_name, config in self.services.items():
+        for service_name, config in self._iter_exposed_services():
             if tool in (config.tools or []):
                 return service_name
                 
@@ -728,13 +784,14 @@ class MegaOrchestrator:
         return f"{header_b64}.{payload_b64}.{_b64(signature)}"
 
     def _get_marketplace_token(self) -> Optional[str]:
-        """Return a marketplace bearer token from env or a local default-secret fallback."""
-        token = os.getenv("MARKETPLACE_JWT_TOKEN", "").strip()
+        """Return a marketplace bearer token from env or mint one from configured JWT secret."""
+        token = load_secret("MARKETPLACE_JWT_TOKEN")
         if token:
             return token
 
-        # Compose currently injects this default into marketplace when .env does not override it.
-        secret = "change_me_market_jwt"
+        secret = load_secret("JWT_SECRET")
+        if not secret:
+            return None
         now = int(time.time())
         payload = {
             "sub": "mega-orchestrator",
@@ -849,18 +906,32 @@ class MegaOrchestrator:
                     "url": f"{base_url}/memory/stats",
                 }
 
-        if service.name == "Research MCP":
+        if service.name == "Perplexity HUB":
             query = arguments.get("query")
             if query is None:
                 query = arguments.get("q", "")
             model = arguments.get("model", "sonar-pro")
             if tool in {"web_search", "search_web", "research_query", "perplexity_search"}:
+                mode = arguments.get("mode")
+                if mode is None:
+                    if arguments.get("response_schema"):
+                        mode = "structured"
+                    elif arguments.get("domains"):
+                        mode = "domain"
+                    else:
+                        mode = "news"
                 return {
                     "method": "POST",
-                    "url": f"{base_url}/research/search",
-                    "params": {
+                    "url": f"{base_url}/hub/query",
+                    "payload": {
                         "query": query,
+                        "mode": mode,
                         "model": model,
+                        "domains": arguments.get("domains", []),
+                        "recency": arguments.get("recency"),
+                        "response_schema": arguments.get("response_schema"),
+                        "synthesis_provider": arguments.get("synthesis_provider", "none"),
+                        "synthesis_model": arguments.get("synthesis_model"),
                     },
                 }
 
@@ -976,6 +1047,52 @@ class MegaOrchestrator:
                     },
                 }
 
+        if service.name == "Security MCP":
+            return {
+                "method": "POST",
+                "url": f"{base_url}/tools/{tool}",
+                "payload": arguments,
+            }
+
+        if service.name == "Config MCP":
+            return {
+                "method": "POST",
+                "url": f"{base_url}/tools/{tool}",
+                "payload": arguments,
+            }
+
+        if service.name == "Log MCP":
+            return {
+                "method": "POST",
+                "url": f"{base_url}/tools/{tool}",
+                "payload": arguments,
+            }
+
+        if service.name == "FORAI MCP":
+            return {
+                "method": "POST",
+                "url": f"{base_url}/tools/call",
+                "payload": {
+                    "name": tool,
+                    "arguments": arguments,
+                },
+            }
+
+        if service.name == "MQTT MCP":
+            return {
+                "method": "POST",
+                "url": f"{base_url}/mcp",
+                "payload": {
+                    "jsonrpc": "2.0",
+                    "id": context_id,
+                    "method": "tools/call",
+                    "params": {
+                        "name": tool,
+                        "arguments": arguments,
+                    },
+                },
+            }
+
         if service.name == "Marketplace MCP":
             return {
                 "method": "POST",
@@ -1077,7 +1194,7 @@ class MegaOrchestrator:
         """Handle direct service request bypass"""
         service_name = request.match_info['service']
         
-        if service_name not in self.services:
+        if service_name not in self.services or service_name not in self.exposed_services:
             return web.json_response({"error": f"Service {service_name} not found"}, status=404)
             
         try:
@@ -1103,6 +1220,7 @@ class MegaOrchestrator:
             "version": self.version,
             "build_date": self.build_date,
             "status": "healthy",
+            "endpoint_profile": self.endpoint_profile,
             "port": self.port,
             "backup_mode": self.backup_mode,
             "timestamp": time.time(),
@@ -1155,7 +1273,7 @@ class MegaOrchestrator:
         """Check health of all MCP services"""
         health_results = {}
         
-        for name, service in self.services.items():
+        for name, service in self._iter_exposed_services():
             try:
                 url = f"http://{service.host}:{service.port}{service.health_endpoint}"
                 timeout = aiohttp.ClientTimeout(total=5)
@@ -1163,9 +1281,15 @@ class MegaOrchestrator:
                 async with aiohttp.ClientSession(timeout=timeout) as session:
                     async with session.get(url) as response:
                         if response.status == 200:
+                            response_data = {}
+                            try:
+                                response_data = await response.json()
+                            except Exception:
+                                response_data = {}
                             health_results[name] = {
                                 "status": "healthy",
                                 "port": service.port,
+                                "service": response_data.get("service", service.name),
                                 "response_time": response.headers.get("response-time", "unknown")
                             }
                         else:
@@ -1187,7 +1311,7 @@ class MegaOrchestrator:
         """Return service information"""
         services_info = {}
         
-        for name, config in self.services.items():
+        for name, config in self._iter_exposed_services():
             services_info[name] = {
                 "name": config.name,
                 "port": config.port,
@@ -1208,8 +1332,10 @@ class MegaOrchestrator:
         """Return comprehensive tools list"""
         all_tools = {}
         
-        for service_name, config in self.services.items():
+        for service_name, config in self._iter_exposed_services():
             for tool in (config.tools or []):
+                if self.endpoint_profile == "compact" and tool not in COMPACT_TOOL_ALLOWLIST:
+                    continue
                 if tool not in all_tools:
                     all_tools[tool] = []
                     
@@ -1223,6 +1349,7 @@ class MegaOrchestrator:
         return web.json_response({
             "orchestrator": "mega",
             "version": self.version,
+            "endpoint_profile": self.endpoint_profile,
             "tools": all_tools,
             "total_tools": len(all_tools)
         })

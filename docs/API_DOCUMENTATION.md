@@ -670,7 +670,7 @@ curl -X POST http://192.168.0.58:7000/mcp \
   }'
 ```
 
-## 🔍 Research MCP API (Port 7011)
+## 🔍 Perplexity HUB API (Port 7011)
 
 ### research_query
 Execute research queries.
@@ -1047,7 +1047,7 @@ The first functional version uses a restart-based model:
 First-wave runtime consumers:
 
 - `mega-orchestrator`
-- `research-mcp`
+- `perplexity-hub`
 - `zen-mcp-server`
 - `gmail-mcp`
 - `security-mcp`

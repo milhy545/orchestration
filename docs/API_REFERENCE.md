@@ -262,7 +262,7 @@ curl -X POST http://localhost:7000/mcp \
 
 ---
 
-## 🔍 Research MCP (Port 7011)
+## 🔍 Perplexity HUB (Port 7011)
 
 ### `research_query`
 Perform research using Perplexity API
