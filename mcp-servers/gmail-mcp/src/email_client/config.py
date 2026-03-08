@@ -1,5 +1,6 @@
 import os
 import logging
+from pathlib import Path
 from dotenv import load_dotenv
 
 # Configure logging (optional here, but good practice if config needs logging)
@@ -20,12 +21,20 @@ else:
         # logging.warning(".env file not found in standard locations.") # Optional warning
 
 # Email configuration
+def _load_setting(name: str, default: str) -> str:
+    file_path = os.getenv(f"{name}_FILE", "").strip()
+    if file_path:
+        value = Path(file_path).read_text(encoding="utf-8").strip()
+        return value or default
+    return os.getenv(name, default)
+
+
 EMAIL_CONFIG = {
-    "email": os.getenv("EMAIL_ADDRESS", "your.email@gmail.com"),
-    "password": os.getenv("EMAIL_PASSWORD", "your-app-specific-password"),
-    "imap_server": os.getenv("IMAP_SERVER", "imap.gmail.com"),
-    "smtp_server": os.getenv("SMTP_SERVER", "smtp.gmail.com"),
-    "smtp_port": int(os.getenv("SMTP_PORT", "587"))
+    "email": _load_setting("EMAIL_ADDRESS", "your.email@gmail.com"),
+    "password": _load_setting("EMAIL_PASSWORD", "your-app-specific-password"),
+    "imap_server": _load_setting("IMAP_SERVER", "imap.gmail.com"),
+    "smtp_server": _load_setting("SMTP_SERVER", "smtp.gmail.com"),
+    "smtp_port": int(_load_setting("SMTP_PORT", "587"))
 }
 
 # Constants

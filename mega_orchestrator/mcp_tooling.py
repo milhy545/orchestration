@@ -254,7 +254,7 @@ MCP_TOOL_DEFINITIONS: Dict[str, Dict[str, Any]] = {
         },
     },
     "research_query": {
-        "description": "Run a web research query through the research MCP.",
+        "description": "Run a web research query through the Perplexity HUB.",
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -264,8 +264,27 @@ MCP_TOOL_DEFINITIONS: Dict[str, Dict[str, Any]] = {
             "required": ["query"],
         },
     },
+    "get_secret": {
+        "description": "Read one allowed secret from Vault-backed orchestration storage.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "service": {
+                    "type": "string",
+                    "description": "Allowed secret scope such as common-mcp or gemini-cli.",
+                },
+                "key": {"type": "string", "description": "Secret key to read."},
+                "reveal": {
+                    "type": "boolean",
+                    "default": False,
+                    "description": "Return the raw value when true; otherwise return masked metadata.",
+                },
+            },
+            "required": ["service", "key"],
+        },
+    },
     "perplexity_search": {
-        "description": "Run a Perplexity-backed search query.",
+        "description": "Run a Perplexity HUB search query.",
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -276,7 +295,7 @@ MCP_TOOL_DEFINITIONS: Dict[str, Dict[str, Any]] = {
         },
     },
     "web_search": {
-        "description": "Run a web search query via the research MCP.",
+        "description": "Run a web search query via the Perplexity HUB.",
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -287,7 +306,7 @@ MCP_TOOL_DEFINITIONS: Dict[str, Dict[str, Any]] = {
         },
     },
     "search_web": {
-        "description": "Alias for web search via the research MCP.",
+        "description": "Alias for web search via the Perplexity HUB.",
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -342,6 +361,21 @@ MCP_TOOL_DEFINITIONS: Dict[str, Dict[str, Any]] = {
             },
             "required": ["archive_url", "sha256"],
         },
+    },
+    "forai_query": {
+        "description": "Query dependencies and relationships from FORAI analysis.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "path": {"type": "string"},
+                "query": {"type": "string"},
+            },
+            "required": ["path", "query"],
+        },
+    },
+    "get_mqtt_status": {
+        "description": "Return MQTT connectivity and subscription status.",
+        "inputSchema": {"type": "object", "properties": {}},
     },
 }
 

@@ -354,7 +354,7 @@ class TestHealthEndpoint:
         assert response.status_code == 200
         data = response.json()
         assert data["status"] == "healthy"
-        assert data["service"] == "Log MCP"
+        assert data["service"] == "log-mcp"
 
 
 class TestToolsList:

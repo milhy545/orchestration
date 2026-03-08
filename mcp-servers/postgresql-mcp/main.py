@@ -201,7 +201,7 @@ async def lifespan(app: FastAPI):
     try:
         db_url = os.getenv(
             "DATABASE_URL",
-            "postgresql://mcp_admin:change_me_in_production@postgresql:5432/mcp_unified",
+            "",
         )
         db_pool = await asyncpg.create_pool(
             db_url, min_size=5, max_size=20, command_timeout=60

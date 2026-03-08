@@ -70,7 +70,16 @@ class CommandResponse(BaseModel):
 
 @app.get("/health")
 async def health():
-    return {"status": "ok", "timestamp": datetime.now().isoformat()}
+    return {
+        "status": "healthy",
+        "service": "terminal-mcp",
+        "version": "1.0.0",
+        "timestamp": datetime.now().isoformat(),
+        "checks": {
+            "allowed_commands_count": len(ALLOWED_COMMANDS),
+            "allowed_working_dirs_count": len(ALLOWED_WORKING_DIRS),
+        },
+    }
 
 
 def validate_working_directory(cwd: str) -> str:

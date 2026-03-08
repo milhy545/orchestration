@@ -2,13 +2,14 @@ services:
   vault:
     image: hashicorp/vault:1.16
     container_name: mcp-vault
+    profiles: ["manual-only"]
     cap_add:
       - IPC_LOCK
-    command: server -dev -dev-root-token-id=${VAULT_DEV_ROOT_TOKEN:-dev-root-token} -dev-listen-address=0.0.0.0:8200
+    entrypoint: ["vault"]
+    command: server -config=/vault/config/server.hcl
     ports:
       - "${VAULT_PORT:-7070}:8200"
     environment:
-      - VAULT_DEV_ROOT_TOKEN=${VAULT_DEV_ROOT_TOKEN:-dev-root-token}
       - VAULT_ADDR=http://127.0.0.1:8200
     healthcheck:
       test:
@@ -16,13 +17,15 @@ services:
           "CMD",
           "/bin/sh",
           "-lc",
-          "export VAULT_ADDR=http://127.0.0.1:8200 VAULT_TOKEN=${VAULT_DEV_ROOT_TOKEN:-dev-root-token}; vault status >/dev/null 2>&1",
+          "export VAULT_ADDR=http://127.0.0.1:8200; vault status >/dev/null 2>&1; code=$$?; [ \"$$code\" -eq 0 ] || [ \"$$code\" -eq 2 ]",
         ]
       interval: 10s
       timeout: 5s
       retries: 10
       start_period: 5s
     volumes:
+      - ./infra/vault:/vault/config:ro
+      - vault-data:/vault/data
       - vault-runtime:/vault/runtime
     restart: unless-stopped
     networks:
@@ -34,7 +37,6 @@ services:
     entrypoint: ["/bin/sh", "/vault/config/bootstrap.sh"]
     environment:
       - VAULT_ADDR=http://vault:8200
-      - VAULT_DEV_ROOT_TOKEN=${VAULT_DEV_ROOT_TOKEN:-dev-root-token}
     depends_on:
       vault:
         condition: service_healthy
@@ -48,10 +50,10 @@ services:
   vault-agent-common:
     image: hashicorp/vault:1.16
     container_name: mcp-vault-agent-common
+    profiles: ["manual-only"]
     entrypoint: ["/bin/sh", "/vault/config/render-envs.sh"]
     environment:
       - VAULT_ADDR=http://vault:8200
-      - VAULT_DEV_ROOT_TOKEN=${VAULT_DEV_ROOT_TOKEN:-dev-root-token}
       - RENDER_INTERVAL_SECONDS=${RENDER_INTERVAL_SECONDS:-30}
     depends_on:
       vault-bootstrap:
@@ -68,6 +70,7 @@ services:
       context: ./services/vault-secrets-ui
       dockerfile: Dockerfile
     container_name: mcp-vault-secrets-ui
+    profiles: ["manual-only"]
     ports:
       - "${VAULT_WEBUI_PORT:-10000}:10000"
     environment:
@@ -95,12 +98,12 @@ services:
       - ./infra/vault:/vault/config:ro
       - vault-runtime:/vault/runtime:ro
 
-  research-mcp:
+  perplexity-hub:
     depends_on:
       - postgresql
       - redis
       - vault-agent-common
-    entrypoint: ["/bin/sh", "/vault/config/run-with-env.sh", "/vault/runtime/research-mcp.env"]
+    entrypoint: ["/bin/sh", "/vault/config/run-with-env.sh", "/vault/runtime/perplexity-hub.env"]
     command: ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
     volumes:
       - ./infra/vault:/vault/config:ro
@@ -155,6 +158,17 @@ services:
       - ./infra/vault:/vault/config:ro
       - vault-runtime:/vault/runtime:ro
 
+  config-mcp:
+    depends_on:
+      - vault-bootstrap
+    environment:
+      - VAULT_ADDR=http://vault:8200
+      - VAULT_TOKEN_FILE=/vault/runtime/read.token
+    volumes:
+      - vault-runtime:/vault/runtime:ro
+
 volumes:
   vault-runtime:
+    driver: local
+  vault-data:
     driver: local

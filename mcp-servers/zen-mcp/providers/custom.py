@@ -12,6 +12,7 @@ from .base import (
 )
 from .openai_compatible import OpenAICompatibleProvider
 from .openrouter_registry import OpenRouterModelRegistry
+from utils.secrets import load_env
 
 
 class CustomProvider(OpenAICompatibleProvider):
@@ -49,9 +50,9 @@ class CustomProvider(OpenAICompatibleProvider):
         """
         # Fall back to environment variables only if not provided
         if not base_url:
-            base_url = os.getenv("CUSTOM_API_URL", "")
+            base_url = load_env("CUSTOM_API_URL", "") or ""
         if not api_key:
-            api_key = os.getenv("CUSTOM_API_KEY", "")
+            api_key = load_env("CUSTOM_API_KEY", "") or ""
 
         if not base_url:
             raise ValueError(

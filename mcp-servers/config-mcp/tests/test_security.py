@@ -126,6 +126,7 @@ class TestEnvironmentVariableSecurity:
         })
         assert response.status_code == 200
         assert response.json()["value"] == "test_value"
+        assert response.json()["masked"] is False
 
     def test_env_var_list_with_prefix(self):
         """Test listing environment variables with prefix filter"""
@@ -167,6 +168,7 @@ class TestEnvironmentVariableSecurity:
         })
         assert response.status_code == 200
         assert response.json()["deleted"] is True
+        assert response.json()["masked"] is False
 
     def test_env_var_missing_key(self):
         """Test that operations requiring key fail without it"""
@@ -175,6 +177,63 @@ class TestEnvironmentVariableSecurity:
         })
         assert response.status_code == 400
         assert "key required" in response.json()["detail"].lower()
+
+    def test_env_var_get_masks_sensitive_values(self, monkeypatch):
+        monkeypatch.setenv("OPENAI_API_KEY", "super-secret-value")
+
+        response = client.post("/tools/env_vars", json={
+            "operation": "get",
+            "key": "OPENAI_API_KEY"
+        })
+        assert response.status_code == 200
+        assert response.json()["masked"] is True
+        assert response.json()["value"] != "super-secret-value"
+        assert "*" in response.json()["value"]
+
+    def test_env_var_list_masks_sensitive_values(self, monkeypatch):
+        monkeypatch.setenv("OPENAI_API_KEY", "super-secret-value")
+
+        response = client.post("/tools/env_vars", json={
+            "operation": "list",
+            "prefix": "OPENAI"
+        })
+        assert response.status_code == 200
+        assert response.json()["variables"]["OPENAI_API_KEY"] != "super-secret-value"
+        assert "*" in response.json()["variables"]["OPENAI_API_KEY"]
+
+    def test_env_var_set_rejects_protected_keys(self):
+        response = client.post("/tools/env_vars", json={
+            "operation": "set",
+            "key": "OPENAI_API_KEY",
+            "value": "should_fail"
+        })
+        assert response.status_code == 403
+        assert "protected" in response.json()["detail"].lower()
+
+    def test_env_var_delete_rejects_protected_keys(self, monkeypatch):
+        monkeypatch.setenv("VAULT_TOKEN", "secret-token")
+
+        response = client.post("/tools/env_vars", json={
+            "operation": "delete",
+            "key": "VAULT_TOKEN"
+        })
+        assert response.status_code == 403
+
+
+class TestHealthEndpointSecurity:
+    """Test health endpoint does not expose sensitive Vault metadata."""
+
+    def test_health_redacts_vault_operational_details(self):
+        response = client.get("/health")
+        assert response.status_code == 200
+        payload = response.json()
+        assert payload["vault"]["configured"] is True
+        assert payload["vault"]["reachable"] is True
+        assert isinstance(payload["vault"]["scope_count"], int)
+        assert "addr" not in payload["vault"]
+        assert "token_file" not in payload["vault"]
+        assert "scopes" not in payload["vault"]
+        assert "detail" not in payload
 
 
 class TestConfigFileOperations:
@@ -360,6 +419,54 @@ class TestBackupOperations:
             assert response.json()["deleted"] is True
 
 
+class TestSecretReadTool:
+    """Test Vault-backed secret reads."""
+
+    def test_get_secret_masked_by_default(self, monkeypatch):
+        monkeypatch.setattr(
+            module,
+            "_read_secret_from_vault",
+            lambda vault_path, key: "ntn_live_test_value",
+        )
+
+        response = client.post(
+            "/tools/get_secret",
+            json={"service": "gemini-cli", "key": "NOTION_API_KEY"},
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["found"] is True
+        assert data["service"] == "gemini-cli"
+        assert data["vault_path"] == "orchestration/common-mcp"
+        assert data["masked_value"].startswith("nt")
+        assert "value" not in data
+
+    def test_get_secret_reveal_returns_value(self, monkeypatch):
+        monkeypatch.setattr(
+            module,
+            "_read_secret_from_vault",
+            lambda vault_path, key: "notion-secret",
+        )
+
+        response = client.post(
+            "/tools/get_secret",
+            json={"service": "common-mcp", "key": "NOTION_API_KEY", "reveal": True},
+        )
+
+        assert response.status_code == 200
+        assert response.json()["value"] == "notion-secret"
+
+    def test_get_secret_unknown_scope_rejected(self):
+        response = client.post(
+            "/tools/get_secret",
+            json={"service": "unknown-scope", "key": "NOTION_API_KEY"},
+        )
+
+        assert response.status_code == 404
+        assert "unknown secret scope" in response.json()["detail"].lower()
+
+
 class TestHealthEndpoint:
     """Test health check endpoint"""
 
@@ -369,7 +476,7 @@ class TestHealthEndpoint:
         assert response.status_code == 200
         data = response.json()
         assert data["status"] == "healthy"
-        assert data["service"] == "Config MCP"
+        assert data["service"] == "config-mcp"
         assert "features" in data
 
 
@@ -382,4 +489,4 @@ class TestToolsList:
         assert response.status_code == 200
         data = response.json()
         assert "tools" in data
-        assert len(data["tools"]) >= 4  # env_vars, config_file, validate, backup
+        assert len(data["tools"]) >= 5  # env_vars, config_file, validate, backup, get_secret

@@ -5,6 +5,7 @@ import os
 from typing import TYPE_CHECKING, Optional
 
 from .base import ModelProvider, ProviderType
+from utils.secrets import load_env
 
 if TYPE_CHECKING:
     from tools.models import ToolModelCategory
@@ -72,7 +73,7 @@ class ModelProviderRegistry:
                 provider = provider_class(api_key=api_key)
             else:
                 # Regular class - need to handle URL requirement
-                custom_url = os.getenv("CUSTOM_API_URL", "")
+                custom_url = load_env("CUSTOM_API_URL", "") or ""
                 if not custom_url:
                     if api_key:  # Key is set but URL is missing
                         logging.warning("CUSTOM_API_KEY set but CUSTOM_API_URL missing – skipping Custom provider")
@@ -242,7 +243,7 @@ class ModelProviderRegistry:
         if not env_var:
             return None
 
-        return os.getenv(env_var)
+        return load_env(env_var)
 
     @classmethod
     def get_preferred_fallback_model(cls, tool_category: Optional["ToolModelCategory"] = None) -> str:

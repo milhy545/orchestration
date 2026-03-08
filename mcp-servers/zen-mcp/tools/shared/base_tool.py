@@ -22,12 +22,19 @@ if TYPE_CHECKING:
 from config import MCP_PROMPT_SIZE_LIMIT
 from providers import ModelProvider, ModelProviderRegistry
 from utils import check_token_limit
+from utils.secrets import load_env
 from utils.conversation_memory import (
     ConversationTurn,
     get_conversation_file_list,
     get_thread,
 )
 from utils.file_utils import read_file_content, read_files
+
+def _is_real_secret(value: str | None) -> bool:
+    if not value:
+        return False
+    return not value.strip().lower().startswith("your_")
+
 
 # Import models from tools.models for compatibility
 try:
@@ -248,8 +255,8 @@ class BaseTool(ABC):
         all_models = ModelProviderRegistry.get_available_model_names()
 
         # Add OpenRouter models if OpenRouter is configured
-        openrouter_key = os.getenv("OPENROUTER_API_KEY")
-        if openrouter_key and openrouter_key != "your_openrouter_api_key_here":
+        openrouter_key = load_env("OPENROUTER_API_KEY")
+        if _is_real_secret(openrouter_key):
             try:
                 registry = self._get_openrouter_registry()
                 # Add all aliases from the registry (includes OpenRouter cloud models)
@@ -303,9 +310,8 @@ class BaseTool(ABC):
         from config import DEFAULT_MODEL
 
         # Check if OpenRouter is configured
-        has_openrouter = bool(
-            os.getenv("OPENROUTER_API_KEY") and os.getenv("OPENROUTER_API_KEY") != "your_openrouter_api_key_here"
-        )
+        openrouter_key = load_env("OPENROUTER_API_KEY")
+        has_openrouter = _is_real_secret(openrouter_key)
 
         # Use the centralized effective auto mode check
         if self.is_effective_auto_mode():
@@ -1199,8 +1205,8 @@ When recommending searches, be specific about what information you need and why 
         all_models = ModelProviderRegistry.get_available_model_names()
 
         # Add OpenRouter models if OpenRouter is configured
-        openrouter_key = os.getenv("OPENROUTER_API_KEY")
-        if openrouter_key and openrouter_key != "your_openrouter_api_key_here":
+        openrouter_key = load_env("OPENROUTER_API_KEY")
+        if _is_real_secret(openrouter_key):
             try:
                 from config import OPENROUTER_MODELS
 

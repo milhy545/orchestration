@@ -33,8 +33,17 @@ Instrumentator().instrument(app).expose(app)
 
 CATALOG_PATH = Path(os.environ.get("MARKET_CATALOG_PATH", "/app/catalog"))
 MARKET_BASE_URL = os.environ.get("MARKET_BASE_URL", "http://localhost:7034").rstrip("/")
-JWT_SECRET = os.environ.get("JWT_SECRET", "")
 JWT_ALGORITHM = os.environ.get("JWT_ALGORITHM", "HS256")
+
+
+def _load_secret(name: str) -> str:
+    file_path = os.environ.get(f"{name}_FILE", "").strip()
+    if file_path:
+        return Path(file_path).read_text(encoding="utf-8").strip()
+    return os.environ.get(name, "").strip()
+
+
+JWT_SECRET = _load_secret("JWT_SECRET")
 
 
 class SkillCompat(BaseModel):
@@ -127,7 +136,7 @@ def _require_scopes(required: List[str]):
         authorization: Optional[str] = Header(default=None),
     ) -> Dict[str, Any]:
         if not JWT_SECRET:
-            raise HTTPException(status_code=500, detail="JWT_SECRET is not configured")
+            raise HTTPException(status_code=500, detail="Server authentication is not configured")
         if not authorization or not authorization.startswith("Bearer "):
             raise HTTPException(status_code=401, detail="Missing bearer token")
 
@@ -392,9 +401,9 @@ async def health_check() -> Dict[str, Any]:
     return {
         "status": "healthy",
         "service": "marketplace-mcp",
+        "version": "1.0.0",
         "port": 8000,
         "timestamp": datetime.now(timezone.utc).isoformat(),
-        "catalog_path": str(CATALOG_PATH),
         "jwt_configured": bool(JWT_SECRET),
     }
 

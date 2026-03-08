@@ -84,7 +84,7 @@ def client_and_secret(tmp_path, monkeypatch):
     )
 
     monkeypatch.setenv("MARKET_CATALOG_PATH", str(catalog))
-    monkeypatch.setenv("JWT_SECRET", "unit-test-secret")
+    monkeypatch.setenv("JWT_SECRET", "unit-test-secret-with-32-byte-minimum")
     monkeypatch.setenv("MARKET_BASE_URL", "http://localhost:7034")
 
     module_path = Path(__file__).resolve().parents[1] / "main.py"
@@ -96,7 +96,7 @@ def client_and_secret(tmp_path, monkeypatch):
     spec.loader.exec_module(module)
 
     client = TestClient(module.app)
-    return client, "unit-test-secret"
+    return client, "unit-test-secret-with-32-byte-minimum"
 
 
 def _auth(secret: str, scopes=None):
@@ -114,12 +114,38 @@ def test_health_open(client_and_secret):
     response = client.get("/health")
     assert response.status_code == 200
     assert response.json()["service"] == "marketplace-mcp"
+    assert "catalog_path" not in response.json()
 
 
 def test_auth_required(client_and_secret):
     client, _ = client_and_secret
     response = client.get("/skills/v1/index")
     assert response.status_code == 401
+
+
+def test_missing_server_auth_config_is_generic(tmp_path, monkeypatch):
+    catalog = tmp_path / "catalog"
+    catalog.mkdir(parents=True)
+    (catalog / "skills-index.json").write_text('{"skills":[]}', encoding="utf-8")
+    (catalog / "servers-index.json").write_text('{"servers":[]}', encoding="utf-8")
+    (catalog / "trust-policy.json").write_text('{"policy":"hash-integrity","required":["sha256"]}', encoding="utf-8")
+
+    monkeypatch.setenv("MARKET_CATALOG_PATH", str(catalog))
+    monkeypatch.delenv("JWT_SECRET", raising=False)
+    monkeypatch.setenv("MARKET_BASE_URL", "http://localhost:7034")
+
+    module_path = Path(__file__).resolve().parents[1] / "main.py"
+    module_name = "marketplace_mcp_main_no_secret"
+    spec = importlib.util.spec_from_file_location(module_name, module_path)
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[module_name] = module
+    spec.loader.exec_module(module)
+
+    client = TestClient(module.app)
+    response = client.get("/skills/v1/index")
+    assert response.status_code == 500
+    assert response.json()["detail"] == "Server authentication is not configured"
 
 
 def test_skills_index_and_resolve(client_and_secret):

@@ -1,0 +1,1395 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VAULT_OS // KEY CONSOLE</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+
+        :root {
+            --bg-color: #051005;
+            --primary: #10ff00;
+            --primary-dim: rgba(16, 255, 0, 0.15);
+            --danger: #ff4d4d;
+            --muted: rgba(16, 255, 0, 0.65);
+            --font-main: 'VT323', monospace;
+            --border-radius: 20px;
+            --glass-opacity: 0.6;
+            --casing-bg: #111;
+            --panel-bg: rgba(0, 0, 0, 0.38);
+            --input-bg: rgba(0, 0, 0, 0.3);
+        }
+
+        body.theme-cyberpunk {
+            --bg-color: #121212;
+            --primary: #00d1ff;
+            --primary-dim: rgba(0, 209, 255, 0.18);
+            --secondary: #ff4fd8;
+            --secondary-dim: rgba(255, 79, 216, 0.18);
+            --danger: #ff4d7a;
+            --muted: rgba(0, 209, 255, 0.72);
+            --font-main: 'Share Tech Mono', monospace;
+            --border-radius: 6px;
+            --glass-opacity: 0.28;
+            --casing-bg: #090909;
+            --panel-bg: rgba(8, 24, 28, 0.62);
+            --input-bg: rgba(7, 19, 24, 0.72);
+        }
+
+        body.theme-vibe {
+            --bg-color: #0f172a;
+            --primary: #818cf8;
+            --primary-dim: rgba(129, 140, 248, 0.15);
+            --danger: #f43f5e;
+            --muted: rgba(196, 181, 253, 0.75);
+            --font-main: 'Rajdhani', sans-serif;
+            --border-radius: 10px;
+            --glass-opacity: 0.08;
+            --casing-bg: #020617;
+            --panel-bg: rgba(15, 23, 42, 0.72);
+            --input-bg: rgba(30, 41, 59, 0.6);
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            background: radial-gradient(circle at top, rgba(255, 255, 255, 0.06), transparent 35%), #000;
+            color: var(--primary);
+            font-family: var(--font-main);
+            margin: 0;
+            min-height: 100vh;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: all 0.4s ease;
+        }
+
+        .monitor-casing {
+            width: min(calc(100vw - 32px), 1480px);
+            height: min(calc(100vh - 32px), 1040px);
+            background: var(--casing-bg);
+            border-radius: var(--border-radius);
+            padding: 14px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: inset 0 0 40px #000, 0 0 50px rgba(0, 0, 0, 0.9);
+        }
+
+        .screen-glass {
+            width: 100%;
+            height: 100%;
+            background-color: var(--bg-color);
+            border-radius: var(--border-radius);
+            position: relative;
+            overflow: hidden;
+            border: 1px solid var(--primary-dim);
+            box-shadow: 0 0 15px var(--primary-dim), inset 0 0 80px rgba(0, 0, 0, 0.8);
+            padding: clamp(16px, 3vh, 28px);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .scanlines {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(to bottom, rgba(0, 0, 0, 0) 50%, rgba(0, 0, 0, 0.24) 50%);
+            background-size: 100% 4px;
+            pointer-events: none;
+            z-index: 40;
+            opacity: var(--glass-opacity);
+            animation: flicker 0.15s infinite;
+        }
+
+        .glow-overlay {
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(circle, rgba(0, 0, 0, 0) 52%, rgba(0, 0, 0, 0.5) 100%);
+            pointer-events: none;
+            z-index: 30;
+        }
+
+        .pip-text {
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            text-shadow: 0 0 7px var(--primary);
+        }
+
+        .panel {
+            background: var(--panel-bg);
+            border: 1px solid var(--primary-dim);
+            padding: 14px;
+            border-radius: calc(var(--border-radius) / 2);
+        }
+
+        .pip-input,
+        .pip-textarea {
+            width: 100%;
+            background: var(--input-bg);
+            color: var(--primary);
+            border: 0;
+            border-bottom: 2px solid var(--primary);
+            font-family: var(--font-main);
+            outline: none;
+            padding: 10px 12px;
+            text-shadow: 0 0 4px var(--primary);
+        }
+
+        .input-shell {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .input-shell .pip-input {
+            padding-right: 34px;
+        }
+
+        .validation-indicator {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            min-width: 16px;
+            text-align: center;
+            font-size: 1rem;
+            line-height: 1;
+            color: transparent;
+        }
+
+        .validation-indicator.validation-ok {
+            color: #4ade80;
+            text-shadow: 0 0 10px rgba(74, 222, 128, 0.85);
+        }
+
+        .pip-textarea {
+            min-height: 180px;
+            resize: vertical;
+        }
+
+        .pip-btn {
+            border: 1px solid var(--primary);
+            background: rgba(0, 0, 0, 0.35);
+            color: var(--primary);
+            font-family: var(--font-main);
+            cursor: pointer;
+            text-transform: uppercase;
+            padding: 10px 20px;
+            transition: all 0.2s;
+        }
+
+        .pip-btn:hover {
+            background: var(--primary);
+            color: #000;
+            box-shadow: 0 0 18px var(--primary);
+        }
+
+        .pip-btn-secondary {
+            border-color: var(--primary-dim);
+        }
+
+        body.theme-cyberpunk .pip-btn-secondary,
+        body.theme-cyberpunk .badge,
+        body.theme-cyberpunk .panel,
+        body.theme-cyberpunk .field-card {
+            border-color: var(--secondary-dim);
+        }
+
+        body.theme-cyberpunk .pip-btn-secondary:hover {
+            background: var(--secondary);
+            color: #050505;
+            box-shadow: 0 0 18px var(--secondary);
+        }
+
+        body.theme-cyberpunk .section-title,
+        body.theme-cyberpunk .field-meta,
+        body.theme-cyberpunk .tracking-\[0\.35em\] {
+            color: var(--secondary);
+            text-shadow: 0 0 10px var(--secondary);
+        }
+
+        body.theme-cyberpunk #restart-command,
+        body.theme-cyberpunk #service-description {
+            color: #ffd1f4;
+        }
+
+        .grid-fields {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 16px;
+        }
+
+        .provider-split {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 18px;
+            align-items: stretch;
+        }
+
+        .provider-stack {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .field-card {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .field-meta {
+            font-size: 0.95rem;
+            color: var(--muted);
+            letter-spacing: 1px;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .console {
+            background: rgba(0, 0, 0, 0.55);
+            border: 1px solid var(--primary-dim);
+            padding: 12px;
+            min-height: 120px;
+            overflow: auto;
+            white-space: pre-wrap;
+        }
+
+        .provider-shell {
+            min-height: 100%;
+        }
+
+        .provider-status {
+            font-size: 0.95rem;
+            color: var(--muted);
+            overflow-wrap: anywhere;
+            word-break: break-word;
+            line-height: 1.45;
+        }
+
+        .provider-head {
+            min-height: 210px;
+        }
+
+        .provider-row-card {
+            min-height: 140px;
+        }
+
+        .provider-row-card .field-meta {
+            line-height: 1.4;
+            overflow-wrap: anywhere;
+            word-break: break-word;
+        }
+
+        .provider-empty {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100%;
+            opacity: 0.72;
+        }
+
+        .console-command-row {
+            display: grid;
+            grid-template-columns: 1fr auto auto;
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+
+        .badge {
+            border: 1px solid var(--primary-dim);
+            padding: 4px 10px;
+            display: inline-flex;
+            gap: 6px;
+            align-items: center;
+        }
+
+        .modal-backdrop {
+            position: absolute;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.72);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            z-index: 80;
+        }
+
+        .modal-card {
+            width: min(720px, 100%);
+            background: var(--casing-bg);
+            border: 1px solid var(--danger);
+            box-shadow: 0 0 30px rgba(255, 77, 77, 0.25);
+        }
+
+        .modal-title {
+            color: var(--danger);
+            text-shadow: 0 0 10px rgba(255, 77, 77, 0.55);
+        }
+
+        .modal-code {
+            color: #ffd1d1;
+            overflow-wrap: anywhere;
+            word-break: break-word;
+        }
+
+        .section-title {
+            font-size: 1.4rem;
+            margin-bottom: 10px;
+        }
+
+        .linkish {
+            color: var(--primary);
+            text-decoration: underline;
+            cursor: pointer;
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #050505;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--primary);
+        }
+
+        @keyframes flicker {
+            0% { opacity: var(--glass-opacity); }
+            50% { opacity: calc(var(--glass-opacity) + 0.05); }
+            100% { opacity: var(--glass-opacity); }
+        }
+
+        @media (max-width: 900px) {
+            body {
+                align-items: stretch;
+                overflow: auto;
+            }
+
+            .monitor-casing {
+                width: 100vw;
+                height: auto;
+                min-height: 100vh;
+                border-radius: 0;
+                padding: 8px;
+            }
+
+            .screen-glass {
+                border-radius: 0;
+                min-height: calc(100vh - 16px);
+            }
+
+            .provider-split,
+            .console-command-row {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body class="theme-cyberpunk">
+    <div class="monitor-casing">
+        <div class="screen-glass">
+            <div class="scanlines"></div>
+            <div class="glow-overlay"></div>
+
+            <header class="relative z-10 flex flex-wrap items-start justify-between gap-4 border-b pb-3 mb-6" style="border-color: var(--primary-dim);">
+                <div>
+                    <h1 class="text-4xl md:text-6xl font-bold pip-text">VAULT_OS</h1>
+                    <div class="tracking-[0.35em] text-sm opacity-70">KEY-FIRST SECRET CONSOLE</div>
+                </div>
+                <div class="flex flex-col items-end gap-2">
+                    <div class="flex gap-2 text-base md:text-lg">
+                        <button class="pip-btn pip-btn-secondary" type="button" onclick="toggleLang()">[ <span id="lang-label">EN</span> ]</button>
+                        <button class="pip-btn pip-btn-secondary" type="button" onclick="toggleTheme()">[ <span id="theme-label">CYBERPUNK</span> ]</button>
+                    </div>
+                    <div class="badge text-sm">
+                        <span data-translate="statusLabel">Status</span>
+                        <span id="health-indicator">CHECKING...</span>
+                    </div>
+                </div>
+            </header>
+
+            <main class="relative z-10 flex-1 overflow-auto pr-1">
+                <section class="panel mb-5">
+                    <div class="section-title pip-text" data-translate="title">Secret Injection</div>
+                    <div class="text-sm opacity-75" data-translate="subtitle">Use focused key inputs first. Full JSON stays available in advanced mode.</div>
+                </section>
+
+                <section class="grid grid-cols-1 lg:grid-cols-[1.3fr_0.7fr] gap-5 mb-5">
+                    <div class="panel">
+                        <label class="block text-lg mb-2 opacity-80" data-translate="target">Target Service</label>
+                        <select id="target-service" class="pip-input">
+{{SERVICE_OPTIONS}}
+                        </select>
+
+                        <div class="mt-5">
+                            <div class="section-title pip-text" data-translate="keyFields">Secret Fields</div>
+                            <div id="service-fields" class="grid-fields"></div>
+                        </div>
+                    </div>
+
+                    <div class="panel">
+                        <div class="section-title pip-text" data-translate="serviceProfile">Service Profile</div>
+                        <div class="space-y-3 text-base">
+                            <div>
+                                <div class="opacity-70" data-translate="description">Description</div>
+                                <div id="service-description" class="text-lg"></div>
+                            </div>
+                            <div>
+                                <div class="opacity-70" data-translate="vaultPath">Vault Path</div>
+                                <div id="vault-path"></div>
+                            </div>
+                            <div>
+                                <div class="opacity-70" data-translate="runtimeFile">Runtime Env File</div>
+                                <div id="env-file"></div>
+                            </div>
+                            <div>
+                                <div class="opacity-70" data-translate="restartTarget">Restart Target</div>
+                                <div id="restart-target"></div>
+                            </div>
+                            <div>
+                                <div class="opacity-70" data-translate="restartCommand">Restart Command</div>
+                                <div id="restart-command" class="break-all"></div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="panel mb-5">
+                    <div class="flex flex-wrap gap-3">
+                        <button class="pip-btn" type="button" onclick="loadSecrets()" data-translate="sync">Sync From Vault</button>
+                        <button class="pip-btn" type="button" onclick="saveSecrets()" data-translate="upload">Upload</button>
+                        <button class="pip-btn pip-btn-secondary" type="button" onclick="toggleAdvanced()" data-translate="advanced">Advanced JSON</button>
+                        <button class="pip-btn pip-btn-secondary" type="button" onclick="alignBuffer()" data-translate="align">Align Buffer</button>
+                    </div>
+                </section>
+
+                <section id="advanced-panel" class="panel mb-5 hidden">
+                    <div class="section-title pip-text" data-translate="advanced">Advanced JSON</div>
+                    <div class="text-sm opacity-70 mb-3" data-translate="advancedHint">Use only when a service needs custom payload keys beyond the dedicated form.</div>
+                    <textarea id="secret-editor" class="pip-textarea" spellcheck="false"></textarea>
+                </section>
+
+                <section class="panel">
+                    <div class="section-title pip-text" data-translate="consoleTitle">Operator Console</div>
+                    <div class="console-command-row">
+                        <input id="console-command" class="pip-input" type="text" spellcheck="false" placeholder="help" autocomplete="off" />
+                        <button class="pip-btn" type="button" onclick="runConsoleCommand()" data-translate="runCommand">Run Command</button>
+                        <button class="pip-btn pip-btn-secondary" type="button" onclick="clearConsole()" data-translate="clearConsole">Clear</button>
+                    </div>
+                    <div id="console-output" class="console"></div>
+                </section>
+            </main>
+
+            <section id="validation-modal" class="modal-backdrop hidden">
+                <div class="modal-card panel">
+                    <div class="section-title pip-text modal-title" data-translate="validationFailed">API Validation Failed</div>
+                    <div class="space-y-3">
+                        <div>
+                            <div class="opacity-70" data-translate="providerLabel">Provider</div>
+                            <div id="validation-modal-provider"></div>
+                        </div>
+                        <div>
+                            <div class="opacity-70" data-translate="fieldLabel">Field</div>
+                            <div id="validation-modal-field"></div>
+                        </div>
+                        <div>
+                            <div class="opacity-70" data-translate="codeLabel">Code</div>
+                            <div id="validation-modal-code" class="modal-code"></div>
+                        </div>
+                        <div>
+                            <div class="opacity-70" data-translate="messageLabel">Message</div>
+                            <div id="validation-modal-message" class="modal-code"></div>
+                        </div>
+                        <div>
+                            <div class="opacity-70" data-translate="detailsLabel">Details</div>
+                            <div id="validation-modal-details" class="modal-code"></div>
+                        </div>
+                    </div>
+                    <div class="mt-5">
+                        <button class="pip-btn" type="button" onclick="closeValidationModal()" data-translate="dismissWarning">Dismiss</button>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <script>
+        const serviceMetadata = {{SERVICE_METADATA_JSON}};
+        let currentLang = 'en';
+        let currentTheme = 'cyberpunk';
+        let currentPayload = {};
+        let advancedVisible = false;
+        let advancedMemoryDiscovery = { embedding: null, generation: null };
+        let advancedMemoryDiscoveryTimers = { embedding: null, generation: null };
+        let fieldValidationState = {};
+        let validationTimers = {};
+        let lastValidationWarningKey = '';
+        const advancedMemoryServiceId = 'advanced-memory-mcp';
+        const advancedMemoryConfig = {
+            embeddingProviders: [
+                { value: 'local', label: 'Local Sentence Transformers' },
+                { value: 'gemini', label: 'Gemini API' },
+                { value: 'ollama', label: 'Ollama' },
+                { value: 'openai_compatible', label: 'LM Studio / llama.cpp / OpenAI-compatible' }
+            ],
+            generationProviders: [
+                { value: 'none', label: 'Disabled' },
+                { value: 'inception', label: 'Inception Mercury' },
+                { value: 'ollama', label: 'Ollama' },
+                { value: 'openai_compatible', label: 'LM Studio / llama.cpp / OpenAI-compatible' }
+            ],
+            models: {
+                LOCAL_EMBEDDING_MODEL: ['all-MiniLM-L6-v2', 'BAAI/bge-small-en-v1.5', 'sentence-transformers/all-mpnet-base-v2'],
+                GEMINI_EMBED_MODEL: ['gemini-embedding-001'],
+                OLLAMA_EMBED_MODEL: ['nomic-embed-text', 'mxbai-embed-large', 'bge-m3'],
+                OLLAMA_CHAT_MODEL: ['llama3.2', 'llama3.1', 'qwen2.5', 'mistral-small', 'gemma3'],
+                OPENAI_COMPAT_EMBED_MODEL: ['text-embedding-3-small', 'nomic-embed-text', 'bge-m3'],
+                OPENAI_COMPAT_CHAT_MODEL: ['qwen2.5', 'llama3.1', 'llama3.2', 'mistral-small', 'gemma3'],
+                INCEPTION_MODEL: ['mercury', 'mercury-coder', 'mercury-thinking']
+            }
+        };
+
+        const translations = {
+            en: {
+                title: 'Secret Injection',
+                subtitle: 'Use focused key inputs first. Full JSON stays available in advanced mode.',
+                target: 'Target Service',
+                keyFields: 'Secret Fields',
+                serviceProfile: 'Service Profile',
+                description: 'Description',
+                vaultPath: 'Vault Path',
+                runtimeFile: 'Runtime Env File',
+                restartTarget: 'Restart Target',
+                restartCommand: 'Restart Command',
+                sync: 'Sync From Vault',
+                upload: 'Upload',
+                advanced: 'Advanced JSON',
+                align: 'Align Buffer',
+                advancedHint: 'Use only when a service needs custom payload keys beyond the dedicated form.',
+                consoleTitle: 'Operator Console',
+                statusLabel: 'Status',
+                healthReady: 'ONLINE',
+                healthFailed: 'DEGRADED',
+                saved: 'Secrets saved. Restart required:',
+                loaded: 'Secrets synchronized from Vault.',
+                aligned: 'Advanced JSON aligned with visible form fields.',
+                invalidJson: 'Advanced JSON is invalid.',
+                loading: 'Loading service payload...',
+                emptyFields: 'No dedicated fields defined for this service.',
+                secretLabel: 'Secret',
+                plainLabel: 'Value',
+                embeddingProvider: 'Embedding Provider',
+                generationProvider: 'Generation Provider',
+                modelLabel: 'Model',
+                localEndpoint: 'Local Endpoint',
+                providerKey: 'API Key',
+                localProviderHint: 'Local providers show their endpoint and model settings.',
+                providerHint: 'Choose providers first. Only the relevant key and model controls stay visible.',
+                embeddingTitle: 'Embedding',
+                generationTitle: 'Generation',
+                resolvedUrl: 'Resolved URL',
+                autoDiscovery: 'Live discovery',
+                runCommand: 'Run Command',
+                clearConsole: 'Clear',
+                commandPlaceholder: 'help',
+                commandDone: 'Command completed.',
+                validationFailed: 'API Validation Failed',
+                providerLabel: 'Provider',
+                fieldLabel: 'Field',
+                codeLabel: 'Code',
+                messageLabel: 'Message',
+                detailsLabel: 'Details',
+                dismissWarning: 'Dismiss'
+            },
+            cs: {
+                title: 'Sprava Secretu',
+                subtitle: 'Primarne pouzivejte samostatna pole pro klice. Cely JSON je az v pokrocilem rezimu.',
+                target: 'Cilova Sluzba',
+                keyFields: 'Pole Pro Klice',
+                serviceProfile: 'Profil Sluzby',
+                description: 'Popis',
+                vaultPath: 'Vault Cesta',
+                runtimeFile: 'Runtime Env Soubor',
+                restartTarget: 'Cil Restartu',
+                restartCommand: 'Prikaz Pro Restart',
+                sync: 'Nacist Z Vaultu',
+                upload: 'Ulozit',
+                advanced: 'Pokrocily JSON',
+                align: 'Zarovnat Buffer',
+                advancedHint: 'Pouzivejte jen kdyz sluzba potrebuje vlastni payload mimo vyhrazena pole.',
+                consoleTitle: 'Operacni Konzole',
+                statusLabel: 'Stav',
+                healthReady: 'ONLINE',
+                healthFailed: 'OMEZENO',
+                saved: 'Secrety ulozeny. Nutny restart:',
+                loaded: 'Secrety nacteny z Vaultu.',
+                aligned: 'Pokrocily JSON byl zarovnan podle viditelnych poli.',
+                invalidJson: 'Pokrocily JSON neni validni.',
+                loading: 'Nacitam payload sluzby...',
+                emptyFields: 'Pro tuto sluzbu nejsou definovana zadna specializovana pole.',
+                secretLabel: 'Secret',
+                plainLabel: 'Hodnota',
+                embeddingProvider: 'Provider Embeddingu',
+                generationProvider: 'Provider Generovani',
+                modelLabel: 'Model',
+                localEndpoint: 'Lokalni Endpoint',
+                providerKey: 'API Klic',
+                localProviderHint: 'Lokalni provideri zobrazuji endpoint a model.',
+                providerHint: 'Nejdriv vyber providery. Zobrazi se jen relevantni klice a modely.',
+                embeddingTitle: 'Embedding',
+                generationTitle: 'Generation',
+                resolvedUrl: 'Vyresena URL',
+                autoDiscovery: 'Live discovery',
+                runCommand: 'Spustit',
+                clearConsole: 'Vymazat',
+                commandPlaceholder: 'help',
+                commandDone: 'Prikaz dokoncen.',
+                validationFailed: 'Selhani API Validace',
+                providerLabel: 'Provider',
+                fieldLabel: 'Pole',
+                codeLabel: 'Kod',
+                messageLabel: 'Zprava',
+                detailsLabel: 'Detaily',
+                dismissWarning: 'Zavrit'
+            }
+        };
+
+        function t(key) {
+            return translations[currentLang][key] || key;
+        }
+
+        function log(message) {
+            const consoleOutput = document.getElementById('console-output');
+            const time = new Date().toLocaleTimeString();
+            consoleOutput.textContent = `[${time}] ${message}\n` + consoleOutput.textContent;
+        }
+
+        function applyTranslations() {
+            document.querySelectorAll('[data-translate]').forEach((node) => {
+                node.textContent = t(node.dataset.translate);
+            });
+            document.getElementById('lang-label').textContent = currentLang === 'en' ? 'EN' : 'CZ';
+            document.getElementById('console-command').placeholder = t('commandPlaceholder');
+            renderFields();
+        }
+
+        function toggleLang() {
+            currentLang = currentLang === 'en' ? 'cs' : 'en';
+            applyTranslations();
+        }
+
+        function toggleTheme() {
+            const order = ['cyberpunk', 'pip-boy', 'vibe'];
+            const labels = {
+                'cyberpunk': 'CYBERPUNK',
+                'pip-boy': 'PIP-BOY',
+                'vibe': 'VIBE AGENT'
+            };
+            const nextTheme = order[(order.indexOf(currentTheme) + 1) % order.length];
+            document.body.classList.remove('theme-cyberpunk', 'theme-vibe');
+            if (nextTheme === 'cyberpunk') {
+                document.body.classList.add('theme-cyberpunk');
+            } else if (nextTheme === 'vibe') {
+                document.body.classList.add('theme-vibe');
+            }
+            currentTheme = nextTheme;
+            document.getElementById('theme-label').textContent = labels[currentTheme];
+        }
+
+        function currentServiceId() {
+            return document.getElementById('target-service').value;
+        }
+
+        function currentServiceMeta() {
+            return serviceMetadata[currentServiceId()];
+        }
+
+        function updateServiceProfile() {
+            const meta = currentServiceMeta();
+            document.getElementById('service-description').textContent = meta.description || '';
+            document.getElementById('vault-path').textContent = `secret/data/${meta.vault_path}`;
+            document.getElementById('env-file').textContent = meta.env_file;
+            document.getElementById('restart-target').textContent = meta.restart_target;
+            document.getElementById('restart-command').textContent = meta.restart_command;
+        }
+
+        function normalizePayload(meta) {
+            const merged = { ...currentPayload };
+            meta.fields.forEach((field) => {
+                if ((merged[field.name] === undefined || merged[field.name] === null) && field.default !== undefined && field.default !== null) {
+                    merged[field.name] = field.default;
+                }
+            });
+            currentPayload = merged;
+        }
+
+        function fieldMap(meta) {
+            return Object.fromEntries(meta.fields.map((field) => [field.name, field]));
+        }
+
+        function escapeHtml(value) {
+            return String(value ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
+        }
+
+        function isAdvancedMemory(meta) {
+            return meta.id === advancedMemoryServiceId;
+        }
+
+        function fieldByName(meta, fieldName) {
+            return meta.fields.find((field) => field.name === fieldName) || null;
+        }
+
+        function selectedValue(name, fallback = '') {
+            return currentPayload[name] ?? fallback;
+        }
+
+        function validationIndicatorMarkup(field) {
+            if (!field.validation) {
+                return '';
+            }
+            const state = fieldValidationState[field.name];
+            const classes = state && state.ok ? 'validation-indicator validation-ok' : 'validation-indicator';
+            const symbol = state && state.ok ? '&#10003;' : '';
+            return `<span id="validation-indicator-${field.name}" class="${classes}">${symbol}</span>`;
+        }
+
+        function buildSelectOptions(options, selected) {
+            const normalized = [...options];
+            if (selected && !normalized.includes(selected)) {
+                normalized.unshift(selected);
+            }
+            return normalized.map((option) => {
+                const isSelected = option === selected ? 'selected' : '';
+                return `<option value="${escapeHtml(option)}" ${isSelected}>${escapeHtml(option)}</option>`;
+            }).join('');
+        }
+
+        function providerSelectCard(name, label, options) {
+            const selected = selectedValue(name);
+            return `
+                <div class="field-card panel">
+                    <label class="text-lg">${label}</label>
+                    <div class="field-meta">${name} // ${t('plainLabel')}</div>
+                    <select data-field-name="${name}" class="pip-input">
+                        ${options.map((option) => `
+                            <option value="${escapeHtml(option.value)}" ${option.value === selected ? 'selected' : ''}>${escapeHtml(option.label)}</option>
+                        `).join('')}
+                    </select>
+                </div>
+            `;
+        }
+
+        function readOnlyCard(label, value) {
+            return `
+                <div class="field-card panel provider-row-card">
+                    <label class="text-lg">${label}</label>
+                    <div class="field-meta">${t('resolvedUrl')}</div>
+                    <div class="pip-input">${escapeHtml(value || '-')}</div>
+                </div>
+            `;
+        }
+
+        function providerStatus(discovery) {
+            if (!discovery) {
+                return `<div class="provider-status">${t('providerHint')}</div>`;
+            }
+            const message = discovery.error || discovery.message || '';
+            return `<div class="provider-status">${escapeHtml(message)}</div>`;
+        }
+
+        function selectCard(field, options, valueOverride = null) {
+            const value = valueOverride ?? selectedValue(field.name, field.default ?? '');
+            return `
+                <div class="field-card panel">
+                    <label class="text-lg">${field.label}</label>
+                    <div class="field-meta">${field.target_env} // ${t('plainLabel')}</div>
+                    <div class="input-shell">
+                        <select data-field-name="${field.name}" class="pip-input">
+                            ${buildSelectOptions(options, value)}
+                        </select>
+                        ${validationIndicatorMarkup(field)}
+                    </div>
+                </div>
+            `;
+        }
+
+        function inputCard(field, metaLabelKey = null) {
+            const type = field.input_type === 'textarea' ? 'text' : field.input_type;
+            const value = selectedValue(field.name, field.default ?? '');
+            const modeLabel = metaLabelKey ? t(metaLabelKey) : (field.secret ? t('secretLabel') : t('plainLabel'));
+            return `
+                <div class="field-card panel provider-row-card">
+                    <label class="text-lg">${field.label}</label>
+                    <div class="field-meta">${field.target_env} // ${modeLabel}</div>
+                    <div class="input-shell">
+                        <input
+                            data-field-name="${field.name}"
+                            data-input-type="${field.input_type}"
+                            class="pip-input"
+                            type="${type}"
+                            value="${escapeHtml(value)}"
+                            placeholder="${escapeHtml(field.placeholder || '')}"
+                            autocomplete="off"
+                        />
+                        ${validationIndicatorMarkup(field)}
+                    </div>
+                </div>
+            `;
+        }
+
+        function emptyCard(message) {
+            return `
+                <div class="panel provider-row-card provider-empty">
+                    <div class="field-meta">${escapeHtml(message)}</div>
+                </div>
+            `;
+        }
+
+        function providerHead(title, providerCard, statusMarkup) {
+            return `
+                <div class="provider-stack panel provider-shell provider-head">
+                    <div class="section-title pip-text">${title}</div>
+                    ${providerCard}
+                    ${statusMarkup}
+                </div>
+            `;
+        }
+
+        function currentDiscovery(side) {
+            return advancedMemoryDiscovery[side];
+        }
+
+        function applyDiscoverySelection(discovery) {
+            if (!discovery || discovery.status !== 'ok' || !discovery.model_field) {
+                return;
+            }
+            if (discovery.selected_model) {
+                currentPayload[discovery.model_field] = discovery.selected_model;
+            }
+        }
+
+        function embeddingCards(fields, provider, discovery) {
+            const cards = { auth: emptyCard('No API key required.'), model: emptyCard('Select an embedding provider.') };
+            if (provider === 'local') {
+                cards.model = selectCard(fields.LOCAL_EMBEDDING_MODEL, discovery?.models?.length ? discovery.models : advancedMemoryConfig.models.LOCAL_EMBEDDING_MODEL);
+            }
+            if (provider === 'gemini') {
+                cards.auth = inputCard(fields.GEMINI_API_KEY, 'providerKey');
+                cards.model = selectCard(fields.GEMINI_EMBED_MODEL, discovery?.models || [], discovery?.selected_model || selectedValue('GEMINI_EMBED_MODEL', fields.GEMINI_EMBED_MODEL.default));
+            }
+            if (provider === 'ollama') {
+                cards.model = selectCard(fields.OLLAMA_EMBED_MODEL, discovery?.models || [], discovery?.selected_model || selectedValue('OLLAMA_EMBED_MODEL', fields.OLLAMA_EMBED_MODEL.default));
+            }
+            if (provider === 'openai_compatible') {
+                cards.auth = inputCard(fields.OPENAI_COMPAT_API_KEY, 'providerKey');
+                cards.model = selectCard(fields.OPENAI_COMPAT_EMBED_MODEL, discovery?.models || [], discovery?.selected_model || selectedValue('OPENAI_COMPAT_EMBED_MODEL', fields.OPENAI_COMPAT_EMBED_MODEL.default));
+            }
+            return cards;
+        }
+
+        function generationCards(fields, provider, discovery) {
+            const cards = { auth: emptyCard('No API key required.'), model: emptyCard('Generation provider disabled.') };
+            if (provider === 'none') {
+                cards.auth = emptyCard('No API key required.');
+                cards.model = emptyCard(discovery?.message || 'Generation provider disabled.');
+            }
+            if (provider === 'inception') {
+                cards.auth = inputCard(fields.INCEPTION_API_KEY, 'providerKey');
+                cards.model = selectCard(fields.INCEPTION_MODEL, discovery?.models || [], discovery?.selected_model || selectedValue('INCEPTION_MODEL', fields.INCEPTION_MODEL.default));
+            }
+            if (provider === 'ollama') {
+                cards.model = selectCard(fields.OLLAMA_CHAT_MODEL, discovery?.models || [], discovery?.selected_model || selectedValue('OLLAMA_CHAT_MODEL', fields.OLLAMA_CHAT_MODEL.default));
+            }
+            if (provider === 'openai_compatible') {
+                cards.auth = inputCard(fields.OPENAI_COMPAT_API_KEY, 'providerKey');
+                cards.model = selectCard(fields.OPENAI_COMPAT_CHAT_MODEL, discovery?.models || [], discovery?.selected_model || selectedValue('OPENAI_COMPAT_CHAT_MODEL', fields.OPENAI_COMPAT_CHAT_MODEL.default));
+            }
+            return cards;
+        }
+
+        function renderAdvancedMemoryFields(container, meta) {
+            const fields = fieldMap(meta);
+            const embeddingProvider = selectedValue('EMBEDDING_PROVIDER', fields.EMBEDDING_PROVIDER.default);
+            const generationProvider = selectedValue('GENERATION_PROVIDER', fields.GENERATION_PROVIDER.default);
+            const embeddingDiscovery = currentDiscovery('embedding');
+            const generationDiscovery = currentDiscovery('generation');
+            applyDiscoverySelection(embeddingDiscovery);
+            applyDiscoverySelection(generationDiscovery);
+            const embedding = embeddingCards(fields, embeddingProvider, embeddingDiscovery);
+            const generation = generationCards(fields, generationProvider, generationDiscovery);
+
+            container.innerHTML = `
+                <div class="provider-split">
+                    ${providerHead(
+                        t('embeddingTitle'),
+                        providerSelectCard('EMBEDDING_PROVIDER', t('embeddingProvider'), advancedMemoryConfig.embeddingProviders),
+                        providerStatus(embeddingDiscovery)
+                    )}
+                    ${providerHead(
+                        t('generationTitle'),
+                        providerSelectCard('GENERATION_PROVIDER', t('generationProvider'), advancedMemoryConfig.generationProviders),
+                        providerStatus(generationDiscovery)
+                    )}
+                    ${embedding.auth}
+                    ${generation.auth}
+                    ${embedding.model}
+                    ${generation.model}
+                </div>
+            `;
+        }
+
+        function renderFields() {
+            const container = document.getElementById('service-fields');
+            const meta = currentServiceMeta();
+            updateServiceProfile();
+            normalizePayload(meta);
+
+            if (isAdvancedMemory(meta)) {
+                renderAdvancedMemoryFields(container, meta);
+                attachFieldListeners(container);
+                syncAdvancedEditor();
+                return;
+            }
+
+            const visibleFields = meta.fields.filter((field) => !field.advanced_only);
+            if (visibleFields.length === 0) {
+                container.innerHTML = `<div class="field-meta">${t('emptyFields')}</div>`;
+                return;
+            }
+
+            container.innerHTML = visibleFields.map((field) => {
+                const type = field.input_type === 'textarea' ? 'text' : field.input_type;
+                const value = currentPayload[field.name] ?? '';
+                const modeLabel = field.secret ? t('secretLabel') : t('plainLabel');
+                return `
+                    <div class="field-card panel">
+                        <label class="text-lg">${field.label}</label>
+                        <div class="field-meta">${field.target_env} // ${modeLabel}</div>
+                        <div class="input-shell">
+                            <input
+                                data-field-name="${field.name}"
+                                data-input-type="${field.input_type}"
+                                class="pip-input"
+                                type="${type}"
+                                value="${String(value).replace(/"/g, '&quot;')}"
+                                placeholder="${field.placeholder || ''}"
+                                autocomplete="off"
+                            />
+                            ${validationIndicatorMarkup(field)}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            attachFieldListeners(container);
+            syncAdvancedEditor();
+        }
+
+        function attachFieldListeners(container) {
+            container.querySelectorAll('[data-field-name]').forEach((input) => {
+                input.addEventListener('input', () => {
+                    currentPayload[input.dataset.fieldName] = input.value;
+                    if (isAdvancedMemory(currentServiceMeta())) {
+                        handleAdvancedMemoryFieldChange(input.dataset.fieldName);
+                        return;
+                    }
+                    syncAdvancedEditor();
+                    relatedValidationFields(currentServiceMeta(), input.dataset.fieldName).forEach((name) => {
+                        clearValidationState(name);
+                        scheduleFieldValidation(name);
+                    });
+                });
+                input.addEventListener('change', () => {
+                    currentPayload[input.dataset.fieldName] = input.value;
+                    if (isAdvancedMemory(currentServiceMeta())) {
+                        handleAdvancedMemoryFieldChange(input.dataset.fieldName);
+                        return;
+                    }
+                    syncAdvancedEditor();
+                    relatedValidationFields(currentServiceMeta(), input.dataset.fieldName).forEach((name) => {
+                        clearValidationState(name);
+                        scheduleFieldValidation(name);
+                    });
+                });
+            });
+        }
+
+        function affectedAdvancedMemorySides(fieldName) {
+            const sides = new Set();
+            if (fieldName === 'EMBEDDING_PROVIDER') {
+                sides.add('embedding');
+            }
+            if (fieldName === 'GENERATION_PROVIDER') {
+                sides.add('generation');
+            }
+            if (fieldName === 'GEMINI_API_KEY' && selectedValue('EMBEDDING_PROVIDER') === 'gemini') {
+                sides.add('embedding');
+            }
+            if (fieldName === 'INCEPTION_API_KEY' && selectedValue('GENERATION_PROVIDER') === 'inception') {
+                sides.add('generation');
+            }
+            if ((fieldName === 'OLLAMA_BASE_URL' || fieldName === 'OLLAMA_EMBED_MODEL') && selectedValue('EMBEDDING_PROVIDER') === 'ollama') {
+                sides.add('embedding');
+            }
+            if ((fieldName === 'OLLAMA_BASE_URL' || fieldName === 'OLLAMA_CHAT_MODEL') && selectedValue('GENERATION_PROVIDER') === 'ollama') {
+                sides.add('generation');
+            }
+            if ((fieldName === 'OPENAI_COMPAT_BASE_URL' || fieldName === 'OPENAI_COMPAT_API_KEY' || fieldName === 'OPENAI_COMPAT_EMBED_MODEL') && selectedValue('EMBEDDING_PROVIDER') === 'openai_compatible') {
+                sides.add('embedding');
+            }
+            if ((fieldName === 'OPENAI_COMPAT_BASE_URL' || fieldName === 'OPENAI_COMPAT_API_KEY' || fieldName === 'OPENAI_COMPAT_CHAT_MODEL') && selectedValue('GENERATION_PROVIDER') === 'openai_compatible') {
+                sides.add('generation');
+            }
+            return Array.from(sides);
+        }
+
+        function clearAdvancedMemoryDiscovery(side) {
+            if (side === 'all') {
+                advancedMemoryDiscovery = { embedding: null, generation: null };
+                return;
+            }
+            advancedMemoryDiscovery[side] = null;
+        }
+
+        function closeValidationModal() {
+            document.getElementById('validation-modal').classList.add('hidden');
+        }
+
+        function showValidationModal(field, payload) {
+            const warningKey = `${field.name}:${payload.code}:${payload.message}:${selectedValue(field.name)}`;
+            if (warningKey === lastValidationWarningKey) {
+                return;
+            }
+            lastValidationWarningKey = warningKey;
+            document.getElementById('validation-modal-provider').textContent = payload.validator || '';
+            document.getElementById('validation-modal-field').textContent = field.label || field.name;
+            document.getElementById('validation-modal-code').textContent = payload.code || '';
+            document.getElementById('validation-modal-message').textContent = payload.message || '';
+            document.getElementById('validation-modal-details').textContent = payload.details || '';
+            document.getElementById('validation-modal').classList.remove('hidden');
+        }
+
+        function updateValidationIndicator(fieldName) {
+            const indicator = document.getElementById(`validation-indicator-${fieldName}`);
+            if (!indicator) {
+                return;
+            }
+            const state = fieldValidationState[fieldName];
+            indicator.className = state && state.ok ? 'validation-indicator validation-ok' : 'validation-indicator';
+            indicator.innerHTML = state && state.ok ? '&#10003;' : '';
+        }
+
+        function clearValidationState(fieldName) {
+            delete fieldValidationState[fieldName];
+            updateValidationIndicator(fieldName);
+        }
+
+        function relatedValidationFields(meta, changedFieldName) {
+            return meta.fields
+                .filter((field) => {
+                    if (!field.validation) {
+                        return false;
+                    }
+                    if (field.name === changedFieldName) {
+                        return true;
+                    }
+                    if (field.validation.base_url_field === changedFieldName) {
+                        return true;
+                    }
+                    return Array.isArray(field.validation.extra_state_fields) && field.validation.extra_state_fields.includes(changedFieldName);
+                })
+                .map((field) => field.name);
+        }
+
+        function shouldAttemptValidation(field) {
+            const value = selectedValue(field.name, '').trim();
+            return Boolean(field.validation && value.length >= 10);
+        }
+
+        async function runFieldValidation(fieldName) {
+            const meta = currentServiceMeta();
+            const field = fieldByName(meta, fieldName);
+            if (!field || !field.validation || !shouldAttemptValidation(field)) {
+                clearValidationState(fieldName);
+                return;
+            }
+            const response = await fetch('/api/field-validation', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    service_id: meta.id,
+                    field_name: fieldName,
+                    state: currentPayload,
+                })
+            });
+            const payload = await response.json();
+            if (!response.ok) {
+                const failure = {
+                    ok: false,
+                    validator: field.validation.validator,
+                    code: `http_${response.status}`,
+                    message: payload.detail || 'Validation failed.',
+                    details: ''
+                };
+                fieldValidationState[fieldName] = failure;
+                updateValidationIndicator(fieldName);
+                showValidationModal(field, failure);
+                return;
+            }
+            fieldValidationState[fieldName] = payload;
+            updateValidationIndicator(fieldName);
+            if (!payload.ok) {
+                showValidationModal(field, payload);
+            } else {
+                lastValidationWarningKey = '';
+            }
+        }
+
+        function scheduleFieldValidation(fieldName) {
+            if (validationTimers[fieldName]) {
+                clearTimeout(validationTimers[fieldName]);
+            }
+            const meta = currentServiceMeta();
+            const field = fieldByName(meta, fieldName);
+            if (!field || !field.validation) {
+                return;
+            }
+            if (!shouldAttemptValidation(field)) {
+                clearValidationState(fieldName);
+                return;
+            }
+            validationTimers[fieldName] = setTimeout(() => {
+                runFieldValidation(fieldName);
+            }, 700);
+        }
+
+        function handleAdvancedMemoryFieldChange(fieldName) {
+            const sides = affectedAdvancedMemorySides(fieldName);
+            if (fieldName === 'EMBEDDING_PROVIDER' || fieldName === 'GENERATION_PROVIDER') {
+                sides.forEach((side) => clearAdvancedMemoryDiscovery(side));
+                renderFields();
+            }
+            syncAdvancedEditor();
+            relatedValidationFields(currentServiceMeta(), fieldName).forEach((name) => {
+                clearValidationState(name);
+                scheduleFieldValidation(name);
+            });
+            if (sides.length === 0) {
+                return;
+            }
+            sides.forEach((side) => scheduleAdvancedMemoryDiscovery(side));
+        }
+
+        async function discoverAdvancedMemory(target = 'all') {
+            const response = await fetch('/api/provider-discovery/advanced-memory', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ state: currentPayload, target })
+            });
+            const payload = await response.json();
+            if (!response.ok) {
+                log(payload.detail || 'Provider discovery failed');
+                return;
+            }
+            const discovery = payload.discovery || {};
+            if (discovery.embedding) {
+                advancedMemoryDiscovery.embedding = discovery.embedding;
+                applyDiscoverySelection(discovery.embedding);
+            }
+            if (discovery.generation) {
+                advancedMemoryDiscovery.generation = discovery.generation;
+                applyDiscoverySelection(discovery.generation);
+            }
+            renderFields();
+            syncAdvancedEditor();
+        }
+
+        function scheduleAdvancedMemoryDiscovery(target = 'all') {
+            const sides = target === 'all' ? ['embedding', 'generation'] : [target];
+            sides.forEach((side) => {
+                if (advancedMemoryDiscoveryTimers[side]) {
+                    clearTimeout(advancedMemoryDiscoveryTimers[side]);
+                }
+                advancedMemoryDiscoveryTimers[side] = setTimeout(() => {
+                    discoverAdvancedMemory(side);
+                }, 400);
+            });
+        }
+
+        function syncAdvancedEditor() {
+            document.getElementById('secret-editor').value = JSON.stringify(currentPayload, null, 2);
+        }
+
+        function readAdvancedEditor() {
+            try {
+                currentPayload = JSON.parse(document.getElementById('secret-editor').value || '{}');
+                renderFields();
+                log(t('aligned'));
+                return true;
+            } catch (error) {
+                log(`${t('invalidJson')} ${error.message}`);
+                return false;
+            }
+        }
+
+        function alignBuffer() {
+            if (advancedVisible) {
+                readAdvancedEditor();
+                return;
+            }
+            syncAdvancedEditor();
+            log(t('aligned'));
+        }
+
+        function toggleAdvanced() {
+            advancedVisible = !advancedVisible;
+            document.getElementById('advanced-panel').classList.toggle('hidden', !advancedVisible);
+            if (advancedVisible) {
+                syncAdvancedEditor();
+            }
+        }
+
+        async function loadSecrets() {
+            log(t('loading'));
+            const response = await fetch(`/api/secrets/${currentServiceId()}`);
+            const payload = await response.json();
+            if (!response.ok) {
+                log(payload.detail || 'Load failed');
+                return;
+            }
+            currentPayload = payload.data || {};
+            fieldValidationState = {};
+            lastValidationWarningKey = '';
+            renderFields();
+            if (isAdvancedMemory(currentServiceMeta())) {
+                clearAdvancedMemoryDiscovery('all');
+                scheduleAdvancedMemoryDiscovery('all');
+            }
+            log(t('loaded'));
+        }
+
+        async function saveSecrets() {
+            if (advancedVisible && !readAdvancedEditor()) {
+                return;
+            }
+
+            const response = await fetch(`/api/secrets/${currentServiceId()}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ data: currentPayload })
+            });
+            const payload = await response.json();
+            if (!response.ok) {
+                log(payload.detail || 'Save failed');
+                return;
+            }
+            log(`${t('saved')} ${payload.restart_target}`);
+            log(payload.restart_command);
+        }
+
+        function clearConsole() {
+            document.getElementById('console-output').textContent = '';
+        }
+
+        async function runConsoleCommand() {
+            const input = document.getElementById('console-command');
+            const command = input.value.trim();
+            if (!command) {
+                return;
+            }
+            if (!isAdvancedMemory(currentServiceMeta())) {
+                log('Console commands are currently available only for advanced-memory-mcp.');
+                return;
+            }
+            if (command.toLowerCase() === 'clear') {
+                clearConsole();
+                input.value = '';
+                return;
+            }
+
+            const response = await fetch('/api/console/advanced-memory', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ command, state: currentPayload })
+            });
+            const payload = await response.json();
+            if (!response.ok) {
+                log(payload.detail || 'Console command failed');
+                return;
+            }
+
+            if (payload.state) {
+                currentPayload = payload.state;
+            }
+            if (payload.discovery) {
+                if (payload.discovery.embedding) {
+                    advancedMemoryDiscovery.embedding = payload.discovery.embedding;
+                    applyDiscoverySelection(payload.discovery.embedding);
+                }
+                if (payload.discovery.generation) {
+                    advancedMemoryDiscovery.generation = payload.discovery.generation;
+                    applyDiscoverySelection(payload.discovery.generation);
+                }
+            }
+            renderFields();
+            syncAdvancedEditor();
+
+            if (Array.isArray(payload.output) && payload.output.length > 0) {
+                payload.output.forEach((line) => log(line));
+            } else {
+                log(t('commandDone'));
+            }
+            input.value = '';
+        }
+
+        async function updateHealth() {
+            try {
+                const response = await fetch('/health');
+                const payload = await response.json();
+                document.getElementById('health-indicator').textContent = payload.vault_reachable ? t('healthReady') : t('healthFailed');
+            } catch (error) {
+                document.getElementById('health-indicator').textContent = t('healthFailed');
+            }
+        }
+
+        document.getElementById('target-service').addEventListener('change', async () => {
+            currentPayload = {};
+            fieldValidationState = {};
+            lastValidationWarningKey = '';
+            clearAdvancedMemoryDiscovery('all');
+            renderFields();
+            await loadSecrets();
+        });
+
+        document.getElementById('validation-modal').addEventListener('click', (event) => {
+            if (event.target.id === 'validation-modal') {
+                closeValidationModal();
+            }
+        });
+
+        document.getElementById('console-command').addEventListener('keydown', async (event) => {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                await runConsoleCommand();
+            }
+        });
+
+        applyTranslations();
+        updateServiceProfile();
+        loadSecrets();
+        updateHealth();
+    </script>
+</body>
+</html>

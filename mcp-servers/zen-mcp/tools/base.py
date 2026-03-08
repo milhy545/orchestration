@@ -29,6 +29,7 @@ import config
 from config import MCP_PROMPT_SIZE_LIMIT
 from providers import ModelProvider, ModelProviderRegistry
 from utils import check_token_limit
+from utils.secrets import load_env
 from utils.conversation_memory import (
     MAX_CONVERSATION_TURNS,
     add_turn,
@@ -38,6 +39,12 @@ from utils.conversation_memory import (
 )
 from utils.file_storage import FileReference, FileStorage
 from utils.file_utils import read_file_content, read_files
+
+def _is_real_secret(value: str | None) -> bool:
+    if not value:
+        return False
+    return not value.strip().lower().startswith("your_")
+
 
 from .models import SPECIAL_STATUS_MODELS, ContinuationOffer, ToolOutput
 
@@ -296,9 +303,8 @@ class BaseTool(ABC):
         from config import DEFAULT_MODEL, MODEL_CAPABILITIES_DESC
 
         # Check if OpenRouter is configured
-        has_openrouter = bool(
-            os.getenv("OPENROUTER_API_KEY") and os.getenv("OPENROUTER_API_KEY") != "your_openrouter_api_key_here"
-        )
+        openrouter_key = load_env("OPENROUTER_API_KEY")
+        has_openrouter = _is_real_secret(openrouter_key)
 
         # Use the centralized effective auto mode check
         if self.is_effective_auto_mode():
