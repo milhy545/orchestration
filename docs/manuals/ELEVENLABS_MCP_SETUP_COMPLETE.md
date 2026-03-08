@@ -64,7 +64,7 @@ Server poskytuje následující funkce:
 ```bash
 cd /home/orchestration
 source claude-agent-env/bin/activate
-export ELEVENLABS_API_KEY="sk_3acc58a81525e79c89124add46a3df6d8eb0f6cd6b4845ff"
+export ELEVENLABS_API_KEY="your-elevenlabs-api-key"
 python -m elevenlabs_mcp
 ```
 

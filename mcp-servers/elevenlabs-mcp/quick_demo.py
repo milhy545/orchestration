@@ -7,8 +7,17 @@ Zobrazí dostupné nástroje a jejich parametry
 import os
 import sys
 
-# Nastavení API klíče
-os.environ['ELEVENLABS_API_KEY'] = 'sk_3acc58a81525e79c89124add46a3df6d8eb0f6cd6b4845ff'
+
+def require_api_key() -> None:
+    if os.getenv("ELEVENLABS_API_KEY", "").strip():
+        return
+    print("❌ ELEVENLABS_API_KEY není nastavený v prostředí.")
+    print("   Nastavte ho před spuštěním demonstrace, například:")
+    print("   export ELEVENLABS_API_KEY='your-api-key'")
+    sys.exit(1)
+
+
+require_api_key()
 
 print("\n" + "="*70)
 print("🎙️  ELEVENLABS MCP SERVER - RYCHLÁ DEMONSTRACE")
@@ -92,7 +101,7 @@ print("="*70)
 print(f"✅ Celkem nástrojů: {len(tools)}")
 print(f"📁 Výstupní adresář: /home/orchestration/mcp-servers/elevenlabs-mcp/outputs/")
 print(f"⚙️  Konfigurační soubor: /home/orchestration/blackbox_mcp_settings.json")
-print(f"🔑 API klíč: Nastaven")
+print("🔑 API klíč: Načten z prostředí")
 
 print("\n" + "="*70)
 print("💡 PŘÍKLADY POUŽITÍ")
