@@ -38,7 +38,7 @@ scrape_configs:
         target_label: 'service_group'
         replacement: 'core'
       - source_labels: ['service']
-        regex: '(research-mcp|advanced-memory-mcp|transcriber-mcp)'
+        regex: '(perplexity-hub|advanced-memory-mcp)'
         target_label: 'service_group'
         replacement: 'ai'
       - source_labels: ['service']
@@ -66,4 +66,3 @@ scrape_configs:
         labels:
           job: varlogs
           __path__: /var/log/*log
-

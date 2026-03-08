@@ -179,7 +179,7 @@ echo "-----------------------------------"
 SERVICES=(
     "terminal-mcp" "filesystem-mcp" "database-mcp" "git-mcp" "memory-mcp" "system-mcp"
     "config-mcp" "log-mcp" "network-mcp" "security-mcp"
-    "postgresql-mcp" "redis-mcp" "qdrant-mcp" "mqtt-mcp" "research-mcp" "webm-transcriber"
+    "postgresql-mcp" "redis-mcp" "qdrant-mcp" "mqtt-mcp" "perplexity-hub" "webm-transcriber"
 )
 
 INSTRUMENTED=0

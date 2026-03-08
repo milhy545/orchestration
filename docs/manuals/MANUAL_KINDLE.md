@@ -105,7 +105,7 @@ Platforma implementuje Zero Trust security model:
 - **Log MCP** (7010) - Logging operations
 
 #### Extended Services (7011-7017, 7024-7026)
-- **Research MCP** (7011) - AI research
+- **Perplexity HUB** (7011) - cited research and optional synthesis
 - **Advanced Memory MCP** (7012) - AI memory
 - **Transcriber MCP** (7013) - Audio processing
 - **Vision MCP** (7014) - Image processing
@@ -293,18 +293,20 @@ curl -X POST http://localhost:7000/mcp \
 - delete_memory - Smazání paměti
 
 #### Advanced Memory MCP (Port 7012)
-**Účel**: AI-enhanced memory s vector search
+**Účel**: vector memory s provider-backed embeddings a optional context answers
 
 **Nástroje**:
-- semantic_store - Semantic storage
+- store_memory - Uložení paměti s embeddingem
+- search_memories - Textové vyhledávání v PostgreSQL
+- semantic_similarity - Similarity search nad vektory
 - vector_search - Vector search
-- memory_analytics - Memory analytics
-- similarity_search - Similarity search
+- get_context - Kombinace text a vector retrieval
+- answer_with_context - Odpověď nad nalezeným kontextem
 
 ### Extended Services
 
-#### Research MCP (Port 7011)
-**Účel**: AI research a data gathering
+#### Perplexity HUB (Port 7011)
+**Účel**: cited research a optional synthesis
 
 **Nástroje**:
 - web_search - Web search

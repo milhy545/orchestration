@@ -1,5 +1,6 @@
 import json
 import os
+from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 import httpx
@@ -46,6 +47,8 @@ async def health() -> Dict[str, Any]:
     return {
         "status": "healthy",
         "service": "research-mcp",
+        "version": "2.0.0",
+        "timestamp": datetime.utcnow().isoformat(),
         "perplexity_configured": configured,
     }
 

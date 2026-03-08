@@ -13,8 +13,8 @@ The Orchestration MCP Platform consists of **8 MCP services** providing **28 spe
 | [Terminal MCP](#terminal-mcp-port-7003) | 7003 | `mcp-terminal` | 3 | ✅ Running | System commands |
 | [Database MCP](#database-mcp-port-7004) | 7004 | `mcp-database` | 4 | ✅ Running | Database operations |
 | [Memory MCP](#memory-mcp-port-7005) | 7005 | `mcp-memory` | 5 | ✅ Running | Information storage |
-| [Research MCP](#research-mcp-port-7011) | 7011 | `mcp-research` | 3 | ✅ Running | Web search & research |
-| [Advanced Memory MCP](#advanced-memory-mcp-port-7012) | 7012 | `mcp-advanced-memory` | 0 | ✅ Running | Enhanced AI memory |
+| [Perplexity HUB](#perplexity-hub-port-7011) | 7011 | `mcp-perplexity-hub` | 3 | ✅ Running | Web search, cited retrieval, optional synthesis |
+| [Advanced Memory MCP](#advanced-memory-mcp-port-7012) | 7012 | `mcp-advanced-memory` | 6 | ✅ Running | Vector memory with provider-backed embeddings and context answers |
 | [Transcriber MCP](#transcriber-mcp-port-7013) | 7013 | `mcp-transcriber` | 3 | ⚠️ Debugging | Audio/video processing |
 | [ZEN MCP Server](#zen-mcp-server-port-7017) | 7017 | `zen-mcp-server` | N/A | ✅ Running | MCP tool orchestration gateway |
 
@@ -898,10 +898,10 @@ curl -X POST http://192.168.0.58:7000/mcp \
 
 ---
 
-## 🔍 Research MCP (Port 7011)
+## 🔍 Perplexity HUB (Port 7011)
 
-**Container**: `mcp-research`  
-**Purpose**: Web search, research, and information gathering  
+**Container**: `mcp-perplexity-hub`  
+**Purpose**: Web search, cited retrieval, and optional synthesis  
 **Status**: ✅ Running (26h+ uptime)  
 **Technology**: Python 3.12+, Perplexity AI, web search APIs, caching
 
@@ -1054,27 +1054,31 @@ curl -X POST http://192.168.0.58:7000/mcp \
 ## 🧠+ Advanced Memory MCP (Port 7012)
 
 **Container**: `mcp-advanced-memory`  
-**Purpose**: Enhanced memory capabilities with AI integration  
+**Purpose**: Vector memory with configurable embedding and generation providers  
 **Status**: ✅ Running (26h+ uptime)  
-**Technology**: Python 3.12+, Gemini AI, advanced embeddings, context management
+**Technology**: Python 3.12+, Qdrant, PostgreSQL, sentence-transformers, Gemini embeddings, OpenAI-compatible LAN endpoints
 
 ### Enhanced Features
-- **Multi-Model Embeddings**: Support for multiple embedding models
-- **AI-Enhanced Context**: Gemini AI for context understanding
-- **Advanced Relationships**: Complex relationship modeling
-- **Dynamic Context Windows**: Adaptive context size management
+- **Provider-backed Embeddings**: `local`, `gemini`, `ollama`, `openai_compatible`
+- **Optional Context Answers**: `answer_with_context` with `inception`, `ollama`, or `openai_compatible`
+- **LAN-capable Local Models**: works with remote `Ollama`, `LM Studio`, or `llama.cpp` servers via URL
+- **Vector + Text Retrieval**: Qdrant similarity plus PostgreSQL text fallback
 
-### Tools (Currently under development)
-This service is running but tools are still being integrated. Expected tools include:
+### Tools (6 total)
 
-- `enhanced_store`: Store with AI-enhanced categorization
-- `contextual_search`: Search with dynamic context understanding
-- `relationship_analysis`: Advanced relationship mapping
-- `knowledge_synthesis`: AI-powered knowledge synthesis
-- `adaptive_learning`: Learning from usage patterns
+- `store_memory`
+- `search_memories`
+- `semantic_similarity`
+- `vector_search`
+- `get_context`
+- `answer_with_context`
 
-### Current Status
-The service is healthy and running, with basic memory operations delegated to the standard Memory MCP. Enhanced features are being gradually rolled out.
+### Runtime Configuration
+- `EMBEDDING_PROVIDER=local|gemini|ollama|openai_compatible`
+- `GENERATION_PROVIDER=none|inception|ollama|openai_compatible`
+- `OLLAMA_BASE_URL=http://<lan-host>:11434`
+- `OPENAI_COMPAT_BASE_URL=http://<lan-host>:1234/v1`
+- `INCEPTION_MODEL=mercury`
 
 ---
 
@@ -1216,7 +1220,7 @@ curl http://192.168.0.58:7002/health  # Git MCP
 curl http://192.168.0.58:7003/health  # Terminal MCP
 curl http://192.168.0.58:7004/health  # Database MCP
 curl http://192.168.0.58:7005/health  # Memory MCP
-curl http://192.168.0.58:7011/health  # Research MCP
+curl http://192.168.0.58:7011/health  # Perplexity HUB
 curl http://192.168.0.58:7012/health  # Advanced Memory MCP
 curl http://192.168.0.58:7013/health  # Transcriber MCP (unhealthy)
 
@@ -1257,7 +1261,7 @@ Current performance benchmarks:
 ### Multi-Service Workflow Example
 
 ```bash
-# 1. Search for information using Research MCP
+# 1. Search for information using Perplexity HUB
 curl -X POST http://192.168.0.58:7000/mcp \
   -H "Content-Type: application/json" \
   -d '{
@@ -1310,7 +1314,7 @@ curl -X POST http://192.168.0.58:7000/mcp \
 
 ### For AI Agents
 - **Start with Memory MCP**: Store and retrieve context information
-- **Use Research MCP**: Gather current information and documentation
+- **Use Perplexity HUB**: Gather current information and documentation
 - **Leverage Filesystem MCP**: Read configurations and create files
 - **Git MCP for Version Control**: Track changes and collaborate
 - **Database MCP for Persistence**: Store structured data
