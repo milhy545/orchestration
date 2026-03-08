@@ -1,5 +1,42 @@
 # Test Coverage & Security Audit - Progress Update
 
+## 2026-03-05 Plan Execution Update
+
+### Scope Delivered
+
+- Unified health payloads across target services:
+  - `mcp-filesystem`, `mcp-terminal`, `mcp-database`, `mcp-memory`, `mcp-security`,
+    `mcp-config`, `mcp-log`, `mcp-research`, `mcp-marketplace`, `mcp-forai`, `mcp-mqtt`
+- Added missing `/health` endpoint in `mcp-mqtt`.
+- Mega-orchestrator service map completed for active core services:
+  - `filesystem`, `git`, `terminal`, `database`, `memory`, `security`, `config`, `log`,
+    `research`, `marketplace`, `forai`, `mqtt`
+- Mega-orchestrator endpoint/tool reduction implemented:
+  - `MEGA_ENDPOINT_PROFILE=compact`
+  - `MEGA_EXPOSED_SERVICES` configurable allowlist
+  - compact tool exposure reduced to 13 tools
+- Vault WebUI verified on port `10000`.
+
+### Test Results
+
+- Targeted unit test suite:
+  - command: `./.venv/bin/python -m pytest -q mcp-servers/filesystem-mcp/tests/test_main.py mcp-servers/git-mcp/tests/test_main.py mcp-servers/terminal-mcp/tests/test_main.py mcp-servers/database-mcp/tests/test_main.py mcp-servers/memory-mcp/tests/test_main.py mcp-servers/security-mcp/tests/test_main.py mcp-servers/config-mcp/tests/test_security.py mcp-servers/log-mcp/tests/test_security.py mcp-servers/marketplace-mcp/tests/test_main.py mcp-servers/mqtt-mcp/tests/test_main.py`
+  - result: `162 passed`
+- E2E orchestration workflow:
+  - command: `bash tests/unit/orchestration_workflow_test.sh`
+  - result: `11 passed, 0 failed`
+
+### Runtime Verification
+
+- `mega-orchestrator` health: `healthy`
+- services reported by mega-orchestrator: `12`
+- core service health checks: `200` + `healthy`
+- restart policy check:
+  - active core services: `unless-stopped`
+  - `mcp-transcriber`, `mcp-vision`: `no` (intentional)
+
+---
+
 **Date:** 2025-11-16
 **Status:** IN PROGRESS
 **Services Completed:** 6 out of 16 (37.5%)

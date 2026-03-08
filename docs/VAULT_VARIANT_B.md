@@ -1,133 +1,85 @@
 # Vault Variant B
 
-`Vault Variant B` adds a lightweight Vault-backed secrets overlay on top of the main orchestration stack without replacing the base `docker-compose.yml`.
+`Vault Variant B` je dnes postavený kolem přenositelného modulu `vault-secrets-ui`, který používá deklarativní konfiguraci služeb a primárně formulářové zadávání jednotlivých klíčů.
 
-## What It Adds
+## Co přidává
 
-- `vault` on `${VAULT_PORT:-7070}` backed by the HashiCorp Vault dev server
-- `vault-bootstrap` to seed policies, shared runtime tokens, and initial secret paths
-- `vault-agent-common` to render shell-safe env snapshots into `/vault/runtime/*.env`
-- `vault-secrets-ui` on `${VAULT_WEBUI_PORT:-10000}` with the restored 3-theme retro Web UI
+- `vault` na `${VAULT_PORT:-7070}`
+- `vault-bootstrap` pro inicializaci politik a seed dat
+- `vault-agent-common` pro render runtime `.env` snapshotů do `/vault/runtime/*.env` a secret files do `/vault/runtime/secrets/<service>/`
+- `vault-secrets-ui` na `${VAULT_WEBUI_PORT:-10000}` s retro UI a key-first workflow
 
-The overlay is intentionally additive. The base stack remains usable without Vault, but when the overlay is enabled the selected services start through a Vault runtime wrapper and load secrets from `/vault/runtime/*.env`.
+## Aktivní workflow
 
-## Files
+1. Vyberte cílovou službu.
+2. Vyplňte dedikovaná pole pro klíče a konfigurační hodnoty.
+3. Uložte změnu do Vaultu.
+4. Restartujte dotčenou službu podle zobrazeného příkazu.
+5. `Advanced JSON` použijte jen tehdy, když potřebujete uložit doplňkové klíče mimo formulář.
 
+## Soubory
+
+- `[services/vault-secrets-ui](/home/orchestration/services/vault-secrets-ui)`
+- `[services/vault-secrets-ui/services.json](/home/orchestration/services/vault-secrets-ui/services.json)`
+- `[scripts/vault-variant-b-smoke.sh](/home/orchestration/scripts/vault-variant-b-smoke.sh)`
 - `docker-compose.vault.yml`
-- `infra/vault/*`
-- `services/vault-secrets-ui/*`
-- `scripts/vault-variant-b-smoke.sh`
 
-## Start
-
-```bash
-docker compose -f docker-compose.yml -f docker-compose.vault.yml up -d --build
-```
-
-For a faster first bring-up on this machine, you can target only the Vault-enabled services:
-
-```bash
-docker compose -f docker-compose.yml -f docker-compose.vault.yml up -d --build \
-  vault vault-bootstrap vault-agent-common vault-secrets-ui \
-  postgresql redis mega-orchestrator research-mcp zen-mcp-server \
-  gmail-mcp security-mcp marketplace-mcp
-```
-
-## Health Checks
+## Health checks
 
 ```bash
 curl -s http://localhost:${VAULT_WEBUI_PORT:-10000}/health
 curl -s http://localhost:${VAULT_PORT:-7070}/v1/sys/health
 curl -s http://localhost:7000/health
+./scripts/vault-ui-playwright-smoke.sh http://127.0.0.1:${VAULT_WEBUI_PORT:-10000}
 ```
 
-Expected:
+Očekávaný výsledek:
 
-- `vault-secrets-ui` reports `status: healthy`
-- Vault responds on `/v1/sys/health`
-- `mega-orchestrator` remains reachable on `7000`
-- `vault-secrets-ui` health also reports token-file and Vault connectivity state
+- `vault-secrets-ui` vrací `status: healthy`
+- health uvádí `token_file_present`
+- health uvádí `vault_reachable`
+- `mega-orchestrator` je stále dostupný na portu `7000`
 
-## Secret Paths
+## Konfigurace služeb
 
-The restored UI and render loop manage these paths:
+Aktivní seznam služeb a polí je v `[services/vault-secrets-ui/services.json](/home/orchestration/services/vault-secrets-ui/services.json)`.
 
-- `secret/orchestration/mega-orchestrator`
-- `secret/orchestration/research-mcp`
-- `secret/orchestration/advanced-memory-mcp`
-- `secret/orchestration/zen-mcp-server`
-- `secret/orchestration/gmail-mcp`
-- `secret/orchestration/internal-auth`
-- `secret/orchestration/common-mcp`
-- `secret/orchestration/perplexity-hub`
+Každá služba definuje:
 
-The first six map to active runtime consumers in the current stack. `common-mcp` and `perplexity-hub` are preserved as legacy secret namespaces from the original variant so the recovered UI matches the historical behavior.
+- `id`
+- `label`
+- `vault_path`
+- `env_file`
+- `restart_target`
+- `delivery_mode`
+- `description`
+- `fields`
 
-## Web UI
+Každé pole definuje:
 
-Open:
+- `name`
+- `label`
+- `target_env`
+- `input_type`
+- `secret`
+- `advanced_only`
+- `placeholder`
+- `default`
 
-```text
-http://localhost:${VAULT_WEBUI_PORT:-10000}
-```
+`delivery_mode: "file"` je preferovaný režim pro secret-heavy služby. Renderer pak uloží raw secret do souboru pod `/vault/runtime/secrets/...` a do runtime `.env` zapíše jen `*_FILE` cestu, takže se secret nepropaguje do container env při startu přes Vault overlay.
 
-The restored UI keeps the original 3-theme variant:
+## Přenositelnost
 
-- `PIP-BOY`
-- `CYBERPUNK`
-- `VIBE AGENT`
+Modul lze přesunout do jiného projektu jako celek:
 
-It also keeps the EN/CS toggle and JSON editor workflow.
+1. zkopírovat složku `[services/vault-secrets-ui](/home/orchestration/services/vault-secrets-ui)`
+2. upravit `services.json`
+3. nastavit `VAULT_ADDR` a `VAULT_TOKEN_FILE`
+4. spustit `uvicorn app:app` nebo použít Dockerfile
 
-The UI now also shows:
+## Historické varianty
 
-- the target runtime env file
-- which service must be restarted
-- the exact `docker compose ... restart <service>` command
-
-The first functional version is intentionally **restart-based**: save the secret, then restart the affected service. The Web UI immediately refreshes the relevant `/vault/runtime/*.env` file after each save so you do not need to wait for the periodic render loop before restarting.
-
-## Runtime Rendered Files
-
-`vault-agent-common` renders env snapshots into the shared runtime volume:
-
-- `/vault/runtime/mega-orchestrator.env`
-- `/vault/runtime/research-mcp.env`
-- `/vault/runtime/advanced-memory-mcp.env`
-- `/vault/runtime/zen-mcp-server.env`
-- `/vault/runtime/gmail-mcp.env`
-- `/vault/runtime/security-mcp.env`
-- `/vault/runtime/marketplace-mcp.env`
-- `/vault/runtime/common-mcp.env`
-- `/vault/runtime/perplexity-hub.env`
-
-These files are mounted read-only into selected containers and sourced at process startup through `infra/vault/run-with-env.sh`. This means updated secrets take effect after the target container is restarted.
-
-## First-Wave Runtime Consumers
-
-The overlay actively injects Vault-backed secrets into these services:
-
-- `mega-orchestrator`
-- `research-mcp`
-- `zen-mcp-server`
-- `gmail-mcp`
-- `security-mcp`
-- `marketplace-mcp`
-
-`advanced-memory-mcp` is wired for the same pattern, but local runtime validation may be deferred on low-resource hosts.
-
-## Operator Workflow
-
-1. Start the stack with `docker-compose.vault.yml`.
-2. Open `http://localhost:${VAULT_WEBUI_PORT:-10000}`.
-3. Select a service and upload the JSON payload with the needed secrets.
-4. Restart the affected service using the command shown in the UI.
-5. Re-check the service health endpoint or behavior through `mega-orchestrator`.
-
-## Smoke Test
-
-```bash
-./scripts/vault-variant-b-smoke.sh
-```
-
-The smoke script validates compose syntax and probes health endpoints if the stack is already running.
+- `2a03dc2`: starší obnovené retro UI
+- `25dac15`: retro UI s runtime metadata a restart logikou
+- `d892ff7`: bezpečnější health probe bez úniku detailů
+- aktuální aktivní verze: přenositelný key-first modul s hidden advanced JSON režimem

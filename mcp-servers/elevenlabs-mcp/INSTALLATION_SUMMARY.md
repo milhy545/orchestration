@@ -37,7 +37,7 @@ pip install elevenlabs-mcp
       "command": "python",
       "args": ["-m", "elevenlabs_mcp"],
       "env": {
-        "ELEVENLABS_API_KEY": "sk_3acc58a81525e79c89124add46a3df6d8eb0f6cd6b4845ff",
+        "ELEVENLABS_API_KEY": "your-elevenlabs-api-key",
         "ELEVENLABS_MCP_OUTPUT_MODE": "files",
         "ELEVENLABS_MCP_BASE_PATH": "/home/orchestration/mcp-servers/elevenlabs-mcp/outputs"
       },
@@ -56,7 +56,7 @@ pip install elevenlabs-mcp
 
 ### 4. Proměnné prostředí
 
-- **ELEVENLABS_API_KEY**: `sk_3acc58a81525e79c89124add46a3df6d8eb0f6cd6b4845ff`
+- **ELEVENLABS_API_KEY**: `your-elevenlabs-api-key`
 - **ELEVENLABS_MCP_OUTPUT_MODE**: `files`
 - **ELEVENLABS_MCP_BASE_PATH**: `/home/orchestration/mcp-servers/elevenlabs-mcp/outputs`
 
@@ -81,7 +81,7 @@ ElevenLabs MCP server poskytuje následující nástroje:
 ```bash
 cd /home/orchestration
 source claude-agent-env/bin/activate
-export ELEVENLABS_API_KEY="sk_3acc58a81525e79c89124add46a3df6d8eb0f6cd6b4845ff"
+export ELEVENLABS_API_KEY="your-elevenlabs-api-key"
 python -m elevenlabs_mcp
 ```
 

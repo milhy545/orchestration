@@ -57,6 +57,10 @@ curl http://localhost:7000/health
 curl http://localhost:7000/services
 ```
 
+### Reports
+- [reports/](reports/)
+- Current session handoff: [reports/handoffs/20260308-root-to-project-resume/README.md](reports/handoffs/20260308-root-to-project-resume/README.md)
+
 ## 🏛️ Architecture Overview
 
 ### Core Components

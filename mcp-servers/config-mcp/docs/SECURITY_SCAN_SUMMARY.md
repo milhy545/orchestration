@@ -113,7 +113,7 @@ mcp-servers/security-mcp/SECURITY_FINDINGS.md (6.6 KB)
 mcp-servers/network-mcp/SECURITY_FINDINGS.md (8.7 KB)
 mcp-servers/redis-mcp/SECURITY_FINDINGS.md (8.9 KB)
 mcp-servers/qdrant-mcp/SECURITY_FINDINGS.md (8.6 KB)
-mcp-servers/research-mcp/SECURITY_FINDINGS.md (13 KB)
+Legacy research findings archive (13 KB)
 mcp-servers/webm-transcriber/SECURITY_FINDINGS.md (13 KB)
 ```
 

@@ -5,11 +5,16 @@ Demonstrace Text-to-Speech funkce ElevenLabs MCP serveru
 
 import asyncio
 import os
+import sys
 from pathlib import Path
 
-# Nastavení API klíče
-os.environ['ELEVENLABS_API_KEY'] = 'sk_3acc58a81525e79c89124add46a3df6d8eb0f6cd6b4845ff'
 os.environ['ELEVENLABS_MCP_BASE_PATH'] = '/home/orchestration/mcp-servers/elevenlabs-mcp/outputs'
+
+if not os.getenv("ELEVENLABS_API_KEY", "").strip():
+    print("❌ ELEVENLABS_API_KEY není nastavený v prostředí.")
+    print("   Nastavte ho před spuštěním demonstrace, například:")
+    print("   export ELEVENLABS_API_KEY='your-api-key'")
+    sys.exit(1)
 
 from elevenlabs_mcp.server import mcp
 
