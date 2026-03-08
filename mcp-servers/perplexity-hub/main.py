@@ -26,7 +26,9 @@ def _load_secret(name: str) -> str | None:
         try:
             value = Path(file_path).read_text(encoding="utf-8").strip()
         except OSError as exc:
-            raise HTTPException(status_code=500, detail=f"{name}_FILE could not be read") from exc
+            raise HTTPException(
+                status_code=500, detail=f"{name}_FILE could not be read"
+            ) from exc
         return value or None
 
     value = os.getenv(name, "").strip()
@@ -96,7 +98,12 @@ def _provider_state() -> dict[str, Any]:
     return {
         "perplexity": {
             "configured": bool(_load_secret("PERPLEXITY_API_KEY")),
-            "capabilities": ["retrieval", "citations", "domain-filtering", "academic-search"],
+            "capabilities": [
+                "retrieval",
+                "citations",
+                "domain-filtering",
+                "academic-search",
+            ],
             "default_model": DEFAULT_PERPLEXITY_MODEL,
         },
         "openai": {
@@ -109,11 +116,17 @@ def _provider_state() -> dict[str, Any]:
 
 def _validate_request(request: HubQueryRequest) -> None:
     if request.mode == "domain" and not request.domains:
-        raise HTTPException(status_code=422, detail="domains are required for domain mode")
+        raise HTTPException(
+            status_code=422, detail="domains are required for domain mode"
+        )
     if request.mode != "domain" and request.recency is not None:
-        raise HTTPException(status_code=422, detail="recency is only supported for domain mode")
+        raise HTTPException(
+            status_code=422, detail="recency is only supported for domain mode"
+        )
     if request.mode == "structured" and not request.response_schema:
-        raise HTTPException(status_code=422, detail="response_schema is required for structured mode")
+        raise HTTPException(
+            status_code=422, detail="response_schema is required for structured mode"
+        )
 
 
 def _parse_structured(answer: str) -> dict[str, Any]:
@@ -144,14 +157,18 @@ async def _execute_query(request: HubQueryRequest) -> HubQueryResponse:
         if openai_key:
             synthesizer = OpenAISynthesizer(openai_key)
             try:
-                answer, model_used = await synthesizer.synthesize(request.model_dump(), retrieval)
+                answer, model_used = await synthesizer.synthesize(
+                    request.model_dump(), retrieval
+                )
             except ProviderConfigurationError as exc:
                 raise HTTPException(status_code=500, detail=str(exc)) from exc
             except ProviderResponseError as exc:
                 raise HTTPException(status_code=502, detail=str(exc)) from exc
             synthesis_provider = "openai"
         else:
-            warnings.append("OpenAI synthesis requested but OPENAI_API_KEY is not configured.")
+            warnings.append(
+                "OpenAI synthesis requested but OPENAI_API_KEY is not configured."
+            )
 
     return HubQueryResponse(
         query=request.query,
@@ -161,7 +178,9 @@ async def _execute_query(request: HubQueryRequest) -> HubQueryResponse:
         model_used=model_used,
         sources=retrieval.sources,
         answer=None if request.mode == "structured" else answer,
-        structured_data=_parse_structured(answer) if request.mode == "structured" else None,
+        structured_data=(
+            _parse_structured(answer) if request.mode == "structured" else None
+        ),
         warnings=warnings,
         timestamp=_utc_now(),
     )
@@ -212,7 +231,9 @@ async def hub_query(request: HubQueryRequest) -> HubQueryResponse:
 
 
 @app.post("/research/news", response_model=LegacySearchResult)
-async def research_news(query: str, model: str = DEFAULT_PERPLEXITY_MODEL) -> LegacySearchResult:
+async def research_news(
+    query: str, model: str = DEFAULT_PERPLEXITY_MODEL
+) -> LegacySearchResult:
     return _legacy_search_response(
         await _execute_query(HubQueryRequest(query=query, mode="news", model=model))
     )
@@ -239,7 +260,9 @@ async def research_domain(
 
 
 @app.post("/research/academic", response_model=LegacySearchResult)
-async def research_academic(query: str, model: str = DEFAULT_PERPLEXITY_MODEL) -> LegacySearchResult:
+async def research_academic(
+    query: str, model: str = DEFAULT_PERPLEXITY_MODEL
+) -> LegacySearchResult:
     return _legacy_search_response(
         await _execute_query(HubQueryRequest(query=query, mode="academic", model=model))
     )
@@ -264,7 +287,9 @@ async def research_structured(
 
 
 @app.post("/research/search", response_model=LegacySearchResult)
-async def research_search(query: str, model: str = DEFAULT_PERPLEXITY_MODEL) -> LegacySearchResult:
+async def research_search(
+    query: str, model: str = DEFAULT_PERPLEXITY_MODEL
+) -> LegacySearchResult:
     return _legacy_search_response(
         await _execute_query(HubQueryRequest(query=query, mode="news", model=model))
     )

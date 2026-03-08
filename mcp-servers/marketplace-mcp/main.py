@@ -136,7 +136,9 @@ def _require_scopes(required: List[str]):
         authorization: Optional[str] = Header(default=None),
     ) -> Dict[str, Any]:
         if not JWT_SECRET:
-            raise HTTPException(status_code=500, detail="Server authentication is not configured")
+            raise HTTPException(
+                status_code=500, detail="Server authentication is not configured"
+            )
         if not authorization or not authorization.startswith("Bearer "):
             raise HTTPException(status_code=401, detail="Missing bearer token")
 

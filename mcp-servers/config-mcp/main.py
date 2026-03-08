@@ -165,7 +165,9 @@ class ConfigValidateRequest(BaseModel):
     config_data: Dict[str, Any]
     schema_definition: Optional[Dict[str, Any]] = Field(default=None, alias="schema")
     required_keys: Optional[List[str]] = Field(default_factory=list)
-    value_types: Optional[Dict[str, str]] = Field(default_factory=dict)  # key -> type mapping
+    value_types: Optional[Dict[str, str]] = Field(
+        default_factory=dict
+    )  # key -> type mapping
 
 
 class ConfigBackupRequest(BaseModel):
@@ -313,7 +315,9 @@ async def env_vars_tool(request: EnvVarRequest) -> Dict[str, Any]:
                 "operation": "get",
                 "key": request.key,
                 "value": _serialize_env_value(request.key, value),
-                "masked": bool(value is not None and _is_sensitive_env_key(request.key)),
+                "masked": bool(
+                    value is not None and _is_sensitive_env_key(request.key)
+                ),
                 "found": value is not None,
                 "timestamp": datetime.now().isoformat(),
             }
@@ -324,7 +328,9 @@ async def env_vars_tool(request: EnvVarRequest) -> Dict[str, Any]:
                     status_code=400, detail="Key and value required for set operation"
                 )
             if _is_protected_env_key(request.key):
-                raise HTTPException(status_code=403, detail="Protected environment variable")
+                raise HTTPException(
+                    status_code=403, detail="Protected environment variable"
+                )
 
             old_value = os.environ.get(request.key)
             os.environ[request.key] = request.value
@@ -347,8 +353,7 @@ async def env_vars_tool(request: EnvVarRequest) -> Dict[str, Any]:
                 }
 
             serialized_vars = {
-                key: _serialize_env_value(key, value)
-                for key, value in env_vars.items()
+                key: _serialize_env_value(key, value) for key, value in env_vars.items()
             }
 
             return {
@@ -365,7 +370,9 @@ async def env_vars_tool(request: EnvVarRequest) -> Dict[str, Any]:
                     status_code=400, detail="Key required for delete operation"
                 )
             if _is_protected_env_key(request.key):
-                raise HTTPException(status_code=403, detail="Protected environment variable")
+                raise HTTPException(
+                    status_code=403, detail="Protected environment variable"
+                )
 
             old_value = os.environ.get(request.key)
             if old_value is not None:
@@ -376,7 +383,9 @@ async def env_vars_tool(request: EnvVarRequest) -> Dict[str, Any]:
                 "key": request.key,
                 "deleted": old_value is not None,
                 "old_value": _serialize_env_value(request.key, old_value),
-                "masked": bool(old_value is not None and _is_sensitive_env_key(request.key)),
+                "masked": bool(
+                    old_value is not None and _is_sensitive_env_key(request.key)
+                ),
                 "timestamp": datetime.now().isoformat(),
             }
 

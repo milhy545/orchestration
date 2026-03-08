@@ -16,6 +16,49 @@ ADVANCED_MEMORY_DIR = PROJECT_ROOT / "mcp-servers" / "advanced-memory-mcp"
 def _import_module(module_name: str, path: Path):
     if str(ADVANCED_MEMORY_DIR) not in sys.path:
         sys.path.insert(0, str(ADVANCED_MEMORY_DIR))
+    if importlib.util.find_spec("fastapi") is None and "fastapi" not in sys.modules:
+        fastapi_stub = types.ModuleType("fastapi")
+
+        class FastAPI:
+            def __init__(self, *args, **kwargs):
+                self.args = args
+                self.kwargs = kwargs
+
+            def get(self, *args, **kwargs):
+                return lambda func: func
+
+            def post(self, *args, **kwargs):
+                return lambda func: func
+
+            def on_event(self, *args, **kwargs):
+                return lambda func: func
+
+        class HTTPException(Exception):
+            def __init__(self, status_code: int, detail: str):
+                super().__init__(detail)
+                self.status_code = status_code
+                self.detail = detail
+
+        fastapi_stub.FastAPI = FastAPI
+        fastapi_stub.HTTPException = HTTPException
+        sys.modules["fastapi"] = fastapi_stub
+    if importlib.util.find_spec("pydantic") is None and "pydantic" not in sys.modules:
+        pydantic_stub = types.ModuleType("pydantic")
+
+        class BaseModel:
+            def __init__(self, **kwargs):
+                for key, value in kwargs.items():
+                    setattr(self, key, value)
+
+            def model_dump(self):
+                return self.__dict__.copy()
+
+        def Field(default=None, **kwargs):
+            return default
+
+        pydantic_stub.BaseModel = BaseModel
+        pydantic_stub.Field = Field
+        sys.modules["pydantic"] = pydantic_stub
     if "asyncpg" not in sys.modules:
         asyncpg_stub = types.ModuleType("asyncpg")
         asyncpg_stub.Pool = object

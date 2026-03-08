@@ -51,6 +51,7 @@ def _load_secret(name: str) -> str | None:
     value = os.getenv(name, "").strip()
     return value or None
 
+
 # Security configuration
 SECRET_KEY = _load_secret("JWT_SECRET_KEY") or secrets.token_urlsafe(32)
 ALGORITHM = "HS256"

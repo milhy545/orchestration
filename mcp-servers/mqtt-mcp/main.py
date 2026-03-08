@@ -64,7 +64,9 @@ class MQTTMCPServer:
                     self.mqtt_username, self.mqtt_password
                 )
             else:
-                logger.warning("MQTT_PASSWORD is not configured; attempting anonymous connection")
+                logger.warning(
+                    "MQTT_PASSWORD is not configured; attempting anonymous connection"
+                )
 
             # Set event handlers
             self.mqtt_client.on_connect = self.on_mqtt_connect
