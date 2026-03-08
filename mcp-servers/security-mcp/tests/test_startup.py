@@ -39,7 +39,7 @@ class TestServiceStartup:
         assert response.status_code == 200
         data = response.json()
         assert data["status"] == "healthy"
-        assert data["service"] == "Security MCP"
+        assert data["service"] == "security-mcp"
 
     def test_tools_list_endpoint_works(self):
         """Test that tools list endpoint works"""

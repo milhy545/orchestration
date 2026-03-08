@@ -3,17 +3,15 @@ import os
 import urllib.error
 import urllib.request
 import uuid
+from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 import asyncpg
-from contextlib import asynccontextmanager
-
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel, Field
-
 from providers import ProviderClient, ProviderError, RuntimeConfig
+from pydantic import BaseModel, Field
 
 DATABASE_URL = os.getenv("MCP_DATABASE_URL", "")
 QDRANT_URL = os.getenv("QDRANT_URL", "http://qdrant-vector:6333")

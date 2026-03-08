@@ -8,10 +8,13 @@ from typing import Any, Literal
 
 from fastapi import FastAPI, HTTPException
 from prometheus_fastapi_instrumentator import Instrumentator
+from providers import (
+    OpenAISynthesizer,
+    PerplexityRetriever,
+    ProviderConfigurationError,
+    ProviderResponseError,
+)
 from pydantic import BaseModel, ConfigDict, Field
-
-from providers import OpenAISynthesizer, PerplexityRetriever, ProviderConfigurationError, ProviderResponseError
-
 
 DEFAULT_PERPLEXITY_MODEL = "sonar-pro"
 DEFAULT_OPENAI_MODEL = "gpt-4.1-mini"

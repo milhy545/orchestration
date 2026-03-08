@@ -9,7 +9,7 @@ from pathlib import Path
 import pytest
 
 
-PROJECT_ROOT = Path("/home/orchestration")
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
 ADVANCED_MEMORY_DIR = PROJECT_ROOT / "mcp-servers" / "advanced-memory-mcp"
 
 
@@ -22,43 +22,55 @@ def _import_module(module_name: str, path: Path):
         sys.modules["asyncpg"] = asyncpg_stub
     if "sentence_transformers" not in sys.modules:
         sentence_stub = types.ModuleType("sentence_transformers")
+
         class SentenceTransformer:
             def __init__(self, *args, **kwargs):
                 self.args = args
+
             def encode(self, text, normalize_embeddings=True):
                 return [0.1, 0.2, 0.3]
+
         sentence_stub.SentenceTransformer = SentenceTransformer
         sys.modules["sentence_transformers"] = sentence_stub
     if "qdrant_client" not in sys.modules:
         qdrant_stub = types.ModuleType("qdrant_client")
+
         class QdrantClient:
             def __init__(self, *args, **kwargs):
                 pass
+
         qdrant_stub.QdrantClient = QdrantClient
         sys.modules["qdrant_client"] = qdrant_stub
     if "qdrant_client.http.models" not in sys.modules:
         models_stub = types.ModuleType("qdrant_client.http.models")
+
         class Distance:
             COSINE = "cosine"
+
         class MatchValue:
             def __init__(self, value):
                 self.value = value
+
         class FieldCondition:
             def __init__(self, key, match):
                 self.key = key
                 self.match = match
+
         class Filter:
             def __init__(self, must):
                 self.must = must
+
         class PointStruct:
             def __init__(self, id, vector, payload):
                 self.id = id
                 self.vector = vector
                 self.payload = payload
+
         class VectorParams:
             def __init__(self, size, distance):
                 self.size = size
                 self.distance = distance
+
         models_stub.Distance = Distance
         models_stub.MatchValue = MatchValue
         models_stub.FieldCondition = FieldCondition
