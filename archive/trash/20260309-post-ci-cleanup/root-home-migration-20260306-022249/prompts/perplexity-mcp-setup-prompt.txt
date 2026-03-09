@@ -1,0 +1,108 @@
+Ahoj! Jsem Claude na HAS serveru a potřebuji nastavit Perplexity MCP server pro rozšíření svých schopností o pokročilé webové vyhledávání a research.
+
+## Aktuální situace:
+- **Server:** 192.168.0.58 (Alpine Linux 3.19)
+- **Claude Code CLI:** ✓ Nainstalován a funkční
+- **Existující konfigurace:** `/home/milhy777/Develop/Configuration-Files/mcp_servers_192_168_0_58.json`
+
+## Úkol: Nastavení Perplexity MCP Server
+
+### 1. Analýza existující konfigurace
+Nejdřív si přečti existující MCP konfiguraci na hlavním počítači:
+```bash
+scp milhy777@192.168.0.50:/home/milhy777/Develop/Configuration-Files/mcp_servers_192_168_0_58.json /tmp/reference-config.json
+```
+
+### 2. Instalace Perplexity MCP Server
+```bash
+# Možnost A: NPM instalace (pokud existuje jako package)
+npm install -g @modelcontextprotocol/server-perplexity
+
+# Možnost B: Ruční instalace z repozitáře
+cd /opt
+git clone https://github.com/modelcontextprotocol/servers.git mcp-servers
+cd mcp-servers/src/perplexity
+npm install
+npm run build
+```
+
+### 3. Konfigurace API klíče
+Perplexity vyžaduje API klíč:
+```bash
+# Získat Perplexity Pro API klíč z uživatele
+echo "export PERPLEXITY_API_KEY=your_api_key_here" >> /etc/environment
+source /etc/environment
+```
+
+### 4. Vytvoření MCP konfigurace
+Vytvořit `/root/.claude/mcp_servers.json`:
+```json
+{
+  "mcpServers": {
+    "perplexity": {
+      "command": "npx",
+      "args": [
+        "@modelcontextprotocol/server-perplexity"
+      ],
+      "env": {
+        "PERPLEXITY_API_KEY": "$PERPLEXITY_API_KEY"
+      }
+    }
+  }
+}
+```
+
+### 5. Alternativní konfigurace (HTTP MCP server)
+Pokud je Perplexity server dostupný jako HTTP service:
+```json
+{
+  "mcpServers": {
+    "perplexity": {
+      "url": "http://192.168.0.58:8081/mcp",
+      "transport": "http"
+    }
+  }
+}
+```
+
+### 6. Testování a ověření
+```bash
+# Test MCP serveru
+claude-code --mcp-debug
+
+# Ověření funkčnosti Perplexity
+# Spustit Claude a otestovat: "Search for latest AI news using Perplexity"
+```
+
+### 7. Firewall konfigurace (pokud potřeba)
+```bash
+# Pro HTTP MCP server
+iptables -I INPUT -p tcp --dport 8081 -s 192.168.0.0/24 -j ACCEPT
+iptables-save > /etc/iptables/rules-save
+```
+
+## Očekávané výsledky:
+Po úspěšném nastavení budu mít přístup k:
+- **Webové vyhledávání** přes Perplexity API
+- **Research capabilities** s citacemi zdrojů
+- **Real-time informace** z webu
+- **Pokročilé AI search** schopnosti
+
+## Řešení problémů:
+- **API klíč:** Zkontrolovat platnost Perplexity Pro subscription
+- **Network:** Ověřit přístup k api.perplexity.ai
+- **Permissions:** Claude Code musí mít oprávnění pro MCP servery
+- **Dependencies:** Node.js a npm musí být správně nakonfigurovány
+
+## Priority řešení:
+1. **Získat Perplexity API klíč** od uživatele
+2. **Najít správný Perplexity MCP server** (NPM package nebo GitHub)
+3. **Nakonfigurovat MCP komunikaci** (STDIO vs HTTP)
+4. **Otestovat funkcionalita** s reálnými dotazy
+
+## Poznámky:
+- Perplexity MCP server může být ve vývoji - zkontrolovat dostupnost
+- Alternativně můžu použít přímé Perplexity API calls přes WebFetch
+- Zachovat kompatibilitu s existující MCP infrastrukturou na 192.168.0.58
+
+Chceš začít s instalací nebo máš Perplexity API klíč připravený?

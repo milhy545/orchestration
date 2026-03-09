@@ -1,0 +1,104 @@
+[
+    {
+        "Id": "sha256:d6cb83a1a76b4db15ed7f1b8af646d9799be5bf2e4a927c28b6dbed0303a3640",
+        "RepoTags": [
+            "orchestration-vault-secrets-ui:latest"
+        ],
+        "RepoDigests": [],
+        "Parent": "",
+        "Comment": "buildkit.dockerfile.v0",
+        "Created": "2026-03-07T23:17:16.094405566Z",
+        "Container": "",
+        "ContainerConfig": {
+            "Hostname": "",
+            "Domainname": "",
+            "User": "",
+            "AttachStdin": false,
+            "AttachStdout": false,
+            "AttachStderr": false,
+            "Tty": false,
+            "OpenStdin": false,
+            "StdinOnce": false,
+            "Env": null,
+            "Cmd": null,
+            "Image": "",
+            "Volumes": null,
+            "WorkingDir": "",
+            "Entrypoint": null,
+            "OnBuild": null,
+            "Labels": null
+        },
+        "DockerVersion": "",
+        "Author": "",
+        "Config": {
+            "Hostname": "",
+            "Domainname": "",
+            "User": "",
+            "AttachStdin": false,
+            "AttachStdout": false,
+            "AttachStderr": false,
+            "ExposedPorts": {
+                "10000/tcp": {}
+            },
+            "Tty": false,
+            "OpenStdin": false,
+            "StdinOnce": false,
+            "Env": [
+                "PATH=/usr/local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+                "LANG=C.UTF-8",
+                "GPG_KEY=A035C8C19219BA821ECEA86B64E628F8D684696D",
+                "PYTHON_VERSION=3.11.13",
+                "PYTHON_SHA256=8fb5f9fbc7609fa822cb31549884575db7fd9657cbffb89510b5d7975963a83a",
+                "WEBUI_PORT=10000"
+            ],
+            "Cmd": [
+                "uvicorn",
+                "app:app",
+                "--host",
+                "0.0.0.0",
+                "--port",
+                "10000"
+            ],
+            "ArgsEscaped": true,
+            "Image": "",
+            "Volumes": null,
+            "WorkingDir": "/app",
+            "Entrypoint": null,
+            "OnBuild": null,
+            "Labels": {
+                "com.docker.compose.project": "orchestration",
+                "com.docker.compose.service": "vault-secrets-ui",
+                "com.docker.compose.version": "2.23.3"
+            }
+        },
+        "Architecture": "amd64",
+        "Os": "linux",
+        "Size": 156841600,
+        "GraphDriver": {
+            "Data": {
+                "LowerDir": "/var/lib/docker/overlay2/07hgeb76mlradrm5mn8qkv0b3/diff:/var/lib/docker/overlay2/v1ftenoeobvw18ue3rd1cu1dv/diff:/var/lib/docker/overlay2/gl2sxazj19n3m2dzag1m6xs1x/diff:/var/lib/docker/overlay2/zox45b188vy2zzoee8yfaco8x/diff:/var/lib/docker/overlay2/71b2fce67c8e6ba81f1fb7462ddbc624a2092b8eb31b0ee476e814d4bcf652a5/diff:/var/lib/docker/overlay2/c9b1d2d873da0952609bf9b5af8f60e9cbb56d409c9cb507e934dd2a8400a412/diff:/var/lib/docker/overlay2/57336ca2de1dc590cdb4ab25b8e4667acf58a7e44d9403386598d6f0b53de90c/diff:/var/lib/docker/overlay2/a582ce62329c62a21c0b3eb761f3fe5e97d908dd0771cb7edd07a87f6ca3b1b7/diff",
+                "MergedDir": "/var/lib/docker/overlay2/ckbf3s8h30ta9mjhl9u5ko4qo/merged",
+                "UpperDir": "/var/lib/docker/overlay2/ckbf3s8h30ta9mjhl9u5ko4qo/diff",
+                "WorkDir": "/var/lib/docker/overlay2/ckbf3s8h30ta9mjhl9u5ko4qo/work"
+            },
+            "Name": "overlay2"
+        },
+        "RootFS": {
+            "Type": "layers",
+            "Layers": [
+                "sha256:7cc7fe68eff66f19872441a51938eecc4ad33746d2baa3abc081c1e6fe25988e",
+                "sha256:0a00f6ce5fb79b48aa2968e84067a2804f848097e274b172e587a1f8a769187f",
+                "sha256:943faa7467a0e21a2f91457021f49f601f064076f4a9a9986476bdad86e683d4",
+                "sha256:d22cc68b10d77da233d72061754d722e59f22e87748b57c0da281b45a5b2a60e",
+                "sha256:c244837d93e328347cf2c33fd1458e84c426fa4235d09d893b6448fa9ae9645d",
+                "sha256:757fe581736cb568acecd7c37d3fe8bc5227eabbb564e9f9d3e65a932a72395d",
+                "sha256:6b2a3e85e47b57f55712e87f5229b2d85320871f8e3e5d35caaeb33aed2d998f",
+                "sha256:7edb23ab39897a2d097e9394101078749f0eb0e4a1fe5ebd53a0e58a4e22e302",
+                "sha256:1b1a8d93166b5a442a395d0fb5a509a7336132ff315211770bddf46b6d169775"
+            ]
+        },
+        "Metadata": {
+            "LastTagTime": "2026-03-07T23:17:17.847967757Z"
+        }
+    }
+]

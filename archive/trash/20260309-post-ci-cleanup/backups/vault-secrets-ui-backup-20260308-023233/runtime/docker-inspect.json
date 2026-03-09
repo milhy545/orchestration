@@ -1,0 +1,275 @@
+[
+    {
+        "Id": "0352af417aec5d81f0f5f5f46e12ac71d6c5c4ab239b5a3daecc584600005833",
+        "Created": "2026-03-07T23:17:20.133353939Z",
+        "Path": "uvicorn",
+        "Args": [
+            "app:app",
+            "--host",
+            "0.0.0.0",
+            "--port",
+            "10000"
+        ],
+        "State": {
+            "Status": "running",
+            "Running": true,
+            "Paused": false,
+            "Restarting": false,
+            "OOMKilled": false,
+            "Dead": false,
+            "Pid": 21912,
+            "ExitCode": 0,
+            "Error": "",
+            "StartedAt": "2026-03-07T23:17:55.947314099Z",
+            "FinishedAt": "0001-01-01T00:00:00Z"
+        },
+        "Image": "sha256:d6cb83a1a76b4db15ed7f1b8af646d9799be5bf2e4a927c28b6dbed0303a3640",
+        "ResolvConfPath": "/var/lib/docker/containers/0352af417aec5d81f0f5f5f46e12ac71d6c5c4ab239b5a3daecc584600005833/resolv.conf",
+        "HostnamePath": "/var/lib/docker/containers/0352af417aec5d81f0f5f5f46e12ac71d6c5c4ab239b5a3daecc584600005833/hostname",
+        "HostsPath": "/var/lib/docker/containers/0352af417aec5d81f0f5f5f46e12ac71d6c5c4ab239b5a3daecc584600005833/hosts",
+        "LogPath": "/var/lib/docker/containers/0352af417aec5d81f0f5f5f46e12ac71d6c5c4ab239b5a3daecc584600005833/0352af417aec5d81f0f5f5f46e12ac71d6c5c4ab239b5a3daecc584600005833-json.log",
+        "Name": "/mcp-vault-secrets-ui",
+        "RestartCount": 0,
+        "Driver": "overlay2",
+        "Platform": "linux",
+        "MountLabel": "",
+        "ProcessLabel": "",
+        "AppArmorProfile": "",
+        "ExecIDs": null,
+        "HostConfig": {
+            "Binds": null,
+            "ContainerIDFile": "",
+            "LogConfig": {
+                "Type": "json-file",
+                "Config": {}
+            },
+            "NetworkMode": "orchestration_mcp-network",
+            "PortBindings": {
+                "10000/tcp": [
+                    {
+                        "HostIp": "",
+                        "HostPort": "10000"
+                    }
+                ]
+            },
+            "RestartPolicy": {
+                "Name": "unless-stopped",
+                "MaximumRetryCount": 0
+            },
+            "AutoRemove": false,
+            "VolumeDriver": "",
+            "VolumesFrom": null,
+            "ConsoleSize": [
+                0,
+                0
+            ],
+            "CapAdd": null,
+            "CapDrop": null,
+            "CgroupnsMode": "private",
+            "Dns": null,
+            "DnsOptions": null,
+            "DnsSearch": null,
+            "ExtraHosts": [],
+            "GroupAdd": null,
+            "IpcMode": "private",
+            "Cgroup": "",
+            "Links": null,
+            "OomScoreAdj": 0,
+            "PidMode": "",
+            "Privileged": false,
+            "PublishAllPorts": false,
+            "ReadonlyRootfs": false,
+            "SecurityOpt": null,
+            "UTSMode": "",
+            "UsernsMode": "",
+            "ShmSize": 67108864,
+            "Runtime": "runc",
+            "Isolation": "",
+            "CpuShares": 0,
+            "Memory": 0,
+            "NanoCpus": 0,
+            "CgroupParent": "",
+            "BlkioWeight": 0,
+            "BlkioWeightDevice": null,
+            "BlkioDeviceReadBps": null,
+            "BlkioDeviceWriteBps": null,
+            "BlkioDeviceReadIOps": null,
+            "BlkioDeviceWriteIOps": null,
+            "CpuPeriod": 0,
+            "CpuQuota": 0,
+            "CpuRealtimePeriod": 0,
+            "CpuRealtimeRuntime": 0,
+            "CpusetCpus": "",
+            "CpusetMems": "",
+            "Devices": null,
+            "DeviceCgroupRules": null,
+            "DeviceRequests": null,
+            "MemoryReservation": 0,
+            "MemorySwap": 0,
+            "MemorySwappiness": null,
+            "OomKillDisable": null,
+            "PidsLimit": null,
+            "Ulimits": null,
+            "CpuCount": 0,
+            "CpuPercent": 0,
+            "IOMaximumIOps": 0,
+            "IOMaximumBandwidth": 0,
+            "Mounts": [
+                {
+                    "Type": "volume",
+                    "Source": "orchestration_vault-runtime",
+                    "Target": "/vault/runtime",
+                    "VolumeOptions": {}
+                }
+            ],
+            "MaskedPaths": [
+                "/proc/asound",
+                "/proc/acpi",
+                "/proc/kcore",
+                "/proc/keys",
+                "/proc/latency_stats",
+                "/proc/timer_list",
+                "/proc/timer_stats",
+                "/proc/sched_debug",
+                "/proc/scsi",
+                "/sys/firmware",
+                "/sys/devices/virtual/powercap"
+            ],
+            "ReadonlyPaths": [
+                "/proc/bus",
+                "/proc/fs",
+                "/proc/irq",
+                "/proc/sys",
+                "/proc/sysrq-trigger"
+            ]
+        },
+        "GraphDriver": {
+            "Data": {
+                "LowerDir": "/var/lib/docker/overlay2/2fa8fa0bd686426ec164cec17522b14a3d0ac3a646e49c533d1b5aafb4c150af-init/diff:/var/lib/docker/overlay2/ckbf3s8h30ta9mjhl9u5ko4qo/diff:/var/lib/docker/overlay2/07hgeb76mlradrm5mn8qkv0b3/diff:/var/lib/docker/overlay2/v1ftenoeobvw18ue3rd1cu1dv/diff:/var/lib/docker/overlay2/gl2sxazj19n3m2dzag1m6xs1x/diff:/var/lib/docker/overlay2/zox45b188vy2zzoee8yfaco8x/diff:/var/lib/docker/overlay2/71b2fce67c8e6ba81f1fb7462ddbc624a2092b8eb31b0ee476e814d4bcf652a5/diff:/var/lib/docker/overlay2/c9b1d2d873da0952609bf9b5af8f60e9cbb56d409c9cb507e934dd2a8400a412/diff:/var/lib/docker/overlay2/57336ca2de1dc590cdb4ab25b8e4667acf58a7e44d9403386598d6f0b53de90c/diff:/var/lib/docker/overlay2/a582ce62329c62a21c0b3eb761f3fe5e97d908dd0771cb7edd07a87f6ca3b1b7/diff",
+                "MergedDir": "/var/lib/docker/overlay2/2fa8fa0bd686426ec164cec17522b14a3d0ac3a646e49c533d1b5aafb4c150af/merged",
+                "UpperDir": "/var/lib/docker/overlay2/2fa8fa0bd686426ec164cec17522b14a3d0ac3a646e49c533d1b5aafb4c150af/diff",
+                "WorkDir": "/var/lib/docker/overlay2/2fa8fa0bd686426ec164cec17522b14a3d0ac3a646e49c533d1b5aafb4c150af/work"
+            },
+            "Name": "overlay2"
+        },
+        "Mounts": [
+            {
+                "Type": "volume",
+                "Name": "orchestration_vault-runtime",
+                "Source": "/var/lib/docker/volumes/orchestration_vault-runtime/_data",
+                "Destination": "/vault/runtime",
+                "Driver": "local",
+                "Mode": "z",
+                "RW": true,
+                "Propagation": ""
+            }
+        ],
+        "Config": {
+            "Hostname": "0352af417aec",
+            "Domainname": "",
+            "User": "",
+            "AttachStdin": false,
+            "AttachStdout": true,
+            "AttachStderr": true,
+            "ExposedPorts": {
+                "10000/tcp": {}
+            },
+            "Tty": false,
+            "OpenStdin": false,
+            "StdinOnce": false,
+            "Env": [
+                "VAULT_ADDR=http://vault:8200",
+                "VAULT_TOKEN_FILE=/vault/runtime/admin.token",
+                "VAULT_RUNTIME_DIR=/vault/runtime",
+                "WEBUI_PORT=10000",
+                "PATH=/usr/local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+                "LANG=C.UTF-8",
+                "GPG_KEY=A035C8C19219BA821ECEA86B64E628F8D684696D",
+                "PYTHON_VERSION=3.11.13",
+                "PYTHON_SHA256=8fb5f9fbc7609fa822cb31549884575db7fd9657cbffb89510b5d7975963a83a"
+            ],
+            "Cmd": [
+                "uvicorn",
+                "app:app",
+                "--host",
+                "0.0.0.0",
+                "--port",
+                "10000"
+            ],
+            "Image": "orchestration-vault-secrets-ui",
+            "Volumes": null,
+            "WorkingDir": "/app",
+            "Entrypoint": null,
+            "OnBuild": null,
+            "Labels": {
+                "com.docker.compose.config-hash": "dbca5356f3c81b326ace42a51f02f2c603efb66b100618e7695655f9cee09ee5",
+                "com.docker.compose.container-number": "1",
+                "com.docker.compose.depends_on": "vault-bootstrap:service_completed_successfully:false",
+                "com.docker.compose.image": "sha256:d6cb83a1a76b4db15ed7f1b8af646d9799be5bf2e4a927c28b6dbed0303a3640",
+                "com.docker.compose.oneoff": "False",
+                "com.docker.compose.project": "orchestration",
+                "com.docker.compose.project.config_files": "/home/orchestration/docker-compose.yml,/home/orchestration/docker-compose.vault.yml",
+                "com.docker.compose.project.working_dir": "/home/orchestration",
+                "com.docker.compose.replace": "186403bd3ff00acbd464c6f5919320c715954032aed315e031285b919578cdcb",
+                "com.docker.compose.service": "vault-secrets-ui",
+                "com.docker.compose.version": "2.23.3"
+            }
+        },
+        "NetworkSettings": {
+            "Bridge": "",
+            "SandboxID": "3ffc7dde69a3f0cc01ab8668cae202d5b26f4aeec325e3080f6475959200c7ad",
+            "SandboxKey": "/var/run/docker/netns/3ffc7dde69a3",
+            "Ports": {
+                "10000/tcp": [
+                    {
+                        "HostIp": "0.0.0.0",
+                        "HostPort": "10000"
+                    },
+                    {
+                        "HostIp": "::",
+                        "HostPort": "10000"
+                    }
+                ]
+            },
+            "HairpinMode": false,
+            "LinkLocalIPv6Address": "",
+            "LinkLocalIPv6PrefixLen": 0,
+            "SecondaryIPAddresses": null,
+            "SecondaryIPv6Addresses": null,
+            "EndpointID": "",
+            "Gateway": "",
+            "GlobalIPv6Address": "",
+            "GlobalIPv6PrefixLen": 0,
+            "IPAddress": "",
+            "IPPrefixLen": 0,
+            "IPv6Gateway": "",
+            "MacAddress": "",
+            "Networks": {
+                "orchestration_mcp-network": {
+                    "IPAMConfig": null,
+                    "Links": null,
+                    "Aliases": [
+                        "mcp-vault-secrets-ui",
+                        "vault-secrets-ui",
+                        "0352af417aec"
+                    ],
+                    "MacAddress": "02:42:ac:13:00:11",
+                    "NetworkID": "53a789ede06c908378c23e2c2cdf3e7f1d1fa44d57b4c9a0a542ac6b166b397a",
+                    "EndpointID": "085e755d46141361850239151918e17d642f8760f5d99897777ebb926ec55d2c",
+                    "Gateway": "172.19.0.1",
+                    "IPAddress": "172.19.0.17",
+                    "IPPrefixLen": 16,
+                    "IPv6Gateway": "",
+                    "GlobalIPv6Address": "",
+                    "GlobalIPv6PrefixLen": 0,
+                    "DriverOpts": null,
+                    "DNSNames": [
+                        "mcp-vault-secrets-ui",
+                        "vault-secrets-ui",
+                        "0352af417aec"
+                    ]
+                }
+            }
+        }
+    }
+]
