@@ -1,0 +1,1 @@
+{"status":"healthy","service":"vault-secrets-ui","vault_addr":"http://vault:8200","token_file":"/vault/runtime/admin.token","token_ready":true,"vault_reachable":true,"vault_status_code":200,"detail":null,"services":["mega-orchestrator","research-mcp","advanced-memory-mcp","zen-mcp-server","gmail-mcp","security-mcp","marketplace-mcp","common-mcp","perplexity-hub"]}

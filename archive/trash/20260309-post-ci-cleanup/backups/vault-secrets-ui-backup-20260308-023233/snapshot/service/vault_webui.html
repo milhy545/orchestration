@@ -1,0 +1,1027 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Server Cockpit</title>
+    <style>
+        :root {
+            --bg: #121212;
+            --bg-elevated: #181b20;
+            --bg-panel: #1f242b;
+            --bg-soft: rgba(255, 255, 255, 0.04);
+            --line: rgba(0, 209, 255, 0.22);
+            --line-strong: rgba(0, 209, 255, 0.5);
+            --text: #edf6fb;
+            --muted: #8ea1b3;
+            --accent: #00d1ff;
+            --accent-strong: #00a8d1;
+            --danger: #ff5f7a;
+            --success: #21d08f;
+            --shadow: 0 24px 80px rgba(0, 0, 0, 0.45);
+            --radius-xl: 28px;
+            --radius-lg: 18px;
+            --radius-md: 12px;
+            --mono: "JetBrains Mono", "SFMono-Regular", "Consolas", monospace;
+            --sans: "Segoe UI Variable", "SF Pro Display", "Helvetica Neue", sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: var(--sans);
+            color: var(--text);
+            background:
+                radial-gradient(circle at top left, rgba(0, 209, 255, 0.12), transparent 32%),
+                radial-gradient(circle at top right, rgba(0, 209, 255, 0.08), transparent 26%),
+                linear-gradient(180deg, #0d0f13 0%, var(--bg) 35%, #0f1115 100%);
+        }
+
+        body::before {
+            content: "";
+            position: fixed;
+            inset: 0;
+            background-image:
+                linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+            background-size: 28px 28px;
+            mask-image: radial-gradient(circle at center, black 55%, transparent 100%);
+            pointer-events: none;
+            opacity: 0.25;
+        }
+
+        .page {
+            width: min(1200px, calc(100vw - 32px));
+            margin: 24px auto;
+            position: relative;
+            z-index: 1;
+        }
+
+        .shell {
+            display: flex;
+            flex-direction: column;
+            min-height: 100%;
+            backdrop-filter: blur(18px);
+            background: linear-gradient(180deg, rgba(17, 20, 26, 0.94), rgba(13, 16, 20, 0.96));
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: var(--radius-xl);
+            box-shadow: var(--shadow);
+            overflow: hidden;
+        }
+
+        .cockpit-shell {
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            background: linear-gradient(180deg, rgba(13, 16, 20, 0.96), rgba(15, 18, 24, 0.9));
+        }
+
+        .dash-header {
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+            gap: 24px;
+            padding: 28px 32px 18px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            background: linear-gradient(180deg, rgba(17, 20, 26, 0.78), rgba(13, 16, 20, 0));
+        }
+
+        .dash-controls {
+            display: flex;
+            align-items: center;
+            gap: 18px;
+        }
+
+        .dash-nav {
+            display: flex;
+            gap: 10px;
+        }
+
+        .dash-nav-link {
+            appearance: none;
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            border-radius: 999px;
+            padding: 10px 18px;
+            font: 600 0.9rem var(--sans);
+            color: var(--text);
+            background: rgba(255, 255, 255, 0.06);
+            cursor: pointer;
+            transition: border-color 0.2s ease, background 0.2s ease, transform 0.2s ease;
+        }
+
+        .dash-nav-link.active {
+            transform: translateY(-1px);
+            border-color: var(--accent);
+            background: rgba(0, 209, 255, 0.14);
+            color: var(--accent);
+        }
+
+        .lang-switcher {
+            display: inline-flex;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 999px;
+            overflow: hidden;
+            background: rgba(0, 0, 0, 0.35);
+        }
+
+        .lang-btn {
+            appearance: none;
+            border: none;
+            background: transparent;
+            padding: 8px 14px;
+            font: 600 0.82rem var(--mono);
+            color: var(--muted);
+            cursor: pointer;
+            transition: color 0.2s ease, background 0.2s ease;
+        }
+
+        .lang-btn.active {
+            color: var(--accent);
+            background: rgba(0, 209, 255, 0.1);
+        }
+
+        .tab-panels {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            padding: 20px 32px 32px;
+            overflow: hidden;
+        }
+
+        .tab-panel {
+            display: none;
+            flex-direction: column;
+            gap: 20px;
+            overflow: auto;
+        }
+
+        .tab-panel.active {
+            display: flex;
+        }
+
+        .vault-inner {
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        .hero {
+            display: grid;
+            grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.8fr);
+            gap: 24px;
+            padding: 28px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .eyebrow {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 14px;
+            color: var(--accent);
+            font: 600 12px/1.1 var(--mono);
+            text-transform: uppercase;
+            letter-spacing: 0.24em;
+        }
+
+        .eyebrow::before {
+            content: "";
+            width: 36px;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--accent));
+        }
+
+        h1 {
+            margin: 0;
+            font-size: clamp(2.2rem, 5vw, 4.2rem);
+            line-height: 0.96;
+            letter-spacing: -0.04em;
+        }
+
+        .lead {
+            margin: 18px 0 0;
+            max-width: 56ch;
+            color: var(--muted);
+            line-height: 1.65;
+            font-size: 1rem;
+        }
+
+        .status-card,
+        .panel {
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.015));
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: var(--radius-lg);
+        }
+
+        .status-card {
+            padding: 18px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .status-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            width: fit-content;
+            padding: 10px 14px;
+            border-radius: 999px;
+            background: rgba(0, 209, 255, 0.1);
+            color: var(--accent);
+            font: 600 0.88rem/1 var(--mono);
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .status-pill.degraded,
+        .status-pill.error {
+            color: var(--danger);
+            background: rgba(255, 95, 122, 0.1);
+        }
+
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 12px;
+        }
+
+        .metric {
+            padding: 14px;
+            background: var(--bg-soft);
+            border-radius: var(--radius-md);
+        }
+
+        .metric .label {
+            display: block;
+            margin-bottom: 6px;
+            color: var(--muted);
+            font-size: 0.82rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+
+        .metric .value {
+            font-family: var(--mono);
+            font-size: 0.96rem;
+            word-break: break-word;
+        }
+
+        .content {
+            display: grid;
+            grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.35fr);
+            gap: 24px;
+            padding: 28px;
+        }
+
+        .panel {
+            padding: 22px;
+        }
+
+        .panel h2 {
+            margin: 0 0 10px;
+            font-size: 1.12rem;
+            letter-spacing: -0.02em;
+        }
+
+        .panel-copy {
+            margin: 0 0 20px;
+            color: var(--muted);
+            line-height: 1.55;
+        }
+
+        .stack {
+            display: grid;
+            gap: 16px;
+        }
+
+        .field {
+            display: grid;
+            gap: 8px;
+        }
+
+        .field label {
+            color: var(--muted);
+            font-size: 0.82rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
+        .input,
+        .textarea,
+        .select {
+            width: 100%;
+            border: 1px solid rgba(255, 255, 255, 0.07);
+            border-radius: 14px;
+            background: rgba(7, 10, 14, 0.9);
+            color: var(--text);
+            padding: 14px 16px;
+            font: 500 0.98rem/1.4 var(--sans);
+            transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+        }
+
+        .textarea,
+        .console {
+            font-family: var(--mono);
+        }
+
+        .textarea {
+            min-height: 360px;
+            resize: vertical;
+        }
+
+        .input:focus,
+        .textarea:focus,
+        .select:focus {
+            outline: none;
+            border-color: var(--line-strong);
+            box-shadow: 0 0 0 4px rgba(0, 209, 255, 0.12);
+            transform: translateY(-1px);
+        }
+
+        .helper {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .btn {
+            appearance: none;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 999px;
+            padding: 12px 18px;
+            background: rgba(255, 255, 255, 0.03);
+            color: var(--text);
+            font: 600 0.92rem/1 var(--sans);
+            cursor: pointer;
+            transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+        }
+
+        .btn:hover {
+            transform: translateY(-1px);
+            border-color: rgba(255, 255, 255, 0.18);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent), #7ee6ff);
+            border-color: transparent;
+            color: #02131a;
+            box-shadow: 0 14px 32px rgba(0, 209, 255, 0.24);
+        }
+
+        .btn-secondary {
+            background: rgba(0, 209, 255, 0.08);
+            border-color: rgba(0, 209, 255, 0.22);
+            color: var(--accent);
+        }
+
+        .meta-card {
+            padding: 16px;
+            border-radius: 16px;
+            background: rgba(0, 0, 0, 0.22);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .meta-card strong {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 0.96rem;
+        }
+
+        .meta-card div {
+            color: var(--muted);
+            line-height: 1.6;
+            word-break: break-word;
+        }
+
+        .notion-card {
+            background: linear-gradient(140deg, rgba(0, 209, 255, 0.14), rgba(255, 255, 255, 0.02));
+            border: 1px solid rgba(0, 209, 255, 0.2);
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            border-radius: 999px;
+            background: rgba(33, 208, 143, 0.12);
+            color: var(--success);
+            font: 600 0.8rem/1 var(--mono);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+
+        .console {
+            min-height: 220px;
+            max-height: 220px;
+            overflow: auto;
+            padding: 18px;
+            background: rgba(0, 0, 0, 0.34);
+            border-radius: 18px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            line-height: 1.65;
+            color: #b9c8d8;
+        }
+
+        .console-line + .console-line {
+            margin-top: 6px;
+        }
+
+        .console-line.error {
+            color: var(--danger);
+        }
+
+        .kicker {
+            color: var(--accent);
+            font-family: var(--mono);
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            font-size: 0.78rem;
+        }
+
+        .footer-note {
+            margin-top: 12px;
+            color: var(--muted);
+            font-size: 0.88rem;
+            line-height: 1.55;
+        }
+
+        @media (max-width: 1024px) {
+            .dash-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .dash-controls {
+                width: 100%;
+                justify-content: space-between;
+            }
+
+            .hero,
+            .content {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 640px) {
+            .page {
+                width: calc(100vw - 16px);
+                margin: 8px auto;
+            }
+
+            .dash-controls {
+                flex-wrap: wrap;
+                justify-content: flex-start;
+            }
+
+            .dash-nav {
+                width: 100%;
+                justify-content: space-between;
+                gap: 6px;
+            }
+
+            .lang-switcher {
+                align-self: flex-end;
+            }
+
+            .hero,
+            .content {
+                padding: 18px;
+                gap: 18px;
+            }
+
+            .status-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .textarea {
+                min-height: 280px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="page">
+        <div class="shell cockpit-shell">
+            <header class="dash-header">
+                <div>
+                    <div class="eyebrow" data-i18n-key="dashboardEyebrow">Cockpit status</div>
+                    <h1 data-i18n-key="brandTitle">Server Cockpit</h1>
+                    <p class="lead" data-i18n-key="brandSubtitle">Unified health and secret control for this host.</p>
+                </div>
+                <div class="dash-controls">
+                    <nav class="dash-nav" aria-label="Sections">
+                        <button class="dash-nav-link active" type="button" data-panel-target="dashboard-panel" data-i18n-key="navDashboard">Dashboard</button>
+                        <button class="dash-nav-link" type="button" data-panel-target="vault-panel" data-i18n-key="navVault">Vault</button>
+                    </nav>
+                    <div class="lang-switcher" role="group" aria-label="Language switcher">
+                        <button class="lang-btn active" type="button" data-lang-toggle="en">EN</button>
+                        <button class="lang-btn" type="button" data-lang-toggle="cz">CZ</button>
+                    </div>
+                </div>
+            </header>
+            <main class="tab-panels">
+                <section id="dashboard-panel" class="tab-panel active">
+                    <div class="panel">
+                        <div class="kicker" data-i18n-key="dashboardKicker">Status overview</div>
+                        <h2 data-i18n-key="dashboardPanelTitle">Vault health & services</h2>
+                        <p class="panel-copy" data-i18n-key="dashboardPanelCopy">
+                            Use the health metrics below to confirm Vault connectivity before making secret changes.
+                        </p>
+                        <div class="status-grid">
+                            <div class="metric">
+                                <span class="label" data-i18n-key="metricVaultAddress">Vault Address</span>
+                                <span id="summary-vault-addr" class="value">-</span>
+                            </div>
+                            <div class="metric">
+                                <span class="label" data-i18n-key="metricTokenFile">Token File</span>
+                                <span id="summary-vault-token" class="value">-</span>
+                            </div>
+                            <div class="metric">
+                                <span class="label" data-i18n-key="metricReachability">Reachability</span>
+                                <span id="summary-vault-reachable" class="value">-</span>
+                            </div>
+                            <div class="metric">
+                                <span class="label" data-i18n-key="metricNamespaces">Available Namespaces</span>
+                                <span id="summary-vault-services" class="value">-</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="panel meta-card">
+                        <strong data-i18n-key="dashboardMetaTitle">Vault reachability</strong>
+                        <div id="summary-vault-reach-note">-</div>
+                    </div>
+                </section>
+                <section id="vault-panel" class="tab-panel">
+                    <div class="vault-inner">
+                        <section class="hero">
+                            <div>
+                                <div class="eyebrow" data-i18n-key="vaultEyebrow">Vault UI / Brand Refresh</div>
+                                <h1 data-i18n-key="vaultHeroTitle">Secrets control for orchestration, Gemini CLI, and Notion.</h1>
+                                <p class="lead" data-i18n-key="vaultHeroLead" data-i18n-html="true">
+                                    Use the shared <strong>`common-mcp`</strong> namespace for cross-tool secrets. The helper panel below keeps
+                                    <strong>`NOTION_API_KEY`</strong> synced into Vault while the JSON editor remains available for full payload management.
+                                </p>
+                            </div>
+                            <aside class="status-card">
+                                <div id="health-pill" class="status-pill">Checking health</div>
+                                <div class="status-grid">
+                                    <div class="metric">
+                                        <span class="label" data-i18n-key="metricVaultAddress">Vault Address</span>
+                                        <span id="vault-addr" class="value">-</span>
+                                    </div>
+                                    <div class="metric">
+                                        <span class="label" data-i18n-key="metricTokenFile">Token File</span>
+                                        <span id="vault-token" class="value">-</span>
+                                    </div>
+                                    <div class="metric">
+                                        <span class="label" data-i18n-key="metricReachability">Reachability</span>
+                                        <span id="vault-reachable" class="value">-</span>
+                                    </div>
+                                    <div class="metric">
+                                        <span class="label" data-i18n-key="metricNamespaces">Available Namespaces</span>
+                                        <span id="vault-services" class="value">-</span>
+                                    </div>
+                                </div>
+                            </aside>
+                        </section>
+
+                        <section class="content">
+                            <div class="stack">
+                                <div class="panel">
+                                    <div class="kicker" data-i18n-key="serviceKicker">Target namespace</div>
+                                    <h2 data-i18n-key="serviceTitle">Vault-backed service selection</h2>
+                                    <p class="panel-copy" data-i18n-key="serviceCopy">Pick the namespace you want to inspect or update. Shared CLI credentials should live in <strong>`common-mcp`</strong>.</p>
+                                    <div class="field">
+                                        <label for="target-service" data-i18n-key="serviceFieldLabel">Service</label>
+                                        <select id="target-service" class="select">
+{{SERVICE_OPTIONS}}
+                                        </select>
+                                    </div>
+                                    <div id="service-summary" class="meta-card">
+                                        <strong data-i18n-key="serviceMetaHeading">Runtime apply model</strong>
+                                        <div id="service-meta-line">Changes apply after restart.</div>
+                                        <div id="service-restart-line">Restart target: -</div>
+                                        <div id="service-command-line">Command: -</div>
+                                    </div>
+                                </div>
+
+                                <div class="panel notion-card">
+                                    <div class="kicker" data-i18n-key="notionKicker">Notion helper</div>
+                                    <h2 data-i18n-key="notionTitle">NOTION_API_KEY quick editor</h2>
+                                    <p class="panel-copy" data-i18n-key="notionCopy">This helper keeps the JSON payload aligned and makes placeholder setup trivial for Gemini CLI.</p>
+                                    <div class="stack">
+                                        <div class="badge" data-i18n-key="badgeText">Recommended target: common-mcp</div>
+                                        <div class="field">
+                                            <label for="notion-api-key">NOTION_API_KEY</label>
+                                            <input id="notion-api-key" class="input" type="password" placeholder="Paste the Notion integration key or leave blank for placeholder">
+                                        </div>
+                                        <div class="helper">
+                                            <button id="use-common-mcp" class="btn btn-secondary" type="button" data-i18n-key="notionButtonCommon">Switch To common-mcp</button>
+                                            <button id="insert-placeholder" class="btn" type="button" data-i18n-key="notionButtonPlaceholder">Insert Placeholder</button>
+                                        </div>
+                                        <div class="footer-note" data-i18n-key="notionHelperNote">
+                                            Saving writes the full JSON payload to Vault. For security, this field is rendered as a password input and only mirrors the current JSON value locally in the browser.
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="panel">
+                                    <div class="kicker" data-i18n-key="consoleKicker">Activity log</div>
+                                    <h2 data-i18n-key="consoleTitle">Console</h2>
+                                    <div id="console" class="console" aria-live="polite"></div>
+                                </div>
+                            </div>
+
+                            <div class="panel">
+                                <div class="kicker" data-i18n-key="payloadKicker">Full payload</div>
+                                <h2 data-i18n-key="payloadTitle">JSON editor</h2>
+                                <p class="panel-copy" data-i18n-key="payloadCopy">Advanced mode for complete secret payload control. The Notion helper above and this editor stay synchronized.</p>
+                                <div class="field">
+                                    <label for="secret-json" data-i18n-key="secretLabel">Secret payload</label>
+                                    <textarea id="secret-json" class="textarea" spellcheck="false">{}</textarea>
+                                </div>
+                                <div class="helper">
+                                    <button id="load-secrets" class="btn" type="button" data-i18n-key="buttonReload">Reload From Vault</button>
+                                    <button id="format-json" class="btn" type="button" data-i18n-key="buttonFormat">Format JSON</button>
+                                    <button id="save-secrets" class="btn btn-primary" type="button" data-i18n-key="buttonSave">Save To Vault</button>
+                                </div>
+                            </div>
+                        </section>
+                    </div>
+                </section>
+            </main>
+        </div>
+    </div>
+
+    <script>
+        const serviceCatalog = {{SERVICE_METADATA_JSON}};
+        const translations = {
+            en: {
+                documentTitle: "Server Cockpit",
+                brandTitle: "Server Cockpit",
+                brandSubtitle: "Unified health and secret control for this host.",
+                dashboardEyebrow: "Cockpit status",
+                navDashboard: "Dashboard",
+                navVault: "Vault",
+                dashboardKicker: "Status overview",
+                dashboardPanelTitle: "Vault health & services",
+                dashboardPanelCopy: "Use the health metrics below to confirm Vault connectivity before making secret changes.",
+                metricVaultAddress: "Vault Address",
+                metricTokenFile: "Token File",
+                metricReachability: "Reachability",
+                metricNamespaces: "Available Namespaces",
+                dashboardMetaTitle: "Vault reachability",
+                vaultEyebrow: "Vault UI / Brand Refresh",
+                vaultHeroTitle: "Secrets control for orchestration, Gemini CLI, and Notion.",
+                vaultHeroLead: "Use the shared <strong>`common-mcp`</strong> namespace for cross-tool secrets. The helper panel below keeps <strong>`NOTION_API_KEY`</strong> synced into Vault while the JSON editor remains available for full payload management.",
+                serviceKicker: "Target namespace",
+                serviceTitle: "Vault-backed service selection",
+                serviceCopy: "Pick the namespace you want to inspect or update. Shared CLI credentials should live in <strong>`common-mcp`</strong>.",
+                serviceFieldLabel: "Service",
+                serviceMetaHeading: "Runtime apply model",
+                notionKicker: "Notion helper",
+                notionTitle: "NOTION_API_KEY quick editor",
+                notionCopy: "This helper keeps the JSON payload aligned and makes placeholder setup trivial for Gemini CLI.",
+                badgeText: "Recommended target: common-mcp",
+                notionButtonCommon: "Switch To common-mcp",
+                notionButtonPlaceholder: "Insert Placeholder",
+                notionHelperNote: "Saving writes the full JSON payload to Vault. For security, this field is rendered as a password input and only mirrors the current JSON value locally in the browser.",
+                consoleKicker: "Activity log",
+                consoleTitle: "Console",
+                payloadKicker: "Full payload",
+                payloadTitle: "JSON editor",
+                payloadCopy: "Advanced mode for complete secret payload control. The Notion helper above and this editor stay synchronized.",
+                secretLabel: "Secret payload",
+                buttonReload: "Reload From Vault",
+                buttonFormat: "Format JSON",
+                buttonSave: "Save To Vault",
+                logLoadHealthSuccess: "Vault health loaded.",
+                logLoadHealthFailed: "Health check failed",
+                controlReady: "Control center ready.",
+                serviceMetaLine: "Changes apply after restart.",
+                restartTargetLabel: "Restart target",
+                commandLabel: "Command",
+                dashboardServicesLabel: "Namespaces"
+            },
+            cz: {
+                documentTitle: "Serverový kokpit",
+                brandTitle: "Serverový kokpit",
+                brandSubtitle: "Centralizovaný dohled zdraví a tajemství na tomto serveru.",
+                dashboardEyebrow: "Kokpit zdraví",
+                navDashboard: "Přehled",
+                navVault: "Vault",
+                dashboardKicker: "Přehled stavu",
+                dashboardPanelTitle: "Zdraví Vaultu & služby",
+                dashboardPanelCopy: "Zkontrolujte níže uvedená čísla, abyste ověřili dostupnost Vaultu před zásahy do tajemství.",
+                metricVaultAddress: "Adresa Vaultu",
+                metricTokenFile: "Soubor tokenu",
+                metricReachability: "Dostupnost",
+                metricNamespaces: "Namespaces",
+                dashboardMetaTitle: "Dostupnost Vaultu",
+                vaultEyebrow: "Vault UI / Obnovený vzhled",
+                vaultHeroTitle: "Správa tajemství pro orchestraci, Gemini CLI a Notion.",
+                vaultHeroLead: "Použijte sdílený <strong>`common-mcp`</strong> namespace pro sdílená tajemství. Nástroj níže udržuje <strong>`NOTION_API_KEY`</strong> synchronizovaný ve Vaultu a editor JSONu zůstává k dispozici pro detailní úpravy payloadu.",
+                serviceKicker: "Cílový prostor",
+                serviceTitle: "Výběr služby s podporou Vaultu",
+                serviceCopy: "Vyberte namespace, který chcete zkontrolovat nebo upravit. Sdílené CLI údaje patří do <strong>`common-mcp`</strong>.",
+                serviceFieldLabel: "Služba",
+                serviceMetaHeading: "Režim aplikace za běhu",
+                notionKicker: "Pomocník pro Notion",
+                notionTitle: "Rychlý editor NOTION_API_KEY",
+                notionCopy: "Pomocník udržuje JSON payload synchronizovaný a usnadňuje nastavit placeholder pro Gemini CLI.",
+                badgeText: "Doporučená cílová služba: common-mcp",
+                notionButtonCommon: "Přepnout na common-mcp",
+                notionButtonPlaceholder: "Vložit placeholder",
+                notionHelperNote: "Uložením se celý JSON payload zapíše do Vaultu. Z bezpečnostních důvodů je pole typu password a jen zrcadlí aktuální hodnotu JSONu v prohlížeči.",
+                consoleKicker: "Protokol aktivit",
+                consoleTitle: "Konzole",
+                payloadKicker: "Celý payload",
+                payloadTitle: "Editor JSON",
+                payloadCopy: "Pokročilý režim pro úplnou kontrolu nad payloadem. Pomocník pro Notion a tento editor zůstávají synchronizované.",
+                secretLabel: "Payload tajemství",
+                buttonReload: "Znovu načíst z Vaultu",
+                buttonFormat: "Naformátovat JSON",
+                buttonSave: "Uložit do Vaultu",
+                logLoadHealthSuccess: "Zdraví Vaultu načteno.",
+                logLoadHealthFailed: "Kontrola zdraví selhala",
+                controlReady: "Řídicí centrum připraveno.",
+                serviceMetaLine: "Změny se projeví po restartu.",
+                restartTargetLabel: "Cíl restartu",
+                commandLabel: "Příkaz",
+                dashboardServicesLabel: "Namespaces"
+            }
+        };
+
+        const statusCopy = {
+            en: {
+                healthy: "Vault online",
+                degraded: "Vault degraded",
+                error: "Health check failed",
+                reachability: { reachable: "reachable", unreachable: "unreachable" },
+                reachNote: {
+                    reachable: "Vault is reachable and ready for edits.",
+                    unreachable: "Vault is unreachable; check connectivity."
+                }
+            },
+            cz: {
+                healthy: "Vault dostupný",
+                degraded: "Vault omezený",
+                error: "Kontrola zdraví selhala",
+                reachability: { reachable: "dostupný", unreachable: "nedostupný" },
+                reachNote: {
+                    reachable: "Vault je dostupný a připravený pro úpravy.",
+                    unreachable: "Vault není dostupný; zkontrolujte připojení."
+                }
+            }
+        };
+
+        let currentLang = "en";
+        let lastHealthPayload = null;
+
+        function applyTranslations() {
+            document.querySelectorAll("[data-i18n-key]").forEach((element) => {
+                const key = element.dataset.i18nKey;
+                if (!key) {
+                    return;
+                }
+                const dictionary = translations[currentLang] || translations.en;
+                const fallback = translations.en[key] || "";
+                const text = dictionary[key] || fallback;
+                if (!text) {
+                    return;
+                }
+                if (element.dataset.i18nHtml === "true") {
+                    element.innerHTML = text;
+                } else {
+                    element.textContent = text;
+                }
+            });
+            document.documentElement.lang = currentLang === "cz" ? "cs" : "en";
+            document.title = translations[currentLang].documentTitle || translations.en.documentTitle;
+            document.querySelectorAll(".lang-btn").forEach((button) => {
+                button.classList.toggle("active", button.dataset.langToggle === currentLang);
+            });
+            updateServiceMetadata();
+            if (lastHealthPayload) {
+                setStatusText(lastHealthPayload);
+            }
+        }
+
+        function setActivePanel(panelId) {
+            document.querySelectorAll(".tab-panel").forEach((panel) => {
+                panel.classList.toggle("active", panel.id === panelId);
+            });
+            document.querySelectorAll(".dash-nav-link").forEach((button) => {
+                button.classList.toggle("active", button.dataset.panelTarget === panelId);
+            });
+        }
+
+        function logLine(message, isError = false) {
+            const consoleEl = document.getElementById("console");
+            if (!consoleEl) {
+                return;
+            }
+            const row = document.createElement("div");
+            row.className = "console-line" + (isError ? " error" : "");
+            row.textContent = "> " + message;
+            consoleEl.appendChild(row);
+            consoleEl.scrollTop = consoleEl.scrollHeight;
+        }
+
+        function parseEditorJson() {
+            const input = document.getElementById("secret-json").value || "{}";
+            return JSON.parse(input);
+        }
+
+        function writeEditorJson(data) {
+            document.getElementById("secret-json").value = JSON.stringify(data || {}, null, 2);
+            syncNotionFieldFromEditor();
+        }
+
+        function syncNotionFieldFromEditor() {
+            let data = {};
+            try {
+                data = parseEditorJson();
+            } catch (error) {
+                return;
+            }
+            document.getElementById("notion-api-key").value = typeof data.NOTION_API_KEY === "string" ? data.NOTION_API_KEY : "";
+        }
+
+        function syncEditorFromNotionField() {
+            let data = {};
+            try {
+                data = parseEditorJson();
+            } catch (error) {
+                logLine("JSON is invalid. Fix it before editing NOTION_API_KEY.", true);
+                return;
+            }
+            data.NOTION_API_KEY = document.getElementById("notion-api-key").value;
+            writeEditorJson(data);
+        }
+
+        async function loadHealth() {
+            try {
+                const response = await fetch("/health");
+                const payload = await response.json();
+                lastHealthPayload = payload;
+                setStatusText(payload);
+                logLine(translations[currentLang].logLoadHealthSuccess, false);
+            } catch (error) {
+                document.getElementById("health-pill").textContent = translations[currentLang].logLoadHealthFailed;
+                document.getElementById("health-pill").className = "status-pill error";
+                logLine(`${translations[currentLang].logLoadHealthFailed}: ${error.message}`, true);
+            }
+        }
+
+        function setStatusText(payload) {
+            if (!payload) {
+                return;
+            }
+            const pill = document.getElementById("health-pill");
+            const statusKey = payload.status === "healthy" ? "healthy" : payload.status === "degraded" ? "degraded" : "error";
+            const statusText = (statusCopy[currentLang] || statusCopy.en)[statusKey] || statusCopy.en.error;
+            pill.textContent = statusText;
+            const pillState = statusKey === "healthy" ? "" : statusKey === "error" ? " error" : " degraded";
+            pill.className = "status-pill" + pillState;
+
+            const address = payload.vault_addr || "-";
+            const token = payload.token_file || "-";
+            const services = payload.services && payload.services.length ? payload.services.join(", ") : "-";
+            const reachKey = payload.vault_reachable ? "reachable" : "unreachable";
+            const reachMapping = (statusCopy[currentLang] || statusCopy.en).reachability || statusCopy.en.reachability;
+            const reachNote = (statusCopy[currentLang] || statusCopy.en).reachNote || statusCopy.en.reachNote;
+            const reachableLabel = reachMapping[reachKey] || reachMapping.reachable;
+
+            document.getElementById("vault-addr").textContent = address;
+            document.getElementById("summary-vault-addr").textContent = address;
+            document.getElementById("vault-token").textContent = token;
+            document.getElementById("summary-vault-token").textContent = token;
+            document.getElementById("vault-services").textContent = services;
+            document.getElementById("summary-vault-services").textContent = services;
+            document.getElementById("vault-reachable").textContent = reachableLabel;
+            document.getElementById("summary-vault-reachable").textContent = reachableLabel;
+            document.getElementById("summary-vault-reach-note").textContent = reachNote[reachKey];
+        }
+
+        function updateServiceMetadata() {
+            const service = document.getElementById("target-service").value;
+            const meta = serviceCatalog[service];
+            if (!meta) {
+                return;
+            }
+            const serviceMetaLine = translations[currentLang].serviceMetaLine || translations.en.serviceMetaLine;
+            const restartLabel = translations[currentLang].restartTargetLabel || translations.en.restartTargetLabel;
+            const commandLabel = translations[currentLang].commandLabel || translations.en.commandLabel;
+            document.getElementById("service-meta-line").textContent = `${meta.description || "Vault-backed secret set."} ${serviceMetaLine}`;
+            document.getElementById("service-restart-line").textContent = `${restartLabel}: ${meta.restart_target || "-"}`;
+            document.getElementById("service-command-line").textContent = `${commandLabel}: ${meta.restart_command || "-"}`;
+        }
+
+        async function loadSecrets() {
+            const service = document.getElementById("target-service").value;
+            try {
+                const response = await fetch("/api/secrets/" + encodeURIComponent(service));
+                if (!response.ok) {
+                    throw new Error(await response.text());
+                }
+                const payload = await response.json();
+                writeEditorJson(payload.data || {});
+                updateServiceMetadata();
+                logLine("Loaded " + service + " from Vault.", false);
+            } catch (error) {
+                logLine("Load failed for " + service + ": " + error.message, true);
+            }
+        }
+
+        async function saveSecrets() {
+            const service = document.getElementById("target-service").value;
+            let data;
+            try {
+                data = parseEditorJson();
+            } catch (error) {
+                logLine("Cannot save invalid JSON: " + error.message, true);
+                return;
+            }
+
+            try {
+                const response = await fetch("/api/secrets/" + encodeURIComponent(service), {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ data })
+                });
+                if (!response.ok) {
+                    throw new Error(await response.text());
+                }
+                const payload = await response.json();
+                logLine("Saved payload for " + service + ".", false);
+                if (payload.restart_required) {
+                    logLine("Restart target: " + payload.restart_target, false);
+                }
+            } catch (error) {
+                logLine("Save failed for " + service + ": " + error.message, true);
+            }
+        }
+
+        function formatJson() {
+            try {
+                writeEditorJson(parseEditorJson());
+                logLine("JSON formatted.", false);
+            } catch (error) {
+                logLine("Invalid JSON: " + error.message, true);
+            }
+        }
+
+        document.querySelectorAll("[data-panel-target]").forEach((button) => {
+            button.addEventListener("click", () => {
+                setActivePanel(button.dataset.panelTarget);
+            });
+        });
+
+        document.querySelectorAll("[data-lang-toggle]").forEach((button) => {
+            button.addEventListener("click", () => {
+                if (!button.dataset.langToggle || button.dataset.langToggle === currentLang) {
+                    return;
+                }
+                currentLang = button.dataset.langToggle;
+                applyTranslations();
+            });
+        });
+
+        document.getElementById("target-service").addEventListener("change", () => {
+            updateServiceMetadata();
+            loadSecrets();
+        });
+
+        document.getElementById("load-secrets").addEventListener("click", loadSecrets);
+        document.getElementById("format-json").addEventListener("click", formatJson);
+        document.getElementById("save-secrets").addEventListener("click", saveSecrets);
+        document.getElementById("notion-api-key").addEventListener("input", syncEditorFromNotionField);
+
+        document.getElementById("insert-placeholder").addEventListener("click", () => {
+            document.getElementById("notion-api-key").value = "";
+            syncEditorFromNotionField();
+            logLine("Inserted empty NOTION_API_KEY placeholder.", false);
+        });
+
+        document.getElementById("use-common-mcp").addEventListener("click", () => {
+            document.getElementById("target-service").value = "common-mcp";
+            updateServiceMetadata();
+            loadSecrets();
+            logLine("Switched target to common-mcp.", false);
+        });
+
+        document.getElementById("target-service").value = serviceCatalog["common-mcp"] ? "common-mcp" : Object.keys(serviceCatalog)[0];
+        applyTranslations();
+        setActivePanel("dashboard-panel");
+        logLine(translations[currentLang].controlReady, false);
+        loadHealth();
+        loadSecrets();
+    </script>
+</body>
+</html>

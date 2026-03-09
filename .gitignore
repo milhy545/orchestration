@@ -99,3 +99,8 @@ claude-agent/__pycache__/
 # Backup files
 *.backup
 *.bak
+
+# Deferred feature worktrees kept local for later productization
+docker-compose.remote-ide.yml
+mega_orchestrator/dashboard/
+services/remote-ide-ssh/
