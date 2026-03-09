@@ -53,7 +53,36 @@ If monitoring files live only in your workspace filesystem, copy `monitoring/` t
 
 ## Services
 
-The `docker-compose.yml` file defines the following services, which are organized into logical groups:
+The `docker-compose.yml` stack defines the orchestrator plus the running MCP services listed below. Each service exposes a FastAPI process that publishes `/health` plus `/tools/list` and one or more MCP tool endpoints.
+
+### Master controller
+- `mega-orchestrator` (HTTP 7000 / MCP bridge and `/tools/list`)
+
+### Core MCP services (7001-7010)
+- `filesystem-mcp` (7001): `file_read`, `file_write`, `file_list`, `file_search`, `file_analyze`
+- `git-mcp` (7002): `git_status`, `git_diff`, `git_log`, `git_commit`, `git_push`
+- `terminal-mcp` (7003): `execute_command`, `system_info`, `directory`, `processes`
+- `database-mcp` (7004): `db_query`, `db_schema`, `db_tables`, `db_sample`
+- `memory-mcp` (7005): `store_memory`, `list_memories`, `search_memories`, `memory_stats`
+- `network-mcp` (7006): planned network tooling (webhooks, HTTP requests, DNS lookup)
+- `system-mcp` (7007): system resource monitors and tooling
+- `security-mcp` (7008): JWT/password helpers plus crypto utilities
+- `config-mcp` (7009): env/config validation, schema guards, backups
+- `log-mcp` (7010): log/search operations and diagnostics
+
+### Enhanced services (7011+)
+- `research-mcp` (7011): AI research/search tools with schema validation
+- `advanced-memory-mcp` (7012): vector memory search / `tools/call`
+- `transcriber-mcp` (7013): audio transcription via `/transcribe/audio` and `/transcribe/url`
+- `marketplace-mcp` (7034): skills catalog, registry, install APIs, `tools/*`
+- `gmail-mcp` (7015): Gmail operations, labels, and message tools
+- `qdrant-mcp`, `postgresql-mcp`, `redis-mcp`: specialized datastore tools
+- `zen-mcp-server` (7017): orchestration gateway with rich tool set
+
+### Support services
+- `postgresql`, `redis`, `qdrant-vector`, `prometheus`, `grafana`, `loki`, `promtail`, `backup-service`, `message-queue`
+ 
+**Documentation:** See `docs/README.md` for the living doc map; `docs/api/` covers every public service/tool; `docs/operations/` covers deployment & monitoring runbooks; `docs/architecture/` describes design rationale and MCP compatibility.
 
 ### Master Controller
 

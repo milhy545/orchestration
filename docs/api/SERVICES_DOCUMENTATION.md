@@ -1,208 +1,52 @@
-# Services Documentation - Orchestration MCP Platform
+## Services and tools – current runtime surface
 
-## 🎯 Services Overview
+Each running MCP container exposes `/health`, `/tools/list`, and at least one MCP tool. The mega-orchestrator (7034) sits in front of them via `/mcp` + `/tools/*` and consolidates tool metadata at `/tools/list`. The tables below summarize the active services (ports match `docker-compose.yml`) plus the tool kits that Mega forwards.
 
-The Orchestration MCP Platform consists of **8 MCP services** providing **28 specialized tools** for AI agents and applications, plus a ZEN MCP gateway for orchestration. Each service is containerized and communicates through the MCP (Model Context Protocol) standard.
+### Mega Orchestrator endpoints (HTTP 7000)
 
-### Service Architecture Summary
+- `GET /health` – coordinator health, database, cache status.
+- `GET /services` – lists all MCP service health + metadata.
+- `GET /stats` – aggregated metrics drawn from PostgreSQL usage tables.
+- `GET /tools/list` – merged tool catalog (accessory for clients and UI).
+- `POST /mcp` & `/mcp/rpc` – Proxy requests to MCP tools (headers: `Content-Type: application/json`).
+- `POST /tools/call` – Syntactic sugar for calling registered tools.
+- `GET /mcp/schema` – JSON schema describing each registered tool (used by clients and CLI bridges).
 
-| Service | Port | Container | Tools | Status | Purpose |
-|---------|------|-----------|-------|--------|---------|
-| [Filesystem MCP](#filesystem-mcp-port-7001) | 7001 | `mcp-filesystem` | 5 | ✅ Running | File operations |
-| [Git MCP](#git-mcp-port-7002) | 7002 | `mcp-git` | 5 | ✅ Running | Version control |
-| [Terminal MCP](#terminal-mcp-port-7003) | 7003 | `mcp-terminal` | 3 | ✅ Running | System commands |
-| [Database MCP](#database-mcp-port-7004) | 7004 | `mcp-database` | 4 | ✅ Running | Database operations |
-| [Memory MCP](#memory-mcp-port-7005) | 7005 | `mcp-memory` | 5 | ✅ Running | Information storage |
-| [Research MCP](#research-mcp-port-7011) | 7011 | `mcp-research` | 3 | ✅ Running | Web search & research |
-| [Advanced Memory MCP](#advanced-memory-mcp-port-7012) | 7012 | `mcp-advanced-memory` | 0 | ✅ Running | Enhanced AI memory |
-| [Transcriber MCP](#transcriber-mcp-port-7013) | 7013 | `mcp-transcriber` | 3 | ⚠️ Debugging | Audio/video processing |
-| [ZEN MCP Server](#zen-mcp-server-port-7017) | 7017 | `zen-mcp-server` | N/A | ✅ Running | MCP tool orchestration gateway |
+See `docs/api/mega_orchestrator.md` for request+response shapes, authentication notes, and example tooling flows.
 
-**Total: 28 MCP Tools across 9 Services**
+### Core MCP services (7001-7010)
 
----
+- **Filesystem MCP** (7001): tools `file_read`, `file_write`, `file_list`, `file_search`, `file_analyze`.
+- **Git MCP** (7002): tools `git_status`, `git_log`, `git_diff`, `git_commit`, `git_push`.
+- **Terminal MCP** (7003): `execute_command`, `system_info`, `directory`, `processes`.
+- **Database MCP** (7004): `db_query`, `db_schema`, `db_tables`, `db_sample`.
+- **Memory MCP** (7005): `store_memory`, `list_memories`, `search_memories`, `memory_stats`.
+- **Network MCP** (7006): webhook/HTTP automation + placeholder tool list (future expansion).
+- **System MCP** (7007): `resource_monitor`, `process_list`, `disk_usage`, `system_info`.
+- **Security MCP** (7008): JWT/password helpers, encryption/decryption, `ssl_check`.
+- **Config MCP** (7009): env/config validation, schema enforcement, backups.
+- **Log MCP** (7010): log_analysis, log_search, log collection tools.
 
-## 🗄️ Filesystem MCP (Port 7001)
+### Enhanced services (7011+)
 
-**Container**: `mcp-filesystem`  
-**Purpose**: Comprehensive file system operations and management  
-**Status**: ✅ Running (26h+ uptime)  
-**Technology**: Python 3.12+, FastAPI, aiofiles
+- **Research MCP** (7011): search/news tools with validated JSON schema inputs.
+- **Advanced Memory MCP** (7012): vector search, AI memory call (`tools/call`).
+- **Marketplace MCP** (7034): `/tools/list`, `/tools/{tool_name}`, `/skills/v1/*`, `/registry/v0.1/*`, `POST /mcp`.
+- **Gmail MCP** (7015): Gmail send/search/labels tools plus `/gmail/*` helpers.
+- **PostgreSQL/Redis/Qdrant MCPs**: Extended datastore tools each exposing `/tools/list`, `/tools/query`, `/tools/schema`, etc.
+- **WebM Transcriber** (7013): `/transcribe/audio`, `/transcribe/url`.
+- **Zen MCP Server** (7017): orchestrator with `server.list_tools()` integrated orchestration interface.
 
-### Tools (5 total)
+### Supporting UI/API surfaces
 
-#### 1. file_read
-**Description**: Read contents of files with support for multiple encodings  
-**Use Cases**: Reading configuration files, logs, source code, documentation
+- **Vault Secrets UI** (`services/vault-secrets-ui/app.py`): `GET /health`, `/`, `/api/services`, `/api/secrets/{service}`, `/api/secrets/{service}` (PUT for updates).  
+- **Scripts** (e.g., `scripts/monitoring-health-check.sh`, `scripts/marketplace/install_skill_from_market.sh`, `scripts/vault-variant-b-smoke.sh`) provide documented operational entry points and should keep references in `docs/operations/`.
 
-**Parameters**:
-```json
-{
-  "path": "/home/orchestration/README.md",
-  "encoding": "utf-8",          // Optional: file encoding
-  "max_size": 10485760         // Optional: max file size (10MB default)
-}
-```
+### Documentation expectations
 
-**Response**:
-```json
-{
-  "content": "file contents here...",
-  "size": 1024,
-  "encoding": "utf-8",
-  "last_modified": "2025-08-17T03:24:38Z",
-  "mime_type": "text/markdown"
-}
-```
-
-**Example**:
-```bash
-curl -X POST http://192.168.0.58:7000/mcp \
-  -H "Content-Type: application/json" \
-  -d '{
-    "tool": "file_read",
-    "arguments": {
-      "path": "/home/orchestration/zen_mcp_server.py"
-    }
-  }'
-```
-
-#### 2. file_write
-**Description**: Write or create files with atomic operations  
-**Use Cases**: Creating configuration files, saving data, updating source code
-
-**Parameters**:
-```json
-{
-  "path": "/tmp/output.txt",
-  "content": "Hello World",
-  "mode": "w",                 // w=write, a=append, x=exclusive create
-  "encoding": "utf-8",         // Optional: file encoding
-  "create_dirs": true          // Optional: create parent directories
-}
-```
-
-**Response**:
-```json
-{
-  "status": "success",
-  "bytes_written": 11,
-  "file_created": true,
-  "timestamp": "2025-08-17T03:24:38Z"
-}
-```
-
-#### 3. file_list
-**Description**: List directory contents with detailed metadata  
-**Use Cases**: Directory exploration, file discovery, system auditing
-
-**Parameters**:
-```json
-{
-  "path": "/home/orchestration",
-  "recursive": false,          // Optional: recursive listing
-  "include_hidden": false,     // Optional: show hidden files
-  "pattern": "*.py",           // Optional: file pattern filter
-  "sort_by": "name"            // Optional: name, size, modified
-}
-```
-
-**Response**:
-```json
-{
-  "files": [
-    {
-      "name": "zen_mcp_server.py",
-      "path": "/home/orchestration/zen_mcp_server.py",
-      "type": "file",
-      "size": 16454,
-      "modified": "2025-08-17T03:24:38Z",
-      "permissions": "644",
-      "owner": "root"
-    }
-  ],
-  "total_files": 12,
-  "total_size": 245760
-}
-```
-
-#### 4. file_search
-**Description**: Search for files using patterns and content  
-**Use Cases**: Finding configuration files, searching source code, locating logs
-
-**Parameters**:
-```json
-{
-  "path": "/home/orchestration",
-  "pattern": "*.py",           // File name pattern
-  "content_pattern": "async",  // Optional: search file contents
-  "recursive": true,
-  "case_sensitive": false,
-  "max_results": 100
-}
-```
-
-**Response**:
-```json
-{
-  "matches": [
-    {
-      "file": "/home/orchestration/zen_mcp_server.py",
-      "line_matches": [
-        {
-          "line_number": 45,
-          "content": "async def handle_request(request):",
-          "context": "Function definition"
-        }
-      ]
-    }
-  ],
-  "total_matches": 23,
-  "search_time": "0.156s"
-}
-```
-
-#### 5. file_analyze
-**Description**: Analyze file structure, metadata, and content statistics  
-**Use Cases**: Code analysis, file type detection, content summarization
-
-**Parameters**:
-```json
-{
-  "path": "/home/orchestration/zen_mcp_server.py",
-  "include_content_stats": true,  // Optional: analyze content
-  "detect_language": true,        // Optional: programming language detection
-  "calculate_complexity": true    // Optional: code complexity metrics
-}
-```
-
-**Response**:
-```json
-{
-  "file_info": {
-    "size": 16454,
-    "lines": 408,
-    "language": "python",
-    "encoding": "utf-8"
-  },
-  "content_stats": {
-    "functions": 12,
-    "classes": 3,
-    "imports": 8,
-    "complexity_score": 15.7
-  },
-  "security_analysis": {
-    "potential_issues": [],
-    "confidence": "high"
-  }
-}
-```
-
-### Security Features
-- **Path Traversal Protection**: Prevents access outside allowed directories
-- **File Size Limits**: Configurable maximum file sizes
-- **Permission Checking**: Validates read/write permissions
-- **Content Sanitization**: Filters dangerous file content
+- Update `docs/api/mega_orchestrator.md` with any new tool or endpoint you add.  
+- Each MCP service should have a short paragraph in this file describing available tools and dependency notes.  
+- Use `docs/operations/` for deployment/monitoring guidance; use `docs/architecture/` for design explanation; use `docs/index/DOCUMENTATION_INDEX.md` for navigation and quick references.
 
 ---
 
