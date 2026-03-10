@@ -1,31 +1,27 @@
 # Orchestration Documentation
 
-This directory collects the living documentation for the Orchestration MCP platform. The structure reflects active runtime services, operational runbooks, API/tool references, and a small historical archive. Use the chapters below as navigation starters.
+This directory contains the active documentation for the current runtime state of the Orchestration platform. Everything under `docs/archive/` is historical material and is excluded from current-state guarantees.
 
-## Architecture
-- [architecture/ARCHITECTURE.md](architecture/ARCHITECTURE.md): system design, service graph, and deployment constraints.
-- [architecture/MEGA_MCP_COMPATIBILITY.md](architecture/MEGA_MCP_COMPATIBILITY.md): mega-orchestrator compatibility guarantees and client contracts.
-- [architecture/VAULT_VARIANT_B.md](architecture/VAULT_VARIANT_B.md): runtime secret injection overlay.
+## Start Here
 
-## Operations
-- [operations/DEPLOYMENT.md](operations/DEPLOYMENT.md): bring-up, environment variables, component dependencies.
-- [operations/MONITORING.md](operations/MONITORING.md): observability stack, Grafana dashboards, Prometheus queries.
-- [operations/PORTAINER_DEPLOYMENT.md](operations/PORTAINER_DEPLOYMENT.md): Portainer management workflow.
-- [operations/TROUBLESHOOTING.md](operations/TROUBLESHOOTING.md): step-by-step recovery guides and diagnostics.
+- [../README.md](../README.md): repository overview, service map, and quick start
+- [index/DOCUMENTATION_INDEX.md](index/DOCUMENTATION_INDEX.md): curated reading order by audience
+- [api/API_DOCUMENTATION.md](api/API_DOCUMENTATION.md): entrypoints, authentication, and common integration flows
+- [api/API_REFERENCE.md](api/API_REFERENCE.md): complete public endpoint and tool reference
+- [api/SERVICES_DOCUMENTATION.md](api/SERVICES_DOCUMENTATION.md): service inventory derived from `docker-compose.yml`
 
-## API & Services
-- [api/API_DOCUMENTATION.md](api/API_DOCUMENTATION.md): mega-orchestrator entrypoint, marketplace APIs, Vault UI.
-- [api/API_REFERENCE.md](api/API_REFERENCE.md): action catalog for Mega, MCP services, and helper surfaces.
-- [api/SERVICES_DOCUMENTATION.md](api/SERVICES_DOCUMENTATION.md): table-driven service/tool inventory.
+## Documentation Areas
 
-## Monitoring & Security
-- [security/SECURITY_SCAN_SUMMARY.md](security/SECURITY_SCAN_SUMMARY.md)
-- [reports/](reports/): audit trails, test summaries, operational reports.
--+- [reports/testing/TEST_SUMMARY.md](reports/testing/TEST_SUMMARY.md)
+- `architecture/`: system structure, compatibility boundaries, and Vault overlay design
+- `operations/`: deployment, monitoring, troubleshooting, and optional Portainer workflow
+- `api/`: gateway routes, direct service APIs, wrapper APIs, and tool inventory
+- `manuals/`: active operator guides
+- `security/`: current security posture and operational security notes
+- `archive/`: superseded plans, migrations, and retired manuals
 
-## Manuals & Archives
-- [manuals/](manuals/): user manuals (Gemini, Vault, etc.).
-- [archive/](archive/): retained historical planning & migration notes.
+## Maintenance Rules
 
-## Documentation Index
-- [index/DOCUMENTATION_INDEX.md](index/DOCUMENTATION_INDEX.md): quick reference and usage guide for the docs directory.
+- Treat `docker-compose.yml`, `mega_orchestrator/`, `mcp-servers/`, and `services/vault-secrets-ui/` as the source of truth.
+- When a public route, tool, or service changes, update `docs/api/API_REFERENCE.md` and `docs/api/public_surface_inventory.json` in the same change.
+- Keep active documentation in English.
+- Use `tests/test_docs_coverage.py` to catch missing coverage, stale terminology, and non-English text in active docs.

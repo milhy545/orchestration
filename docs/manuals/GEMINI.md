@@ -1,37 +1,32 @@
-# Repository Guidelines
+# Repository Guidelines for External Agents
 
-## Struktura projektu a organizace modulů
-- `mcp-servers/`: jednotlivé MCP mikroservisy (každý má vlastní `requirements.txt` a `Dockerfile`).
-- `mega_orchestrator/`, `claude-agent/`, `claude-agent-env/`: core orchestrace a agentní komponenty.
-- `config/`: sdílená konfigurace (včetně `config/requirements.txt` a `config/Dockerfile`).
-- `monitoring/`: konfigurace Prometheus, Grafana, Loki, Promtail.
-- `docs/`: dokumentace (viz `docs/operations/MONITORING.md`).
-- `scripts/`: údržbové a health‑check skripty.
-- `tests/`: cross‑service testy a utilitky.
+## Project Structure
 
-## Build, test a vývojové příkazy
-- `docker-compose up -d`: spustí celý stack na pozadí.
-- `docker-compose down`: zastaví všechny služby.
-- `docker-compose logs -f <service>`: sleduje logy jedné služby.
-- `./scripts/monitoring-health-check.sh`: ověří nastavení monitoringu.
-- `bash tests/docker-compose-monitoring-test.sh`: zkontroluje monitoring části `docker-compose.yml`.
-- `pytest`: spustí Python testy v `tests/` a `mcp-servers/*/tests`.
+- `mcp-servers/`: individual MCP microservices, each with its own `requirements.txt` and `Dockerfile`.
+- `mega_orchestrator/`, `claude-agent/`, `claude-agent-env/`: orchestration core and agent-related components.
+- `config/`: shared configuration, including `config/requirements.txt` and `config/Dockerfile`.
+- `monitoring/`: Prometheus, Grafana, Loki, and Promtail configuration.
+- `docs/`: current documentation. Start with `docs/README.md`.
+- `scripts/`: operator scripts for health checks, diagnostics, migrations, marketplace tasks, and backups.
+- `tests/`: cross-service tests and helper utilities.
 
-## Styl kódu a pojmenování
-- Respektuj existující konvence v dané službě. Pro Python používej 4 mezery a PEP 8.
-- V YAML (např. `docker-compose.yml`) drž 2‑mezerné odsazení a pokud jde, řaď bloky služeb konzistentně.
-- Testy musí být pojmenované `test_*.py` a třídy/funkce `Test*`/`test_*` (viz `pytest.ini`).
+## Core Commands
 
-## Testovací pravidla
-- Pytest je konfigurovaný v `pytest.ini` a používá markery `unit`, `integration`, `security`, `performance`, `slow`.
-- Při použití `pytest-cov` je minimum pokrytí `fail_under = 70`.
-- Přidávej testy ke službě, kterou upravuješ (např. `mcp-servers/<service>/tests/`).
+- `docker-compose up -d`
+- `docker-compose down`
+- `docker-compose logs -f <service>`
+- `./scripts/monitoring-health-check.sh`
+- `bash tests/docker-compose-monitoring-test.sh`
+- `pytest`
 
-## Commity a Pull Requesty
-- Nedávné commity jsou krátké a popisné, občas se scope prefixem (např. `docs:`). Drž se tohoto stylu.
-- PR by měl mít jasné shrnutí, důvod změn a seznam spuštěných příkazů.
-- Při změnách monitoringu nebo Dockeru uveď dotčené služby a případné nové proměnné prostředí.
+## Coding and Review Rules
 
-## Bezpečnost a konfigurace
-- Před spuštěním zkopíruj `.env.example` na `.env`.
-- Nikdy necommituj tajné údaje; používej `.env` nebo externí bezpečné úložiště.
+- Respect the conventions already used inside each service.
+- Use 4-space indentation and PEP 8 for Python.
+- Keep YAML indentation at 2 spaces.
+- Add tests next to the service being changed.
+- Never commit secrets; use `.env` files or an external secrets system.
+
+## Documentation Rule
+
+If a change affects a public endpoint, MCP tool, script, or operator workflow, update the relevant active documentation in the same change set.

@@ -1,0 +1,222 @@
+{
+  "services": [
+    {
+      "id": "mega-orchestrator",
+      "port": "7000",
+      "doc": "docs/api/mega_orchestrator.md",
+      "tokens": ["/health", "/services", "/stats", "/tools/list", "/mcp", "/mcp/rpc", "/mcp/schema"]
+    },
+    {
+      "id": "filesystem-mcp",
+      "port": "7001",
+      "doc": "docs/api/API_REFERENCE.md",
+      "tokens": ["filesystem-mcp", "/files/{path}", "/file/{path}", "/file/write", "/search/files", "/analyze/{path}", "file_read", "file_write", "file_list", "file_search", "file_analyze"]
+    },
+    {
+      "id": "git-mcp",
+      "port": "7002",
+      "doc": "docs/api/API_REFERENCE.md",
+      "tokens": ["git-mcp", "/git/{path}/status", "/git/{path}/log", "/git/{path}/diff", "/git/{path}/commit", "/git/{path}/push", "git_status", "git_log", "git_diff", "git_commit", "git_push"]
+    },
+    {
+      "id": "terminal-mcp",
+      "port": "7003",
+      "doc": "docs/api/API_REFERENCE.md",
+      "tokens": ["terminal-mcp", "/command", "/directory", "/processes", "execute_command", "system_info"]
+    },
+    {
+      "id": "database-mcp",
+      "port": "7004",
+      "doc": "docs/api/API_REFERENCE.md",
+      "tokens": ["database-mcp", "/db/execute", "/db/tables", "/db/schema/{table_name}", "/db/sample/{table_name}", "db_query", "db_tables", "db_schema", "db_sample"]
+    },
+    {
+      "id": "memory-mcp",
+      "port": "7005",
+      "doc": "docs/api/API_REFERENCE.md",
+      "tokens": ["memory-mcp", "/memory/store", "/memory/list", "/memory/search", "/memory/{memory_id}", "/memory/stats", "store_memory", "list_memories", "search_memories", "delete_memory", "memory_stats"]
+    },
+    {
+      "id": "network-mcp",
+      "port": "7006",
+      "doc": "docs/api/API_REFERENCE.md",
+      "tokens": ["network-mcp", "/tools/http_request", "/tools/webhook_create", "/webhooks/{webhook_id}", "/tools/dns_lookup", "/tools/api_test", "/webhooks", "/webhook-logs", "http_request", "webhook_create", "dns_lookup", "api_test"]
+    },
+    {
+      "id": "system-mcp",
+      "port": "7007",
+      "doc": "docs/api/API_REFERENCE.md",
+      "tokens": ["system-mcp", "/tools/resource_monitor", "/tools/process_list", "/tools/disk_usage", "/tools/system_info", "resource_monitor", "process_list", "disk_usage", "system_info"]
+    },
+    {
+      "id": "security-mcp",
+      "port": "7008",
+      "doc": "docs/api/API_REFERENCE.md",
+      "tokens": ["security-mcp", "/tools/jwt_token", "/tools/password_hash", "/tools/password_verify", "/tools/encrypt", "/tools/decrypt", "/tools/ssl_check", "jwt_token", "password_hash", "password_verify", "encrypt", "decrypt", "ssl_check"]
+    },
+    {
+      "id": "config-mcp",
+      "port": "7009",
+      "doc": "docs/api/API_REFERENCE.md",
+      "tokens": ["config-mcp", "/tools/env_vars", "/tools/config_file", "/tools/validate", "/tools/backup", "env_vars", "config_file", "validate", "backup"]
+    },
+    {
+      "id": "log-mcp",
+      "port": "7010",
+      "doc": "docs/api/API_REFERENCE.md",
+      "tokens": ["log-mcp", "/tools/log_analysis", "/tools/log_search", "log_analysis", "log_search"]
+    },
+    {
+      "id": "research-mcp",
+      "port": "7011",
+      "doc": "docs/api/API_REFERENCE.md",
+      "tokens": ["research-mcp", "/research/news", "/research/domain", "/research/academic", "/research/structured", "/research/search"]
+    },
+    {
+      "id": "advanced-memory-mcp",
+      "port": "7012",
+      "doc": "docs/api/API_REFERENCE.md",
+      "tokens": ["advanced-memory-mcp", "/tools/list", "/tools/call", "semantic_similarity", "vector_search", "get_context"]
+    },
+    {
+      "id": "transcriber-mcp",
+      "port": "7013",
+      "doc": "docs/api/API_REFERENCE.md",
+      "tokens": ["transcriber-mcp", "/transcribe/audio", "/transcribe/url"]
+    },
+    {
+      "id": "gmail-mcp",
+      "port": "7015",
+      "doc": "docs/api/API_REFERENCE.md",
+      "tokens": ["gmail-mcp", "/tool/{tool_name}", "/gmail/search", "/gmail/send", "/gmail/forward", "/gmail/email/{email_id}", "/gmail/count", "/gmail/labels", "/gmail/labels/apply", "/gmail/move"]
+    },
+    {
+      "id": "forai-mcp",
+      "port": "7016",
+      "doc": "docs/api/API_REFERENCE.md",
+      "tokens": ["forai-mcp", "/tools/list", "/tools/call"]
+    },
+    {
+      "id": "zen-mcp-server",
+      "port": "7017",
+      "doc": "docs/api/API_REFERENCE.md",
+      "tokens": ["zen-mcp-server", "stdio MCP server", "list tools", "call tools"]
+    },
+    {
+      "id": "mqtt-mcp",
+      "port": "7019",
+      "doc": "docs/api/API_REFERENCE.md",
+      "tokens": ["mqtt-mcp", "POST /mcp"]
+    },
+    {
+      "id": "code-graph-mcp",
+      "port": "7020",
+      "doc": "docs/api/API_REFERENCE.md",
+      "tokens": ["code-graph-mcp", "/tools/list", "/tools/call"]
+    },
+    {
+      "id": "postgresql-mcp-wrapper",
+      "port": "7024",
+      "doc": "docs/api/API_REFERENCE.md",
+      "tokens": ["postgresql-mcp-wrapper", "/tools/query", "/tools/schema", "/tools/connection"]
+    },
+    {
+      "id": "redis-mcp-wrapper",
+      "port": "7025",
+      "doc": "docs/api/API_REFERENCE.md",
+      "tokens": ["redis-mcp-wrapper", "/tools/cache", "/tools/session"]
+    },
+    {
+      "id": "qdrant-mcp-wrapper",
+      "port": "7026",
+      "doc": "docs/api/API_REFERENCE.md",
+      "tokens": ["qdrant-mcp-wrapper", "/tools/collection", "/tools/vector", "/tools/search"]
+    },
+    {
+      "id": "marketplace-mcp",
+      "port": "7034",
+      "doc": "docs/api/API_REFERENCE.md",
+      "tokens": ["marketplace-mcp", "/skills/v1/index", "/skills/v1/packages/{name}/{version}", "/skills/v1/install-plan", "/registry/v0.1/servers", "/registry/v0.1/servers/{server_id}/latest", "/tools/{tool_name}", "POST /mcp"]
+    },
+    {
+      "id": "vault-secrets-ui",
+      "port": "n/a",
+      "doc": "docs/api/API_REFERENCE.md",
+      "tokens": ["vault-secrets-ui", "/api/services", "/api/secrets/{service}", "PUT /api/secrets/{service}", "GET /"]
+    }
+  ],
+  "operator_scripts": [
+    {
+      "id": "health-check.sh",
+      "doc": "docs/api/SERVICES_DOCUMENTATION.md",
+      "tokens": ["scripts/health-check.sh"]
+    },
+    {
+      "id": "monitor-services.sh",
+      "doc": "docs/api/SERVICES_DOCUMENTATION.md",
+      "tokens": ["scripts/monitor-services.sh"]
+    },
+    {
+      "id": "monitoring-health-check.sh",
+      "doc": "docs/api/SERVICES_DOCUMENTATION.md",
+      "tokens": ["scripts/monitoring-health-check.sh"]
+    },
+    {
+      "id": "backup-databases.sh",
+      "doc": "docs/api/SERVICES_DOCUMENTATION.md",
+      "tokens": ["scripts/backup-databases.sh"]
+    },
+    {
+      "id": "quick_diagnose.sh",
+      "doc": "docs/api/SERVICES_DOCUMENTATION.md",
+      "tokens": ["scripts/diagnostics/quick_diagnose.sh"]
+    },
+    {
+      "id": "production_monitor.sh",
+      "doc": "docs/api/SERVICES_DOCUMENTATION.md",
+      "tokens": ["scripts/diagnostics/production_monitor.sh"]
+    },
+    {
+      "id": "get_market_token.sh",
+      "doc": "docs/api/SERVICES_DOCUMENTATION.md",
+      "tokens": ["scripts/marketplace/get_market_token.sh"]
+    },
+    {
+      "id": "codex_configure_market.sh",
+      "doc": "docs/api/SERVICES_DOCUMENTATION.md",
+      "tokens": ["scripts/marketplace/codex_configure_market.sh"]
+    },
+    {
+      "id": "install_skill_from_market.sh",
+      "doc": "docs/api/SERVICES_DOCUMENTATION.md",
+      "tokens": ["scripts/marketplace/install_skill_from_market.sh"]
+    },
+    {
+      "id": "vault-variant-b-smoke.sh",
+      "doc": "docs/api/SERVICES_DOCUMENTATION.md",
+      "tokens": ["scripts/vault-variant-b-smoke.sh"]
+    },
+    {
+      "id": "install-mcp.sh",
+      "doc": "docs/api/SERVICES_DOCUMENTATION.md",
+      "tokens": ["scripts/install-mcp.sh"]
+    }
+  ],
+  "excluded_surfaces": [
+    {
+      "id": "vision-mcp",
+      "doc": "README.md",
+      "tokens": ["vision-mcp", "placeholder service"]
+    },
+    {
+      "id": "common-mcp",
+      "doc": "README.md",
+      "tokens": ["common-mcp", "compatibility namespaces"]
+    },
+    {
+      "id": "perplexity-hub",
+      "doc": "README.md",
+      "tokens": ["perplexity-hub", "compatibility namespaces"]
+    }
+  ]
+}

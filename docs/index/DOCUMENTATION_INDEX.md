@@ -1,44 +1,38 @@
-# Documentation Index - Orchestration MCP Platform
+# Documentation Index
 
-## Quick Starters
-1. [../README.md](../README.md) — product overview and service map.
-2. [../api/API_DOCUMENTATION.md](../api/API_DOCUMENTATION.md) — mega-orchestrator, marketplace, Vault, and MCP bridges.
-3. [../api/SERVICES_DOCUMENTATION.md](../api/SERVICES_DOCUMENTATION.md) — active service/tool inventory and links to each tool’s docs.
-4. [../operations/DEPLOYMENT.md](../operations/DEPLOYMENT.md) — bring-up, env vars, and cluster wiring.
-5. [../operations/MONITORING.md](../operations/MONITORING.md) — observability stack and health checks.
+## Recommended Reading Order
 
-## Documentation Strategy
+### Operators
+1. [../../README.md](../../README.md)
+2. [../operations/DEPLOYMENT.md](../operations/DEPLOYMENT.md)
+3. [../operations/MONITORING.md](../operations/MONITORING.md)
+4. [../operations/TROUBLESHOOTING.md](../operations/TROUBLESHOOTING.md)
+5. [../manuals/MANUAL.md](../manuals/MANUAL.md)
 
-- **Architecture**: `docs/architecture/` (system design, compatibility, Vault overlay).
-- **Operations**: `docs/operations/` (deployment, monitoring, Portainer, troubleshooting).
-- **API & Services**: `docs/api/` (mega-orchestrator and MCP tools), new active-service index.
-- **Security & Reports**: `docs/security/`, `docs/reports/`.
-- **Manuals**: `docs/manuals/` (Gemini, manuals, Vault quick-starts).
-- **Archive**: `docs/archive/` (historical plans, migration stories) and top-level `archive/` for retained artifacts.
+### Integrators
+1. [../api/API_DOCUMENTATION.md](../api/API_DOCUMENTATION.md)
+2. [../api/mega_orchestrator.md](../api/mega_orchestrator.md)
+3. [../api/API_REFERENCE.md](../api/API_REFERENCE.md)
+4. [../architecture/MEGA_MCP_COMPATIBILITY.md](../architecture/MEGA_MCP_COMPATIBILITY.md)
 
-## Audience Paths
-
-Operators: README → operations docs → monitoring dashboards → reports.  
-Integrators: API docs → service inventory → compatibility guide.  
-Developers: architecture docs → MCP service descriptions → tooling list.  
-Auditors: security summary → reports/audits.  
-Researchers: archive/ for past plans plus `docs/README.md` archive guidance.
+### Maintainers
+1. [../architecture/ARCHITECTURE.md](../architecture/ARCHITECTURE.md)
+2. [../api/SERVICES_DOCUMENTATION.md](../api/SERVICES_DOCUMENTATION.md)
+3. [../security/SECURITY_SCAN_SUMMARY.md](../security/SECURITY_SCAN_SUMMARY.md)
+4. [../archive/README.md](../archive/README.md)
 
 ## Active Public Surface
 
-- `mega-orchestrator` (HTTP 7000): `GET /health`, `/tools/list`, `/services`, `/stats`, `/mcp`, `/mcp/rpc`, `/tools/call`, `/mcp/schema`.
-- MCP services (7001-7017): each exposes `/health`, `/tools/list`, MCP tools such as `file_read`, `git_status`, `mcp-transcribe`, `db_query`, etc.
-- Enhanced services like `marketplace-mcp`, `gmail-mcp`, and Vault UI (see `services/vault-secrets-ui/app.py`).
-- Operational scripts under `scripts/` provide automation entry points (monitoring-health-check, backup, marketplace installs, Vault variant launch).
+- Gateway: `mega-orchestrator` on `7000`
+- Private catalog: `marketplace-mcp` on `7034`
+- Vault overlay UI: `vault-secrets-ui` on `10000` when the overlay compose file is enabled
+- MCP and wrapper services: `7001` through `7026` depending on the service
+- Observability stack: Prometheus `7028`, Grafana `7031`, Loki `7032`
 
-## Documentation Workflows
+## Source-of-Truth Files
 
-When a service/tool changes:
-1. Update the relevant `docs/api/*` entry and service/tool table.
-2. Reflect new ports/endpoints in `README.md` service map.
-3. Refresh `docs/index/DOCUMENTATION_INDEX.md` if the audience path changes.
-4. Link new operational scripts from `docs/operations/*` runbooks.
-
-## Maintenance Notes
-- Keep new materials in the categorized folder (architecture/api/operations).
-- Label historical docs in `docs/archive/` and `archive/` as such.
+- Runtime topology: `docker-compose.yml`
+- Gateway routes: `mega_orchestrator/mega_orchestrator_complete.py`
+- Service APIs: `mcp-servers/*/main.py`
+- Vault UI API: `services/vault-secrets-ui/app.py`
+- Docs coverage inventory: `docs/api/public_surface_inventory.json`

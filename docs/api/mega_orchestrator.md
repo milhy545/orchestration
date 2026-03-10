@@ -1,36 +1,81 @@
-# Mega Orchestrator API
+# Mega-Orchestrator API
 
-The orchestrator listens on HTTP `7000` (see `mega_orchestrator/mega_orchestrator_complete.py`). It proxies MCP tools, publishes a unified `/tools/list`, and exposes health/metrics endpoints used by dashboards and automation.
+`mega-orchestrator` is implemented in `mega_orchestrator/mega_orchestrator_complete.py` and exposed on host port `7000`. It is the main catalog and routing surface for clients that want one HTTP entrypoint instead of calling each MCP service directly.
 
-| Endpoint | Method | Description |
+## Route Contract
+
+| Method | Route | Description |
 | --- | --- | --- |
-| `/health` | GET | Health check that validates PostgreSQL + Redis connections plus service registry heartbeat. Returns `{ "status": "ok", "services": {...} }`. |
-| `/services` | GET | Lists every MCP service with status, port, and last ping. Useful for dashboards and instrumentation. |
-| `/stats` | GET | Aggregated PostgreSQL metrics (requests per tool, error counters, uptime). |
-| `/tools/list` | GET | Merged tool catalog with name, description, schema URI, `service`, and `version`. Clients use this to discover MCP tools. |
-| `/mcp` | POST | Primary MCP dispatch endpoint. Accepts `{ "tool": "...", "arguments": {...} }` and forwards to the responsible MCP service based on `tools/list`. |
-| `/mcp/rpc` | POST | MCP JSON-RPC compatibility mirror (supports `initialize`, `notifications/initialized`, `tools/list`, `tools/call`). |
-| `/tools/call` | POST | Alternate entrypoint for calling MCP tools with named parameters (calls forward to `/mcp` internally). |
-| `/mcp/schema` | GET | Exposes the canonical tool schema (JSON) used by CLI bridges and external clients (see `mega_orchestrator/mcp_stdio_bridge.py`). |
+| `POST` | `/mcp` | Main tool dispatch route; accepts native request bodies and JSON-RPC payloads |
+| `POST` | `/mcp/rpc` | JSON-RPC compatible alias |
+| `POST` | `/mcp/{service}` | Send a request to one named downstream service |
+| `GET` | `/health` | Gateway health plus downstream summary |
+| `GET` | `/services` | Registered services with health and routing metadata |
+| `GET` | `/tools/list` | Unified tool catalog built from the currently exposed working subset |
+| `GET` | `/mcp/schema` | MCP tool and resource schema returned by the gateway |
+| `GET` | `/status` | Lightweight status payload |
+| `GET` | `/stats` | Requests processed, uptime, mode switches, and related counters |
+| `GET` | `/providers` | Provider registry state |
+| `GET` | `/modes` | Available SAGE modes and routing data |
+| `GET` | `/memory/stats` | Gateway memory metrics |
+| `GET` | `/files/stats` | Gateway file-storage metrics |
+| `GET` | `/debug/cache` | Cache inspection |
+| `GET` | `/debug/contexts/{session_id}` | Debug view into a stored session context |
 
-## Authentication & Headers
+## Request Shape
 
-- The orchestrator forwards requests without additional auth by default, but production deployments should gate `/mcp`/`/tools/call` behind JWTs (see `.env` for `JWT_SECRET` and `MARKETPLACE_JWT_TOKEN`).
-- Use `Content-Type: application/json` for all POST endpoints.
+### Native tool dispatch
 
-## Example invocation
+```json
+{
+  "tool": "file_read",
+  "arguments": {
+    "path": "/home/orchestration/README.md"
+  },
+  "mode": "docs",
+  "session_id": "optional-session-id",
+  "context_id": "optional-context-id"
+}
+```
+
+### JSON-RPC dispatch
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "tools/call",
+  "params": {
+    "name": "file_read",
+    "arguments": {
+      "path": "/home/orchestration/README.md"
+    }
+  }
+}
+```
+
+## Response Notes
+
+- Health and inventory routes return standard JSON objects.
+- Tool execution returns the routed service result or an error object.
+- The schema route exposes both tool definitions and stable resource URIs such as `mega://health`, `mega://services`, and `mega://schema`.
+- Tool availability depends on the gateway's configured service registry and downstream health.
+
+## Example
 
 ```bash
 curl -X POST http://localhost:7000/mcp \
   -H "Content-Type: application/json" \
   -d '{
-    "tool": "file_read",
+    "tool": "git_status",
     "arguments": {
-      "path": "/home/orchestration/README.md"
+      "path": "/workspace/repository"
     }
   }'
 ```
 
-## Tool discovery script
+## Operational Guidance
 
-- The orchestrator publishes `GET /tools/list`, which feeds `scripts/marketplace/install_skill_from_market.sh` and CLI helpers (e.g., `mega_orchestrator/mcp_stdio_bridge.py`). Run `scripts/diagnostics/quick_diagnose.sh` after upgrades to regenerate the catalog snapshot.
+- Use `GET /tools/list` before building a client-side registry.
+- Use `GET /services` to determine which downstream services are currently healthy.
+- Do not assume the gateway is an authentication boundary in the default compose deployment.

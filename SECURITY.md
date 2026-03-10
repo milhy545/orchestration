@@ -1,21 +1,23 @@
 # Security Policy
 
-## Supported Versions
+## Supported Branch
 
-Use this section to tell people about which versions of your project are
-currently being supported with security updates.
+Security fixes are applied to the current `master` branch. Historical snapshots, archived plans, and old generated artifacts are retained for reference only and should not be treated as supported releases.
 
-| Version | Supported          |
-| ------- | ------------------ |
-| 5.1.x   | :white_check_mark: |
-| 5.0.x   | :x:                |
-| 4.0.x   | :white_check_mark: |
-| < 4.0   | :x:                |
+## Security Posture
+
+- The stack is designed for controlled LAN or development environments by default.
+- Many service ports are exposed directly by `docker-compose.yml`; do not publish them to the public internet without adding a reverse proxy, authentication, network policy, and secret rotation.
+- Marketplace access is gated by JWT bearer tokens when `JWT_SECRET` is configured.
+- Vault-based runtime secret injection is available through `docker-compose.vault.yml` and `services/vault-secrets-ui/`.
 
 ## Reporting a Vulnerability
 
-Use this section to tell people how to report a vulnerability.
+Report security issues privately to the repository maintainer and include:
 
-Tell them where to go, how often they can expect to get an update on a
-reported vulnerability, what to expect if the vulnerability is accepted or
-declined, etc.
+- the affected service or endpoint
+- a minimal reproduction or proof of concept
+- impact assessment
+- any logs or configuration needed to reproduce the issue safely
+
+Do not open public issues for unpatched vulnerabilities that expose credentials, authentication bypasses, remote execution paths, or data exfiltration risks.

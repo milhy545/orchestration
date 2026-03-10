@@ -1,37 +1,38 @@
 # Repository Guidelines
 
-## Struktura projektu a organizace modulů
-- `mcp-servers/`: jednotlivé MCP mikroservisy (každý má vlastní `requirements.txt` a `Dockerfile`).
-- `mega_orchestrator/`, `claude-agent/`, `claude-agent-env/`: core orchestrace a agentní komponenty.
-- `config/`: sdílená konfigurace (včetně `config/requirements.txt` a `config/Dockerfile`).
-- `monitoring/`: konfigurace Prometheus, Grafana, Loki, Promtail.
-- `docs/`: dokumentace (viz `docs/operations/MONITORING.md`).
-- `scripts/`: údržbové a health‑check skripty.
-- `tests/`: cross‑service testy a utilitky.
+## Project Structure
+- `mcp-servers/`: individual MCP microservices, each with its own `requirements.txt` and `Dockerfile`
+- `mega_orchestrator/`, `claude-agent/`, `claude-agent-env/`: orchestration core and agent runtime components
+- `config/`: shared build and dependency configuration
+- `monitoring/`: Prometheus, Grafana, Loki, and Promtail configuration
+- `docs/`: active documentation, indexed from `docs/README.md`
+- `scripts/`: operator, health-check, marketplace, and migration scripts
+- `tests/`: repository-level tests and cross-service checks
 
-## Build, test a vývojové příkazy
-- `docker-compose up -d`: spustí celý stack na pozadí.
-- `docker-compose down`: zastaví všechny služby.
-- `docker-compose logs -f <service>`: sleduje logy jedné služby.
-- `./scripts/monitoring-health-check.sh`: ověří nastavení monitoringu.
-- `bash tests/docker-compose-monitoring-test.sh`: zkontroluje monitoring části `docker-compose.yml`.
-- `pytest`: spustí Python testy v `tests/` a `mcp-servers/*/tests`.
+## Build, Test, and Development Commands
+- `docker compose up -d`: start the default stack in the background
+- `docker compose down`: stop the stack
+- `docker compose logs -f <service>`: follow logs for one service
+- `./scripts/monitoring-health-check.sh`: validate the monitoring configuration and wiring
+- `bash tests/docker-compose-monitoring-test.sh`: verify the monitoring-related compose sections
+- `pytest`: run repository tests and service tests under `tests/` and `mcp-servers/*/tests`
 
-## Styl kódu a pojmenování
-- Respektuj existující konvence v dané službě. Pro Python používej 4 mezery a PEP 8.
-- V YAML (např. `docker-compose.yml`) drž 2‑mezerné odsazení a pokud jde, řaď bloky služeb konzistentně.
-- Testy musí být pojmenované `test_*.py` a třídy/funkce `Test*`/`test_*` (viz `pytest.ini`).
+## Coding Style
+- Follow the existing conventions inside each service
+- Use 4 spaces and PEP 8 for Python
+- Keep YAML files, including `docker-compose.yml`, at 2-space indentation
+- Keep test naming compatible with `pytest.ini`: `test_*.py`, `Test*`, and `test_*`
 
-## Testovací pravidla
-- Pytest je konfigurovaný v `pytest.ini` a používá markery `unit`, `integration`, `security`, `performance`, `slow`.
-- Při použití `pytest-cov` je minimum pokrytí `fail_under = 70`.
-- Přidávej testy ke službě, kterou upravuješ (např. `mcp-servers/<service>/tests/`).
+## Testing Rules
+- Pytest markers: `unit`, `integration`, `security`, `performance`, `slow`
+- When `pytest-cov` is used, the minimum coverage target is `fail_under = 70`
+- Add or update tests next to the service you change whenever practical
 
-## Commity a Pull Requesty
-- Nedávné commity jsou krátké a popisné, občas se scope prefixem (např. `docs:`). Drž se tohoto stylu.
-- PR by měl mít jasné shrnutí, důvod změn a seznam spuštěných příkazů.
-- Při změnách monitoringu nebo Dockeru uveď dotčené služby a případné nové proměnné prostředí.
+## Commits and Pull Requests
+- Prefer short descriptive commits, optionally with a scope prefix such as `docs:`
+- Pull requests should explain the reason for the change and list the commands that were run
+- Changes that touch Docker or monitoring should mention the affected services and any new environment variables
 
-## Bezpečnost a konfigurace
-- Před spuštěním zkopíruj `.env.example` na `.env`.
-- Nikdy necommituj tajné údaje; používej `.env` nebo externí bezpečné úložiště.
+## Security and Configuration
+- Copy `.env.example` to `.env` before starting the stack
+- Never commit secrets; use `.env`, Vault, or another secure external store

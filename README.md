@@ -1,306 +1,122 @@
-# Orchestration Project
+# Orchestration Platform
 
-## Description
+Orchestration is a Docker-based MCP platform for running a mixed fleet of HTTP services, MCP-compatible tool servers, and operational support services behind a single project layout. The stack is centered on the `mega-orchestrator` gateway and ships with file, git, terminal, database, memory, research, messaging, security, marketplace, and secret-management components.
 
-This project is a microservices-based system for orchestrating and managing a collection of services using Docker. It acts as a central hub for various functionalities, including file operations, version control, command execution, AI-powered tasks, and more. The system is designed to be modular and extensible, with services communicating over a shared network.
+## Runtime Overview
 
-## Architecture
+### Control and integration surfaces
 
-The core of the project is the **Mega-Orchestrator**, a Python-based HTTP server that acts as a secure proxy to the various MCP (Master Control Program) services. The coordinator is responsible for:
+| Component | Host port | Role |
+| --- | --- | --- |
+| `mega-orchestrator` | `7000` | Unified gateway, service registry, MCP JSON-RPC bridge, health and stats endpoints |
+| `marketplace-mcp` | `7034` | Private skills catalog and MCP subregistry protected by JWT scopes |
+| `vault-secrets-ui` | `10000` with `docker-compose.vault.yml` | Vault-backed secret editor and runtime env exporter |
 
--   **Routing:** It routes incoming requests to the appropriate MCP service based on the requested tool.
--   **Health Checks:** It monitors the health of the MCP services.
--   **Logging:** It logs all MCP requests to a PostgreSQL database.
--   **Caching:** It caches responses from the MCP services using Redis.
--   **API Abstraction:** It provides a unified API for interacting with the MCP services.
+### Core MCP services
 
-The MCP services themselves are a collection of microservices, each responsible for a specific set of tasks. They are designed to be lightweight and independent, and they communicate with the coordinator over a shared Docker network.
+| Service | Host port | Public contract |
+| --- | --- | --- |
+| `filesystem-mcp` | `7001` | File browsing, read, write, search, analysis |
+| `git-mcp` | `7002` | Repository status, log, diff, commit, push |
+| `terminal-mcp` | `7003` | Command execution, directory listing, process listing |
+| `database-mcp` | `7004` | SQL execution plus table, schema, and sample inspection |
+| `memory-mcp` | `7005` | Persistent memory CRUD and statistics |
+| `network-mcp` | `7006` | HTTP requests, webhooks, DNS, API testing |
+| `system-mcp` | `7007` | Resource monitoring, processes, disks, system facts |
+| `security-mcp` | `7008` | JWT minting, password hashing, encryption, SSL checks |
+| `config-mcp` | `7009` | Environment inspection, config files, validation, backups |
+| `log-mcp` | `7010` | Log analysis and log search |
 
-## Getting Started
+### Extended services
 
-To get started with this project, follow these steps:
+| Service | Host port | Public contract |
+| --- | --- | --- |
+| `research-mcp` | `7011` | News, domain, academic, structured, and generic research APIs |
+| `advanced-memory-mcp` | `7012` | Vector-backed memory search through `/tools/list` and `/tools/call` |
+| `transcriber-mcp` | `7013` | Audio and URL transcription |
+| `vision-mcp` | `7014` | placeholder service currently reusing the system image; no distinct public contract |
+| `gmail-mcp` | `7015` | Gmail search, send, forward, labels, move, and generic tool dispatch |
+| `forai-mcp` | `7016` | Media-oriented tool server with `forai_*` tools |
+| `zen-mcp-server` | `7017` | Multi-model MCP stdio server for code and reasoning tools |
+| `mqtt-mcp` | `7019` | MQTT JSON-RPC bridge for publish, subscribe, and message inspection |
+| `code-graph-mcp` | `7020` | Neo4j-backed code graph indexing and queries |
 
-1.  **Clone the repository:**
-    ```bash
-    git clone <repository-url>
-    ```
-2.  **Set up the environment:**
-    - Copy `.env.example` to `.env` and customize credentials/API keys.
-    - Confirm path variables used by `docker-compose.yml`:
-      - `PROJECT_ROOT` (repo path visible to Docker daemon)
-      - `DATA_ROOT` (persistent data directory)
-      - `MONITORING_ROOT` (base path containing `monitoring/`)
-      - `HOST_HOME_PATH` (host `/home` mount used by `filesystem-mcp`)
-      - `ZEN_MCP_SERVER_PATH` (build context for `zen-mcp-server`)
-3.  **Run the services:**
-    ```bash
-    docker compose up -d
-    ```
+### Wrapper and infrastructure services
 
-### Portable path notes (Coder/remote Docker daemon)
+| Service | Host port | Role |
+| --- | --- | --- |
+| `postgresql-mcp-wrapper` | `7024` | Read-oriented PostgreSQL wrapper tools |
+| `redis-mcp-wrapper` | `7025` | Cache and session tools |
+| `qdrant-mcp-wrapper` | `7026` | Vector collection, vector, and search tools |
+| `postgresql` | `7021` | Primary relational store |
+| `redis` | `7022` | Cache, sessions, and queue primitives |
+| `qdrant-vector` | `7023`, `7027` | Vector storage |
+| `prometheus` | `7028` | Metrics collection |
+| `backup-service` | `7029` | Scheduled backup worker |
+| `message-queue` | `7030` | Queue-compatible Redis service |
+| `grafana` | `7031` | Dashboards |
+| `loki` | `7032` | Log aggregation |
+| `mqtt-broker` | `7018` | MQTT broker |
+| `neo4j` | `7474`, `7687` | Graph database used by `code-graph-mcp` |
 
-If your Docker daemon cannot access your workspace path directly (common in Coder or remote-Docker setups), set path variables to daemon-visible locations before starting services.
+## Quick Start
+
+1. Copy `.env.example` to `.env` and fill in provider, mail, and optional marketplace settings.
+2. Confirm the path variables used by `docker-compose.yml`: `PROJECT_ROOT`, `DATA_ROOT`, `MONITORING_ROOT`, and `HOST_HOME_PATH`.
+3. Start the default stack:
 
 ```bash
-export PROJECT_ROOT=/absolute/path/visible/to/docker-daemon
-export DATA_ROOT=/absolute/path/visible/to/docker-daemon/data
-export MONITORING_ROOT=/absolute/path/visible/to/docker-daemon
-
-docker compose up -d prometheus grafana loki promtail
+docker compose up -d
 ```
 
-If monitoring files live only in your workspace filesystem, copy `monitoring/` to a daemon-visible path first, then point `MONITORING_ROOT` there.
-
-## Services
-
-The `docker-compose.yml` stack defines the orchestrator plus the running MCP services listed below. Each service exposes a FastAPI process that publishes `/health` plus `/tools/list` and one or more MCP tool endpoints.
-
-### Master controller
-- `mega-orchestrator` (HTTP 7000 / MCP bridge and `/tools/list`)
-
-### Core MCP services (7001-7010)
-- `filesystem-mcp` (7001): `file_read`, `file_write`, `file_list`, `file_search`, `file_analyze`
-- `git-mcp` (7002): `git_status`, `git_diff`, `git_log`, `git_commit`, `git_push`
-- `terminal-mcp` (7003): `execute_command`, `system_info`, `directory`, `processes`
-- `database-mcp` (7004): `db_query`, `db_schema`, `db_tables`, `db_sample`
-- `memory-mcp` (7005): `store_memory`, `list_memories`, `search_memories`, `memory_stats`
-- `network-mcp` (7006): planned network tooling (webhooks, HTTP requests, DNS lookup)
-- `system-mcp` (7007): system resource monitors and tooling
-- `security-mcp` (7008): JWT/password helpers plus crypto utilities
-- `config-mcp` (7009): env/config validation, schema guards, backups
-- `log-mcp` (7010): log/search operations and diagnostics
-
-### Enhanced services (7011+)
-- `research-mcp` (7011): AI research/search tools with schema validation
-- `advanced-memory-mcp` (7012): vector memory search / `tools/call`
-- `transcriber-mcp` (7013): audio transcription via `/transcribe/audio` and `/transcribe/url`
-- `marketplace-mcp` (7034): skills catalog, registry, install APIs, `tools/*`
-- `gmail-mcp` (7015): Gmail operations, labels, and message tools
-- `qdrant-mcp`, `postgresql-mcp`, `redis-mcp`: specialized datastore tools
-- `zen-mcp-server` (7017): orchestration gateway with rich tool set
-
-### Support services
-- `postgresql`, `redis`, `qdrant-vector`, `prometheus`, `grafana`, `loki`, `promtail`, `backup-service`, `message-queue`
- 
-**Documentation:** See `docs/README.md` for the living doc map; `docs/api/` covers every public service/tool; `docs/operations/` covers deployment & monitoring runbooks; `docs/architecture/` describes design rationale and MCP compatibility.
-
-### Master Controller
-
--   **`mega-orchestrator` (Port 7000):** The master controller that acts as an HTTP to MCP (Master Control Program) bridge.
-
-### Core MCP Services
-
--   **`filesystem-mcp` (Port 7001):** Handles file operations.
--   **`git-mcp` (Port 7002):** Provides version control functionalities.
--   **`terminal-mcp` (Port 7003):** Allows for command execution.
--   **`database-mcp` (Port 7004):** Manages data operations.
--   **`memory-mcp` (Port 7005):** Offers simple storage capabilities.
--   **`network-mcp` (Port 7006):** (Placeholder) Intended for network operations.
--   **`system-mcp` (Port 7007):** (Placeholder) Intended for system information.
--   **`security-mcp` (Port 7008):** (Placeholder) Intended for security operations.
--   **`config-mcp` (Port 7009):** (Placeholder) Intended for configuration management.
--   **`log-mcp` (Port 7010):** (Placeholder) Intended for logging operations.
-
-### AI/Enhanced Services
-
--   **`research-mcp` (Port 7011):** Facilitates AI research tasks.
--   **`advanced-memory-mcp` (Port 7012):** Provides AI-powered memory with vector search and semantic similarity.
--   **`transcriber-mcp` (Port 7013):** Handles audio processing and transcription. On this host it is currently treated as a template target only; production routing should be moved to stronger hardware.
--   **`vision-mcp` (Port 7014):** (Placeholder) Intended for vision-related tasks.
--   **`zen-mcp-server` (Port 7017):** MCP tool orchestration gateway for multi-model usage.
-
-### Service Wrappers
-
--   **`postgresql-mcp-wrapper` (Port 7024):** A wrapper for database operations.
--   **`redis-mcp-wrapper` (Port 7025):** A wrapper for cache and session management.
--   **`qdrant-mcp-wrapper` (Port 7026):** A wrapper for vector database operations.
-
-### Support Services
-
--   **`postgresql` (Port 7021):** The primary database for the system.
--   **`redis` (Port 7022):** Used for caching and session management.
--   **`qdrant-vector` (Port 7023):** A vector database for AI-related tasks.
-
-### Management & Monitoring Services
-
--   **`prometheus` (Port 7028):** Metrics collection and storage for all MCP services.
--   **`grafana` (Port 7031):** Dashboards and visualization platform with pre-configured MCP overview dashboard.
--   **`loki` (Port 7032):** Log aggregation system collecting logs from all Docker containers.
--   **`marketplace-mcp` (Port 7034):** Private Skills Catalog + MCP Subregistry API for LAN clients.
--   **`promtail`:** Log collection agent (no external port, internal service).
--   **`backup-service` (Port 7029):** Performs automated backups.
--   **`message-queue` (Port 7030):** A Redis-based message queue for task queuing.
-
-**📊 Full observability stack** - See [MONITORING.md](docs/operations/MONITORING.md) for complete monitoring documentation.
-
-## Hybrid Marketplace (Skills + MCP Registry)
-
-The stack now includes a Dockerized hybrid marketplace service:
-
-## Current Mega Orchestrator Routing Notes
-
-- `git_push` is implemented through `git-mcp` with a safe-upstream-only policy: current branch, existing upstream, no force push.
-- `file_write`, `file_search`, and `file_analyze` are implemented through `filesystem-mcp` and routed by `mega-orchestrator`.
-- `transcriber` and `video_processing` remain template targets on this machine. Keep them registered for orchestration compatibility, but plan to redirect those workloads to a separate, stronger host in a future deployment.
-
-- Skills Catalog API: `/skills/v1/*`
-- MCP Subregistry API: `/registry/v0.1/*`
-- MCP tool dispatch: `/mcp`, `/tools/*`
-
-### Quick start
-
-1. Set a shared JWT secret in `.env`:
+4. Verify the main entrypoints:
 
 ```bash
-JWT_SECRET=change_me_market_jwt
-MARKET_BASE_URL=http://localhost:7034
-```
-
-2. Start services:
-
-```bash
-docker compose up -d security-mcp marketplace-mcp
-```
-
-3. Mint read token:
-
-```bash
-scripts/marketplace/get_market_token.sh market-client 120 --export-file ~/.config/orchestration-market/market.env
-```
-
-4. Configure local client env:
-
-```bash
-scripts/marketplace/codex_configure_market.sh --token-file ~/.config/orchestration-market/market.env
-```
-
-5. Install a skill package from the marketplace:
-
-```bash
-source ~/.config/orchestration-market/market.env
-scripts/marketplace/install_skill_from_market.sh --skill my-skills-export
-```
-
-### MQTT Services
-
--   **`mqtt-broker` (Port 7018):** A Mosquitto message broker for IoT communication.
--   **`mqtt-mcp` (Port 7019):** Handles MQTT operations via the MCP protocol.
-
-## API Endpoints
-
-The Mega-Orchestrator exposes the following endpoints:
-
--   **`GET /services`**: Lists the available MCP services and their status.
--   **`GET /health`**: Provides a health check of the coordinator and its database/cache connections.
--   **`GET /tools/list`**: Lists all available tools from the MCP services.
--   **`GET /stats`**: Shows usage statistics from the PostgreSQL database.
--   **`POST /mcp`**: A proxy endpoint for MCP tool requests.
--   **`POST /tools/call`**: Another endpoint for calling MCP tools.
-
-## Usage
-
-To start all the services in detached mode, run:
-
-```bash
-docker-compose up -d
-```
-
-To stop the services, run:
-
-```bash
-docker-compose down
-```
-
-You can view the logs of a specific service using:
-
-```bash
-docker-compose logs -f <service-name>
-```
-
-## Monitoring & Observability
-
-The platform includes a comprehensive monitoring stack for full visibility into all services:
-
-### Quick Start
-
-```bash
-# Access Grafana dashboards
-http://localhost:7031  (admin/admin)
-
-# View Prometheus metrics
-http://localhost:7028
-
-# Query logs via Loki
-http://localhost:7032
-```
-
-### Available Dashboards
-
-- **MCP Orchestration - Overview**: Real-time service health, request rates, latency, errors, and infrastructure metrics
-- **Service Health Status**: Up/down status for all 16 MCP services
-- **Performance Metrics**: Request rate, response time (p95), error rates
-- **Infrastructure**: PostgreSQL connections, Redis clients, MQTT message rates
-- **Live Logs**: Real-time error streaming from all containers
-
-### Health Check
-
-Validate monitoring stack configuration (requires `python3` + `PyYAML`):
-
-```bash
+curl http://localhost:7000/health
+curl http://localhost:7034/health
 ./scripts/monitoring-health-check.sh
 ```
 
-**📊 For detailed monitoring documentation, see [MONITORING.md](docs/operations/MONITORING.md)**
-
-## Vault Variant B
-
-Vault Variant B is available as an optional overlay that adds:
-
-- HashiCorp Vault on `7070`
-- Vault Web UI on `10000`
-- restart-based runtime secret injection for selected services
-
-Start it with:
+5. Start the Vault overlay when needed:
 
 ```bash
-docker compose -f docker-compose.yml -f docker-compose.vault.yml up -d --build
+docker compose -f docker-compose.yml -f docker-compose.vault.yml up -d
+./scripts/vault-variant-b-smoke.sh
 ```
 
-The first functional version is restart-based: save secrets in the Web UI, then restart the affected service so it reloads the rendered env file from `/vault/runtime`. See [docs/architecture/VAULT_VARIANT_B.md](docs/architecture/VAULT_VARIANT_B.md) for the full operator workflow.
+## Common Workflows
 
-## MCP Client Compatibility
+- Discover the unified tool catalog through `GET /tools/list` on `mega-orchestrator`.
+- Call tools through `POST /mcp` or `POST /mcp/rpc`.
+- Install internal skills from the marketplace with:
 
-`mega-orchestrator` supports:
+```bash
+scripts/marketplace/get_market_token.sh
+scripts/marketplace/install_skill_from_market.sh --skill <name> --token "$MARKETPLACE_JWT_TOKEN"
+```
 
-- Legacy custom bridge via `POST /mcp`
-- Native MCP JSON-RPC via `POST /mcp` or `POST /mcp/rpc`
-- MCP stdio bridge via `python -m mega_orchestrator.mcp_stdio_bridge`
+- Edit runtime secrets through Vault UI after the Vault overlay is running:
+  `http://localhost:${VAULT_WEBUI_PORT:-10000}/`
 
-For client-specific examples, see [docs/architecture/MEGA_MCP_COMPATIBILITY.md](docs/architecture/MEGA_MCP_COMPATIBILITY.md).
-
-## Repository Structure
-
-- `mcp-servers/`: MCP microservices and service-local tests.
-- `mega_orchestrator/`: central orchestration and MCP compatibility layer.
-- `config/`: shared configuration, Docker build context, and service glue.
-- `services/`: non-MCP supporting applications such as the Vault Web UI.
-- `scripts/`: operational scripts, diagnostics, and maintenance helpers.
-- `tests/`: cross-service tests and shared test utilities.
-- `docs/`: categorized documentation by architecture, operations, API, reports, and archive.
-- `archive/`: retained non-runtime artifacts such as backups, migration snapshots, legacy configs, and scratch material.
+Compatibility namespaces still exist in the Vault overlay for legacy secret mapping, including `common-mcp` and `perplexity-hub`. They are compatibility namespaces, not first-class runtime APIs.
 
 ## Documentation Map
 
-- Start at [docs/README.md](docs/README.md) for the docs front door.
-- Architecture and system design live in [docs/architecture/](docs/architecture/).
-- Operational runbooks live in [docs/operations/](docs/operations/).
-- API and service references live in [docs/api/](docs/api/).
-- Reports and audits live in [docs/reports/](docs/reports/).
-- Historical planning and superseded documentation live in [docs/archive/](docs/archive/).
+- [docs/README.md](/home/orchestration/docs/README.md): main documentation entry point
+- [docs/api/API_DOCUMENTATION.md](/home/orchestration/docs/api/API_DOCUMENTATION.md): how to call the platform
+- [docs/api/API_REFERENCE.md](/home/orchestration/docs/api/API_REFERENCE.md): complete public endpoint and tool reference
+- [docs/api/SERVICES_DOCUMENTATION.md](/home/orchestration/docs/api/SERVICES_DOCUMENTATION.md): service inventory with ports and dependencies
+- [docs/operations/DEPLOYMENT.md](/home/orchestration/docs/operations/DEPLOYMENT.md): deployment and environment guidance
+- [docs/operations/MONITORING.md](/home/orchestration/docs/operations/MONITORING.md): monitoring stack and operator checks
+- [docs/manuals/MANUAL.md](/home/orchestration/docs/manuals/MANUAL.md): operator manual
 
-Archive note:
-- The top-level `archive/` folder is a retention zone for historical artifacts and is not part of the active runtime path.
+## Repository Layout
 
-## Contributing
-
-Please refer to the existing coding style and conventions. Before submitting a pull request, ensure that your changes are well-tested.
+- `mcp-servers/`: MCP and HTTP microservices
+- `mega_orchestrator/`: gateway, provider registry, routing, memory, and MCP bridge code
+- `services/vault-secrets-ui/`: Vault-backed secret editor UI and API
+- `monitoring/`: Prometheus, Grafana, Loki, and Promtail configuration
+- `scripts/`: operational and installation scripts
+- `tests/`: repository-level tests, including documentation coverage checks
+- `docs/`: active product and operator documentation
+- `archive/` and `docs/archive/`: retained historical material not guaranteed to match the current runtime

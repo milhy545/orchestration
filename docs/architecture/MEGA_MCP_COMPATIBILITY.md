@@ -8,16 +8,16 @@
 
 ## Network MCP
 
-Use the LAN URL:
+Use the local or reverse-proxied gateway URL:
 
 ```bash
-http://192.168.0.58:7000/mcp
+http://localhost:7000/mcp
 ```
 
 or the explicit alias:
 
 ```bash
-http://192.168.0.58:7000/mcp/rpc
+http://localhost:7000/mcp/rpc
 ```
 
 Supported JSON-RPC methods:
@@ -36,7 +36,7 @@ Supported JSON-RPC methods:
 For clients that prefer command-based MCP:
 
 ```bash
-MEGA_ORCHESTRATOR_URL=http://192.168.0.58:7000 python -m mega_orchestrator.mcp_stdio_bridge
+MEGA_ORCHESTRATOR_URL=http://localhost:7000 python -m mega_orchestrator.mcp_stdio_bridge
 ```
 
 This is the recommended path for:
