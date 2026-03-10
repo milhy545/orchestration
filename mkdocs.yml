@@ -1,0 +1,60 @@
+site_name: Orchestration Platform
+site_description: Current-state documentation for the Orchestration MCP platform
+repo_name: milhy545/orchestration
+repo_url: https://github.com/milhy545/orchestration
+docs_dir: docs
+site_dir: site
+strict: true
+exclude_docs: |
+  reports/*
+  reports/**
+  archive/8.md
+  archive/FINAL_MCP_REORGANIZATION_PLAN.md
+  archive/mega-orchestrator-migration-DETAILED.md
+  archive/mega-orchestrator-migration-SHORT.md
+  archive/mega-orchestrator-migration-v1-BACKUP.md
+  archive/mega-orchestrator-migration-v2-FINAL.md
+  archive/manuals/*
+
+theme:
+  name: material
+  features:
+    - navigation.sections
+    - navigation.expand
+    - content.code.copy
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+
+nav:
+  - Home: README.md
+  - Getting Started: index/DOCUMENTATION_INDEX.md
+  - API:
+      - Overview: api/API_DOCUMENTATION.md
+      - Reference: api/API_REFERENCE.md
+      - Services: api/SERVICES_DOCUMENTATION.md
+      - Mega-Orchestrator: api/mega_orchestrator.md
+  - Architecture:
+      - System Architecture: architecture/ARCHITECTURE.md
+      - Mega Compatibility: architecture/MEGA_MCP_COMPATIBILITY.md
+      - Vault Variant B: architecture/VAULT_VARIANT_B.md
+  - Operations:
+      - Deployment: operations/DEPLOYMENT.md
+      - Monitoring: operations/MONITORING.md
+      - Portainer: operations/PORTAINER_DEPLOYMENT.md
+      - Troubleshooting: operations/TROUBLESHOOTING.md
+  - Manual:
+      - Operator Manual: manuals/MANUAL.md
+      - Gemini Notes: manuals/GEMINI.md
+      - Claude Notes: CLAUDE.md
+  - Security:
+      - Security Summary: security/SECURITY_SCAN_SUMMARY.md
+  - Archive:
+      - Archive Overview: archive/README.md

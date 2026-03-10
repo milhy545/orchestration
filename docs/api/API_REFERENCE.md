@@ -291,7 +291,7 @@ Routes: `GET /tools/list`, `POST /tools/call`
 
 ### Vision MCP (`7014`)
 
-`vision-mcp` is present in `docker-compose.yml` as a scaffold service reusing the `system-mcp` image. It does not define a distinct public contract in this repository and should be treated as a reserved placeholder port rather than a separately documented API.
+`vision-mcp` is present in `docker-compose.yml` as a scaffold service reusing the `system-mcp` image. It does not define a distinct public contract in this repository and should be treated as a reserved scaffold port rather than a separately documented API.
 
 ## Vault Secrets UI (`vault-secrets-ui`)
 

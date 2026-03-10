@@ -30,7 +30,7 @@
 {
   "tool": "file_read",
   "arguments": {
-    "path": "/home/orchestration/README.md"
+    "path": "/workspace/README.md"
   },
   "mode": "docs",
   "session_id": "optional-session-id",
@@ -48,7 +48,7 @@
   "params": {
     "name": "file_read",
     "arguments": {
-      "path": "/home/orchestration/README.md"
+      "path": "/workspace/README.md"
     }
   }
 }

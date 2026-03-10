@@ -59,6 +59,6 @@ Most service-to-service traffic stays on the compose bridge network. Persistence
 
 ## Compatibility Notes
 
-- `vision-mcp` is present in compose as a placeholder and is excluded from stable public-surface guarantees.
+- `vision-mcp` is present in compose as a scaffold entry and is excluded from stable public-surface guarantees.
 - Compatibility Vault namespaces such as `common-mcp` and `perplexity-hub` are maintained for secret mapping, not as first-class runtime APIs.
 - Archived documentation remains available for historical traceability but does not define the current architecture.

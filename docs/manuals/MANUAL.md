@@ -48,4 +48,4 @@ This manual is the canonical long-form guide for operating the current Orchestra
 
 - `docs/archive/` contains superseded plans and migration notes.
 - `docs/archive/manuals/` contains old or derived manual formats.
-- `vision-mcp` remains a placeholder compose entry and is not a supported production capability.
+- `vision-mcp` remains a scaffold compose entry and is not a supported production capability.

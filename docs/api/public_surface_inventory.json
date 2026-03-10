@@ -206,7 +206,7 @@
     {
       "id": "vision-mcp",
       "doc": "README.md",
-      "tokens": ["vision-mcp", "placeholder service"]
+      "tokens": ["vision-mcp", "reserved scaffold service"]
     },
     {
       "id": "common-mcp",

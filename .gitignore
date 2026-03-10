@@ -99,3 +99,6 @@ claude-agent/__pycache__/
 # Backup files
 *.backup
 *.bak
+
+# Documentation build output
+site/

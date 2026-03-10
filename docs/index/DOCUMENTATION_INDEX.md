@@ -3,7 +3,7 @@
 ## Recommended Reading Order
 
 ### Operators
-1. [../../README.md](../../README.md)
+1. [../README.md](../README.md)
 2. [../operations/DEPLOYMENT.md](../operations/DEPLOYMENT.md)
 3. [../operations/MONITORING.md](../operations/MONITORING.md)
 4. [../operations/TROUBLESHOOTING.md](../operations/TROUBLESHOOTING.md)

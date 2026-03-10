@@ -34,7 +34,7 @@ Orchestration is a Docker-based MCP platform for running a mixed fleet of HTTP s
 | `research-mcp` | `7011` | News, domain, academic, structured, and generic research APIs |
 | `advanced-memory-mcp` | `7012` | Vector-backed memory search through `/tools/list` and `/tools/call` |
 | `transcriber-mcp` | `7013` | Audio and URL transcription |
-| `vision-mcp` | `7014` | placeholder service currently reusing the system image; no distinct public contract |
+| `vision-mcp` | `7014` | reserved scaffold service currently reusing the system image; no distinct public contract |
 | `gmail-mcp` | `7015` | Gmail search, send, forward, labels, move, and generic tool dispatch |
 | `forai-mcp` | `7016` | Media-oriented tool server with `forai_*` tools |
 | `zen-mcp-server` | `7017` | Multi-model MCP stdio server for code and reasoning tools |
@@ -102,13 +102,13 @@ Compatibility namespaces still exist in the Vault overlay for legacy secret mapp
 
 ## Documentation Map
 
-- [docs/README.md](/home/orchestration/docs/README.md): main documentation entry point
-- [docs/api/API_DOCUMENTATION.md](/home/orchestration/docs/api/API_DOCUMENTATION.md): how to call the platform
-- [docs/api/API_REFERENCE.md](/home/orchestration/docs/api/API_REFERENCE.md): complete public endpoint and tool reference
-- [docs/api/SERVICES_DOCUMENTATION.md](/home/orchestration/docs/api/SERVICES_DOCUMENTATION.md): service inventory with ports and dependencies
-- [docs/operations/DEPLOYMENT.md](/home/orchestration/docs/operations/DEPLOYMENT.md): deployment and environment guidance
-- [docs/operations/MONITORING.md](/home/orchestration/docs/operations/MONITORING.md): monitoring stack and operator checks
-- [docs/manuals/MANUAL.md](/home/orchestration/docs/manuals/MANUAL.md): operator manual
+- [docs/README.md](docs/README.md): main documentation entry point
+- [docs/api/API_DOCUMENTATION.md](docs/api/API_DOCUMENTATION.md): how to call the platform
+- [docs/api/API_REFERENCE.md](docs/api/API_REFERENCE.md): complete public endpoint and tool reference
+- [docs/api/SERVICES_DOCUMENTATION.md](docs/api/SERVICES_DOCUMENTATION.md): service inventory with ports and dependencies
+- [docs/operations/DEPLOYMENT.md](docs/operations/DEPLOYMENT.md): deployment and environment guidance
+- [docs/operations/MONITORING.md](docs/operations/MONITORING.md): monitoring stack and operator checks
+- [docs/manuals/MANUAL.md](docs/manuals/MANUAL.md): operator manual
 
 ## Repository Layout
 

@@ -58,6 +58,6 @@ When runtime secrets are managed through Vault:
 
 ## Deployment Notes
 
-- `vision-mcp` is a placeholder service and should not be treated as a production capability.
+- `vision-mcp` is a scaffold service and should not be treated as a production capability.
 - Wrapper services on `7024-7026` are active APIs and should remain documented.
 - `promtail` has no external port and is managed through the compose stack rather than direct user access.

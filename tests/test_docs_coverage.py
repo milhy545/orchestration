@@ -11,6 +11,8 @@ BANNED_TERMS = [
     "28 MCP tools",
     "7 specialized services",
     "Only exposed port",
+    "placeholder service",
+    "/home/orchestration/",
 ]
 
 
@@ -46,6 +48,11 @@ def test_active_docs_do_not_use_legacy_terms():
         content = path.read_text(encoding="utf-8")
         for term in BANNED_TERMS:
             assert term not in content, f"Legacy term {term!r} found in {path}"
+
+
+def test_mkdocs_config_exists():
+    mkdocs_path = REPO_ROOT / "mkdocs.yml"
+    assert mkdocs_path.exists(), "mkdocs.yml is missing"
 
 
 def test_active_docs_are_english_only_for_prose():

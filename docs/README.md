@@ -4,11 +4,12 @@ This directory contains the active documentation for the current runtime state o
 
 ## Start Here
 
-- [../README.md](../README.md): repository overview, service map, and quick start
 - [index/DOCUMENTATION_INDEX.md](index/DOCUMENTATION_INDEX.md): curated reading order by audience
 - [api/API_DOCUMENTATION.md](api/API_DOCUMENTATION.md): entrypoints, authentication, and common integration flows
 - [api/API_REFERENCE.md](api/API_REFERENCE.md): complete public endpoint and tool reference
 - [api/SERVICES_DOCUMENTATION.md](api/SERVICES_DOCUMENTATION.md): service inventory derived from `docker-compose.yml`
+
+Use the repository root `README.md` on GitHub for the public repo landing page. This `docs/README.md` file is the in-site landing page for the documentation build.
 
 ## Documentation Areas
 

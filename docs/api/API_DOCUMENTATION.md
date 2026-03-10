@@ -45,7 +45,7 @@ curl -X POST http://localhost:7000/mcp \
   -d '{
     "tool": "file_read",
     "arguments": {
-      "path": "/home/orchestration/README.md"
+      "path": "/workspace/README.md"
     }
   }'
 ```
