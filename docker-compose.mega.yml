@@ -90,6 +90,26 @@ services:
     networks:
       - mcp-network
 
+  # 7017: Orchestrator CLI - Lightweight Management
+  orchestrator-cli:
+    build: /home/orchestration/orchestrator-cli
+    container_name: mcp-orchestrator-cli
+    ports:
+      - "7017:8000"
+    volumes:
+      - /home/orchestration:/home/orchestration
+      - /home/orchestration/data/repositories:/repositories
+      - /home/orchestration/data/workspaces:/workspace
+    environment:
+      - MCP_DATABASE_URL=${MCP_DATABASE_URL:-}
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - postgresql
+      - redis
+    restart: unless-stopped
+    networks:
+      - mcp-network
+
   # 7004: Database MCP - Data Operations
   database-mcp:
     build: /home/orchestration/mcp-servers/database-mcp
