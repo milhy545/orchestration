@@ -1,0 +1,45 @@
+➜  orchestration git:(master) ✗ 
+➜  orchestration git:(master) ✗ >....                                                                                       
+- Vylepšené MCP servery - zen_mcp_server_v2.py, direct_mcp_bridge.py, universal_mcp_wrapper.py
+- Claude Agent systém - kompletní implementace s OAuth a session management
+- Docker konfigurace - docker-compose-core.yml, support-services-compose.yml                  
+
+Vyčištěno:                                                                  
+- Skladka zmenšena z 154MB na 712KB
+- Odstraněny __pycache__, node_modules, venv složky
+- Aktualizován .gitignore pro nové soubory
+
+Výsledek: Zachovány všechny cenné materiály, odstraněny nepotřebné soubory"
+[master b6a7424] Inteligentní integrace užitečných souborů ze Skladky
+ 31 files changed, 10256 insertions(+)
+ create mode 100644 claude-agent/anthropic_oauth_setup.py
+ create mode 100755 claude-agent/claude_agent_start.sh
+ create mode 100644 claude-agent/claude_session_bridge.py
+ create mode 100644 claude-agent/config/agent_config.yaml
+ create mode 100755 claude-agent/haiku_agent.py
+ create mode 100644 claude-agent/test_agent.py
+ create mode 100644 claude-agent/test_fast_fallback.py
+ create mode 100644 claude-agent/test_ollama.py
+ create mode 100755 config/direct_mcp_bridge.py
+ create mode 100644 config/docker-compose-core.yml
+ create mode 100644 config/support-services-compose.yml
+ create mode 100644 config/universal_mcp_wrapper.py
+ create mode 100755 config/zen_mcp_server_v2.py
+ create mode 100644 docs/8.md
+ create mode 100644 docs/API_DOCUMENTATION.md
+ create mode 100644 docs/API_REFERENCE.md
+ create mode 100644 docs/ARCHITECTURE.md
+ create mode 100644 docs/CLAUDE.md
+ create mode 100644 docs/DEPLOYMENT.md
+ create mode 100644 docs/DOCUMENTATION_INDEX.md
+ create mode 100644 docs/FINAL_MCP_REORGANIZATION_PLAN.md
+ create mode 100644 docs/PORTAINER_DEPLOYMENT.md
+ create mode 100644 docs/README.md
+ create mode 100644 docs/SERVICES_DOCUMENTATION.md
+ create mode 100644 docs/TROUBLESHOOTING.md
+ create mode 100755 tests/failure/failure_recovery_test.sh
+ create mode 100755 tests/performance/stress_load_test.sh
+ create mode 100755 tests/security/security_assessment_test.sh
+ create mode 100755 tests/unit/memory_crud_test.sh
+ create mode 100755 tests/unit/orchestration_workflow_test.sh
+➜  orchestration git:(master) 

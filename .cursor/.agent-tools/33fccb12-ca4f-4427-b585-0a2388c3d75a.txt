@@ -1,0 +1,20 @@
+home-automat-server:/home/orchestration# cat .cursor/.agent-tools/3e30d762-1be7-4c7e-8a61-3c0fc89a8fa1.txt                                                      
+home-automat-server:/home/orchestration# cat .cursor/.agent-tools/2497249a-8b3c-4f11-af15-33a2eda7122c.txt                                                      
+mcp-advanced-memory      0.0.0.0:7012->8000/tcp, :::7012->8000/tcp
+mcp-backup               0.0.0.0:7029->8000/tcp, :::7029->8000/tcp
+mcp-config               0.0.0.0:7009->8000/tcp, :::7009->8000/tcp
+mcp-database             0.0.0.0:7004->8000/tcp, :::7004->8000/tcp
+mcp-filesystem           0.0.0.0:7001->8000/tcp, :::7001->8000/tcp
+mcp-git                  0.0.0.0:7002->8000/tcp, :::7002->8000/tcp
+mcp-log                  0.0.0.0:7010->8000/tcp, :::7010->8000/tcp
+mcp-memory               0.0.0.0:7005->8000/tcp, :::7005->8000/tcp
+mcp-message-queue        0.0.0.0:7030->6379/tcp, :::7030->6379/tcp
+mcp-monitoring           0.0.0.0:7028->9090/tcp, :::7028->9090/tcp
+mcp-mqtt                 0.0.0.0:7019->8000/tcp, :::7019->8000/tcp
+mcp-postgresql           0.0.0.0:7021->5432/tcp, :::7021->5432/tcp
+mcp-postgresql-wrapper   0.0.0.0:7024->8000/tcp, :::7024->8000/tcp
+mcp-qdrant               0.0.0.0:7023->6333/tcp, :::7023->6333/tcp, 0.0.0.0:7027->6334/tcp, :::7027->6334/tcp                                                   
+mcp-qdrant-wrapper       
+mcp-redis                0.0.0.0:7022->6379/tcp, :::7022->6379/tcp
+mcp-redis-wrapper        
+mcp-research             0.0.0.0:7011->8000/tcp, :::7011->8000/tcp

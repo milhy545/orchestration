@@ -1,6 +1,22 @@
-perplexity-mcp-prod,Up 6 hours
-terminal-mcp-prod,Up 9 hours
-git-mcp-prod,Up 9 hours
-filesystem-mcp-prod,Up 9 hours
-database-mcp-prod,Up 9 hours
-memory-mcp-prod,Up 9 hours
+mcp-perplexity-hub,Up 6 days
+mcp-advanced-memory,Up 6 days
+mcp-postgresql-wrapper,Up 6 days (healthy)
+mcp-marketplace,Up 6 days (healthy)
+mcp-vault-secrets-ui,Up 6 days
+mcp-mqtt,Up 6 days (healthy)
+mcp-terminal,Up 6 days
+mcp-database,Up 6 days
+mcp-log,Up 6 days (healthy)
+mcp-git,Up 6 days
+mcp-filesystem,Up 6 days
+mcp-security,Up 6 days (healthy)
+mcp-forai,Up 6 days
+mcp-memory,Up 6 days
+mcp-config,Up 6 days (healthy)
+mcp-vault-agent-common,Up 6 days
+mcp-vault,Up 6 days (healthy)
+mcp-prometheus,Up 10 days
+mcp-loki,Up 10 days
+mcp-postgresql,Up 4 days (healthy)
+mcp-qdrant,Up 10 days
+mcp-redis,Up 10 days (healthy)

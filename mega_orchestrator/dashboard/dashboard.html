@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LLMS Dashboard</title>
+  <link rel="stylesheet" href="/dashboard/static/dashboard.css">
+</head>
+<body>
+  <div class="dashboard-shell">
+    <nav class="dashboard-nav">
+      <h2>LLMS</h2>
+      <div class="theme-picker">
+        <button data-theme="cockpit-dark">Cockpit</button>
+        <button data-theme="pip-boy">Pip-Boy</button>
+        <button data-theme="cyberpunk">Cyber</button>
+        <button data-theme="vibe-agent">Vibe</button>
+      </div>
+      <button class="language-toggle" id="lang-toggle">EN / CZ</button>
+    </nav>
+    <main class="dashboard-content">
+      <section class="dashboard-header">
+        <div>
+          <p id="title-platform">LLMS Control Dashboard</p>
+          <h1>Operations cockpit</h1>
+        </div>
+        <p id="overview-health" class="status-pill">Loading...</p>
+      </section>
+      <section id="section-overview" class="dashboard-section active">
+        <div class="section-grid">
+          <div class="card">
+            <header>overview</header>
+            <h3 id="overview-health-label">Orchestrator health</h3>
+            <p>Service summary and system context</p>
+          </div>
+        </div>
+      </section>
+      <section id="section-services" class="dashboard-section">
+        <div id="services-list" class="section-grid"></div>
+      </section>
+      <section id="section-vault" class="dashboard-section">
+        <div class="card dashboard-vault" id="vault-frame">
+          <header>Vault control</header>
+          <p>Loading Vault UI…</p>
+        </div>
+      </section>
+      <section id="section-monitoring" class="dashboard-section">
+        <div class="card">
+          <header>Monitoring</header>
+          <p>Prometheus, Grafana, Loki links go here</p>
+        </div>
+      </section>
+      <section id="section-logs" class="dashboard-section">
+        <div class="card">
+          <header>Logs</header>
+          <p>Log stream preview</p>
+        </div>
+      </section>
+      <section id="section-providers" class="dashboard-section">
+        <div class="card">
+          <header>AI providers</header>
+          <pre id="providers-list" style="white-space: pre-wrap;"></pre>
+        </div>
+      </section>
+    </main>
+  </div>
+  <script src="/dashboard/static/dashboard.js"></script>
+</body>
+</html>

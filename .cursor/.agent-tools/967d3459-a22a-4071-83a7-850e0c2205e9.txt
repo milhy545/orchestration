@@ -1,0 +1,79 @@
+➜  orchestration git:(master) ✗ git status
+On branch master
+Your branch is ahead of 'origin/master' by 2 commits.
+  (use "git push" to publish your local commits)
+
+Changes to be committed:
+  (use "git restore --staged <file>..." to unstage)
+        modified:   .gitignore
+        deleted:    Skladka/development-archive-20250823/CHANGELOG.md
+        deleted:    Skladka/development-archive-20250823/CLAUDE.md
+        deleted:    Skladka/development-archive-20250823/DIRECT_MCP_BRIDGE_README.md
+        deleted:    Skladka/development-archive-20250823/GEMINI.md
+        deleted:    Skladka/development-archive-20250823/PRODUCTION_STATUS.md
+        deleted:    Skladka/development-archive-20250823/README.md
+        deleted:    Skladka/development-archive-20250823/README_CZ.md
+        deleted:    Skladka/development-archive-20250823/borec.md
+        deleted:    Skladka/development-archive-20250823/claude-agent/anthropic_oauth_setup.py
+        deleted:    Skladka/development-archive-20250823/claude-agent/claude_agent_start.sh
+        deleted:    Skladka/development-archive-20250823/claude-agent/claude_session_bridge.py
+        deleted:    Skladka/development-archive-20250823/claude-agent/config/agent_config.yaml
+        deleted:    Skladka/development-archive-20250823/claude-agent/haiku_agent.py
+        deleted:    Skladka/development-archive-20250823/claude-agent/test_agent.py
+        deleted:    Skladka/development-archive-20250823/claude-agent/test_fast_fallback.py
+        deleted:    Skladka/development-archive-20250823/claude-agent/test_ollama.py
+        deleted:    Skladka/development-archive-20250823/claude-agent/venv/bin/Activate.ps1
+        deleted:    Skladka/development-archive-20250823/claude-agent/venv/bin/activate
+        deleted:    Skladka/development-archive-20250823/claude-agent/venv/bin/activate.csh
+        deleted:    Skladka/development-archive-20250823/claude-agent/venv/bin/activate.fish
+        deleted:    Skladka/development-archive-20250823/claude-agent/venv/bin/distro
+        deleted:    Skladka/development-archive-20250823/claude-agent/venv/bin/httpx
+        deleted:    Skladka/development-archive-20250823/claude-agent/venv/bin/normalizer
+        deleted:    Skladka/development-archive-20250823/claude-agent/venv/bin/pip
+        deleted:    Skladka/development-archive-20250823/claude-agent/venv/bin/pip3
+        deleted:    Skladka/development-archive-20250823/claude-agent/venv/bin/pip3.11
+        deleted:    Skladka/development-archive-20250823/claude-agent/venv/bin/python
+        deleted:    Skladka/development-archive-20250823/claude-agent/venv/bin/python3
+        deleted:    Skladka/development-archive-20250823/claude-agent/venv/bin/python3.11
+        deleted:    Skladka/development-archive-20250823/claude-agent/venv/lib64
+        deleted:    Skladka/development-archive-20250823/claude-agent/venv/pyvenv.cfg
+        deleted:    Skladka/development-archive-20250823/direct_mcp_bridge.py
+        deleted:    Skladka/development-archive-20250823/docker-compose-backup-20250816-1900.yml
+        deleted:    Skladka/development-archive-20250823/docker-compose-core.yml
+        deleted:    Skladka/development-archive-20250823/docker-compose-orig.yml
+        deleted:    Skladka/development-archive-20250823/docker-compose.yml.backup
+        deleted:    Skladka/development-archive-20250823/docker-compose.yml.backup-20250812-101600
+        deleted:    Skladka/development-archive-20250823/docker-compose.yml.backup-pre-mqtt
+        deleted:    Skladka/development-archive-20250823/docs/8.md
+        deleted:    Skladka/development-archive-20250823/docs/API_DOCUMENTATION.md
+        deleted:    Skladka/development-archive-20250823/docs/API_REFERENCE.md
+        deleted:    Skladka/development-archive-20250823/docs/ARCHITECTURE.md
+        deleted:    Skladka/development-archive-20250823/docs/CLAUDE.md
+        deleted:    Skladka/development-archive-20250823/docs/DEPLOYMENT.md
+        deleted:    Skladka/development-archive-20250823/docs/DOCUMENTATION_INDEX.md
+        deleted:    Skladka/development-archive-20250823/docs/FINAL_MCP_REORGANIZATION_PLAN.md
+        deleted:    Skladka/development-archive-20250823/docs/PORTAINER_DEPLOYMENT.md
+        deleted:    Skladka/development-archive-20250823/docs/README.md
+        deleted:    Skladka/development-archive-20250823/docs/SERVICES_DOCUMENTATION.md
+        deleted:    Skladka/development-archive-20250823/docs/TROUBLESHOOTING.md
+        deleted:    Skladka/development-archive-20250823/has_debug_request.json
+        deleted:    Skladka/development-archive-20250823/mcp-wrapper.py
+        deleted:    Skladka/development-archive-20250823/package-lock.json
+        deleted:    Skladka/development-archive-20250823/package.json
+        deleted:    Skladka/development-archive-20250823/support-services-compose.yml
+        deleted:    Skladka/development-archive-20250823/test_zen_mcp_upgraded.py
+        deleted:    Skladka/development-archive-20250823/tests/failure/failure_recovery_test.sh
+        deleted:    Skladka/development-archive-20250823/tests/performance/stress_load_test.sh
+        deleted:    Skladka/development-archive-20250823/tests/security/security_assessment_test.sh
+        deleted:    Skladka/development-archive-20250823/tests/unit/memory_crud_test.sh
+        deleted:    Skladka/development-archive-20250823/tests/unit/orchestration_workflow_test.sh
+        deleted:    Skladka/development-archive-20250823/universal_mcp_wrapper.py
+        deleted:    Skladka/development-archive-20250823/zen_mcp_server.py
+        deleted:    Skladka/development-archive-20250823/zen_mcp_server_updated.py
+        deleted:    Skladka/development-archive-20250823/zen_mcp_server_updated.py.backup-2231
+        deleted:    Skladka/development-archive-20250823/zen_routing_fix.py
+        deleted:    Skladka/zen_coordinator.py.backup
+        deleted:    Skladka/zen_coordinator_fixed.py
+        deleted:    Skladka/zen_coordinator_organized.py
+
+➜  orchestration git:(master) ✗ 

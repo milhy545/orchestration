@@ -1,0 +1,99 @@
+total 106424
+drwxr-xr-x 21 root     root          4096 Oct 15 23:08 .
+drwxr-xr-x  9 root     root          4096 Aug 23 05:54 ..
+drwxr-xr-x  5 root     root          4096 Sep  2 03:11 .claude
+drwxr-xr-x  3 root     root          4096 Oct 15 18:30 .cursor
+-rw-r--r--  1 root     root           677 Sep  2 03:11 .env
+-rw-r--r--  1 root     root           677 Sep  2 03:11 .env.backup
+-rw-r--r--  1 root     root           677 Sep  2 03:11 .env.backup.pre-commit
+-rw-r--r--  1 root     root           688 Aug 11 10:17 .env.example
+drwxr-xr-x  8 root     root          4096 Oct 15 23:26 .git
+drwxr-xr-x  3 root     root          4096 Sep 30 02:26 .github
+-rw-r--r--  1 root     root           992 Oct 15 18:44 .gitignore
+drwxr-xr-x  5 root     root          4096 Aug  7 16:04 .venv
+-rw-r--r--  1 root     root          6681 Oct 14 17:42 ELEVENLABS_MCP_SETUP_COMPLETE.md                                                                         
+-rw-r--r--  1 root     root          2917 Sep 30 02:25 GEMINI.md
+-rw-r--r--  1 root     root         21396 Oct 15 23:00 MANUAL.html
+-rw-r--r--  1 root     root         19584 Oct 15 23:00 MANUAL.md
+-rw-r--r--  1 root     root         18522 Oct 15 23:08 MANUAL_KINDLE.md
+-rw-r--r--  1 root     root          4921 Oct 15 18:27 README.md
+drwxr-xr-x  3 root     root          4096 Aug 23 08:15 Skladka
+-rw-r--r--  1 root     root           662 Oct 14 17:33 blackbox_mcp_settings.json                                                                               
+-rwxr-xr-x  1 root     root            77 Aug 21 13:49 claude
+drwxr-xr-x  8 root     root          4096 Oct 15 18:42 claude-agent
+drwxr-xr-x  5 root     root          4096 Sep  2 03:11 claude-agent-env
+drwxr-xr-x  3 root     root          4096 Oct 15 18:43 config
+drwxr-xr-x 18 root     root          4096 Aug 16 18:20 data
+-rw-r--r--  1 root     root         14009 Oct 15 18:28 docker-compose.yml
+-rw-r--r--  1 root     root         14369 Oct  3 05:44 docker-compose.yml.bak
+drwxr-xr-x  2 root     root          4096 Oct 15 18:41 docs
+drwxr-xr-x  2 root     root          4096 Aug 21 21:32 logs
+drwxr-xr-x 24 root     root          4096 Oct 14 17:30 mcp-servers
+-rw-r--r--  1 root     root       1833263 Sep  2 07:39 mega_migration_backup_20250902_083935.tar.gz                                                             
+drwxr-xr-x  5 root     root          4096 Sep  2 07:39 mega_orchestrator
+drwxr-sr-x  4 milhy777 milhy777      4096 Aug 11 11:08 milhy777
+drwxr-xr-x  4 root     root          4096 Jul 21 18:58 monitoring
+drwxr-xr-x  6 root     root          4096 Oct 12 14:58 node_modules
+-rw-r--r--  1 root     root     106878911 Sep  2 07:17 orchestration_backup_20250902_081538.tar.gz                                                              
+-rw-r--r--  1 root     root          1167 Oct 12 14:58 package-lock.json
+-rw-r--r--  1 root     root            71 Oct 12 14:58 package.json
+-rw-r--r--  1 root     root            71 Oct 15 18:43 package.json.backup
+-rwxr-xr-x  1 root     root           353 Aug 17 08:59 production_monitor.sh
+-rwxr-xr-x  1 root     root          3326 Oct  1 00:22 quick_diagnose.sh
+drwxr-xr-x  2 root     root          4096 Oct 15 18:27 scripts
+-rwxr-xr-x  1 root     root          6357 Oct  1 00:22 server_gemini_fix.sh
+drwxr-xr-x  6 root     root          4096 Oct 15 18:42 tests
+    container_name: zen-coordinator
+    ports:
+    container_name: mcp-filesystem
+    ports:
+    container_name: mcp-git
+    ports:
+    container_name: mcp-terminal
+    ports:
+    container_name: mcp-database
+    ports:
+    container_name: mcp-memory
+    ports:
+    container_name: mcp-network-service
+    ports:
+    container_name: mcp-system
+    ports:
+    container_name: mcp-security
+    ports:
+    container_name: mcp-config
+    ports:
+    container_name: mcp-log
+    ports:
+    container_name: mcp-research
+    ports:
+    container_name: mcp-advanced-memory
+    ports:
+    container_name: mcp-transcriber
+    ports:
+    container_name: mcp-vision
+    ports:
+    container_name: mcp-postgresql-wrapper
+    ports:
+    container_name: mcp-redis-wrapper
+    ports:
+    container_name: mcp-qdrant-wrapper
+    ports:
+    container_name: mcp-postgresql
+    ports:
+    container_name: mcp-redis
+    ports:
+    container_name: mcp-qdrant
+    ports:
+    container_name: mcp-monitoring
+    ports:
+    container_name: mcp-backup
+    ports:
+    container_name: mcp-message-queue
+    ports:
+    container_name: mqtt-broker
+    ports:
+    container_name: mcp-mqtt
+    ports:
+    container_name: backup-coordinator
+    ports:

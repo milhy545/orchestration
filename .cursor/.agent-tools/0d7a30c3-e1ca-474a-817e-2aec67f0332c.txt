@@ -1,0 +1,77 @@
+➜  orchestration git:(master) ✗ git commit -m "Remove large directories from git and update .gitignore
+dquote> 
+dquote> - Remove Skladka/ directory (154MB) from git tracking
+dquote> - Add claude-agent-env/, Skladka/, *.tar.gz to .gitignore
+dquote> - This reduces repository size significantly"
+[master 7dc695b] Remove large directories from git and update .gitignore
+ 70 files changed, 14 insertions(+), 16533 deletions(-)
+ delete mode 100644 Skladka/development-archive-20250823/CHANGELOG.md
+ delete mode 100644 Skladka/development-archive-20250823/CLAUDE.md
+ delete mode 100644 Skladka/development-archive-20250823/DIRECT_MCP_BRIDGE_README.md
+ delete mode 100644 Skladka/development-archive-20250823/GEMINI.md
+ delete mode 100644 Skladka/development-archive-20250823/PRODUCTION_STATUS.md
+ delete mode 100644 Skladka/development-archive-20250823/README.md
+ delete mode 100644 Skladka/development-archive-20250823/README_CZ.md
+ delete mode 100644 Skladka/development-archive-20250823/borec.md
+ delete mode 100644 Skladka/development-archive-20250823/claude-agent/anthropic_oauth_setup.py
+ delete mode 100755 Skladka/development-archive-20250823/claude-agent/claude_agent_start.sh
+ delete mode 100644 Skladka/development-archive-20250823/claude-agent/claude_session_bridge.py
+ delete mode 100644 Skladka/development-archive-20250823/claude-agent/config/agent_config.yaml
+ delete mode 100755 Skladka/development-archive-20250823/claude-agent/haiku_agent.py
+ delete mode 100644 Skladka/development-archive-20250823/claude-agent/test_agent.py
+ delete mode 100644 Skladka/development-archive-20250823/claude-agent/test_fast_fallback.py
+ delete mode 100644 Skladka/development-archive-20250823/claude-agent/test_ollama.py
+ delete mode 100644 Skladka/development-archive-20250823/claude-agent/venv/bin/Activate.ps1
+ delete mode 100644 Skladka/development-archive-20250823/claude-agent/venv/bin/activate
+ delete mode 100644 Skladka/development-archive-20250823/claude-agent/venv/bin/activate.csh
+ delete mode 100644 Skladka/development-archive-20250823/claude-agent/venv/bin/activate.fish
+ delete mode 100755 Skladka/development-archive-20250823/claude-agent/venv/bin/distro
+ delete mode 100755 Skladka/development-archive-20250823/claude-agent/venv/bin/httpx
+ delete mode 100755 Skladka/development-archive-20250823/claude-agent/venv/bin/normalizer
+ delete mode 100755 Skladka/development-archive-20250823/claude-agent/venv/bin/pip
+ delete mode 100755 Skladka/development-archive-20250823/claude-agent/venv/bin/pip3
+ delete mode 100755 Skladka/development-archive-20250823/claude-agent/venv/bin/pip3.11
+ delete mode 120000 Skladka/development-archive-20250823/claude-agent/venv/bin/python
+ delete mode 120000 Skladka/development-archive-20250823/claude-agent/venv/bin/python3
+ delete mode 120000 Skladka/development-archive-20250823/claude-agent/venv/bin/python3.11
+ delete mode 120000 Skladka/development-archive-20250823/claude-agent/venv/lib64
+ delete mode 100644 Skladka/development-archive-20250823/claude-agent/venv/pyvenv.cfg
+ delete mode 100755 Skladka/development-archive-20250823/direct_mcp_bridge.py
+ delete mode 100644 Skladka/development-archive-20250823/docker-compose-backup-20250816-1900.yml
+ delete mode 100644 Skladka/development-archive-20250823/docker-compose-core.yml
+ delete mode 100644 Skladka/development-archive-20250823/docker-compose-orig.yml
+ delete mode 100644 Skladka/development-archive-20250823/docker-compose.yml.backup
+ delete mode 100644 Skladka/development-archive-20250823/docker-compose.yml.backup-20250812-101600
+ delete mode 100644 Skladka/development-archive-20250823/docker-compose.yml.backup-pre-mqtt
+ delete mode 100644 Skladka/development-archive-20250823/docs/8.md
+ delete mode 100644 Skladka/development-archive-20250823/docs/API_DOCUMENTATION.md
+ delete mode 100644 Skladka/development-archive-20250823/docs/API_REFERENCE.md
+ delete mode 100644 Skladka/development-archive-20250823/docs/ARCHITECTURE.md
+ delete mode 100644 Skladka/development-archive-20250823/docs/CLAUDE.md
+ delete mode 100644 Skladka/development-archive-20250823/docs/DEPLOYMENT.md
+ delete mode 100644 Skladka/development-archive-20250823/docs/DOCUMENTATION_INDEX.md
+ delete mode 100644 Skladka/development-archive-20250823/docs/FINAL_MCP_REORGANIZATION_PLAN.md
+ delete mode 100644 Skladka/development-archive-20250823/docs/PORTAINER_DEPLOYMENT.md
+ delete mode 100644 Skladka/development-archive-20250823/docs/README.md
+ delete mode 100644 Skladka/development-archive-20250823/docs/SERVICES_DOCUMENTATION.md
+ delete mode 100644 Skladka/development-archive-20250823/docs/TROUBLESHOOTING.md
+ delete mode 100644 Skladka/development-archive-20250823/has_debug_request.json
+ delete mode 100755 Skladka/development-archive-20250823/mcp-wrapper.py
+ delete mode 100644 Skladka/development-archive-20250823/package-lock.json
+ delete mode 100644 Skladka/development-archive-20250823/package.json
+ delete mode 100644 Skladka/development-archive-20250823/support-services-compose.yml
+ delete mode 100755 Skladka/development-archive-20250823/test_zen_mcp_upgraded.py
+ delete mode 100755 Skladka/development-archive-20250823/tests/failure/failure_recovery_test.sh
+ delete mode 100755 Skladka/development-archive-20250823/tests/performance/stress_load_test.sh
+ delete mode 100755 Skladka/development-archive-20250823/tests/security/security_assessment_test.sh
+ delete mode 100755 Skladka/development-archive-20250823/tests/unit/memory_crud_test.sh
+ delete mode 100755 Skladka/development-archive-20250823/tests/unit/orchestration_workflow_test.sh
+ delete mode 100644 Skladka/development-archive-20250823/universal_mcp_wrapper.py
+ delete mode 100755 Skladka/development-archive-20250823/zen_mcp_server.py
+ delete mode 100755 Skladka/development-archive-20250823/zen_mcp_server_updated.py
+ delete mode 100755 Skladka/development-archive-20250823/zen_mcp_server_updated.py.backup-2231
+ delete mode 100644 Skladka/development-archive-20250823/zen_routing_fix.py
+ delete mode 100755 Skladka/zen_coordinator.py.backup
+ delete mode 100644 Skladka/zen_coordinator_fixed.py
+ delete mode 100755 Skladka/zen_coordinator_organized.py
+➜  orchestration git:(master) 

@@ -1,0 +1,71 @@
+~
+~
+standard input
+➜  orchestration git:(master) cd /home/orchestration && git status
+On branch master
+Your branch and 'origin/master' have diverged,
+and have 1 and 3 different commits each, respectively.
+  (use "git pull" if you want to integrate the remote branch with yours)
+
+nothing to commit, working tree clean
+➜  orchestration git:(master) 
+➜  orchestration git:(master) cd /home/orchestration && git --no-pager log HEAD..origin/master --oneline
+e7b2f8c (origin/master) CI: Move deploy workflow to correct .github/workflows directory
+7eb5a6c Implementace automatického nasazování deploy.yml
+c1b06ba feat: Přidání zálohovacího skriptu, README a vylepšení docker-compose
+➜  orchestration git:(master) 
+➜  orchestration git:(master) cd /home/orchestration && git --no-pager log origin/master..HEAD --oneline
+3340686 (HEAD -> master) Update docker-compose configuration and .gitignore
+➜  orchestration git:(master) 
+➜  orchestration git:(master) git config pull.rebase false
+➜  orchestration git:(master) 
+➜  orchestration git:(master) git pull --tags origin master
+From https://github.com/milhy545/orchestration
+ * branch            master     -> FETCH_HEAD
+Auto-merging docker-compose.yml
+CONFLICT (content): Merge conflict in docker-compose.yml
+Automatic merge failed; fix conflicts and then commit the result.
+➜  orchestration git:(master) ✗ 
+➜  orchestration git:(master) ✗ git status
+On branch master
+Your branch and 'origin/master' have diverged,
+and have 1 and 3 different commits each, respectively.
+  (use "git pull" if you want to integrate the remote branch with yours)
+
+You have unmerged paths.
+  (fix conflicts and run "git commit")
+  (use "git merge --abort" to abort the merge)
+
+Changes to be committed:
+        modified:   .claude/agents/multi_llm_agent_fixed.py
+        new file:   .github/workflows/deploy.yml
+        new file:   README.md
+        modified:   scripts/backup-databases.sh
+
+Unmerged paths:
+  (use "git add <file>..." to mark resolution)
+        both modified:   docker-compose.yml
+
+➜  orchestration git:(master) ✗ 
+➜  orchestration git:(master) ✗ git add docker-compose.yml
+➜  orchestration git:(master) ✗ 
+➜  orchestration git:(master) ✗ git status
+On branch master
+Your branch and 'origin/master' have diverged,
+and have 1 and 3 different commits each, respectively.
+  (use "git pull" if you want to integrate the remote branch with yours)
+
+All conflicts fixed but you are still merging.
+  (use "git commit" to conclude merge)
+
+Changes to be committed:
+        modified:   .claude/agents/multi_llm_agent_fixed.py
+        new file:   .github/workflows/deploy.yml
+        new file:   README.md
+        modified:   docker-compose.yml
+        modified:   scripts/backup-databases.sh
+
+➜  orchestration git:(master) ✗ 
+➜  orchestration git:(master) ✗ git commit
+[master 72247ee] git commit -m "Merge remote-tracking branch 'origin/master' into master
+➜  orchestration git:(master) 

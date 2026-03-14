@@ -16,6 +16,22 @@
         "voice-design",
         "sound-effects"
       ]
+    },
+    "mega-orchestrator": {
+      "command": "python3",
+      "args": [
+        "-m",
+        "mega_orchestrator.mcp_stdio_bridge"
+      ],
+      "env": {
+        "MEGA_ORCHESTRATOR_URL": "http://127.0.0.1:7000",
+        "PYTHONPATH": "/remote-home/milhy777/workspace"
+      },
+      "description": "Jednotná brána a MCP bridge pro orchestrační platformu",
+      "capabilities": [
+        "tools",
+        "resources"
+      ]
     }
   }
 }
