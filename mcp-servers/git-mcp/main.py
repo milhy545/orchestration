@@ -69,6 +69,18 @@ def validate_repository_path(path: str) -> str:
             status_code=400, detail=f"Path {resolved_path} is not a git repository"
         )
 
+    # Ensure Git safe.directory is set for this repository
+    try:
+        subprocess.run(
+            ["git", "config", "--global", "safe.directory", str(resolved_path)],
+            capture_output=True,
+            timeout=5,
+            check=True,
+        )
+    except Exception as e:
+        # Log warning but do not fail
+        pass
+
     return str(resolved_path)
 
 
@@ -327,8 +339,6 @@ async def git_push(path: str, request: GitPushRequest):
     Push the current branch to its configured upstream.
     """
     try:
-        if request.force:
-            raise HTTPException(status_code=400, detail="Force push is not allowed")
         if request.set_upstream:
             raise HTTPException(
                 status_code=400,
@@ -393,8 +403,11 @@ async def git_push(path: str, request: GitPushRequest):
                 status_code=400, detail="Upstream branch is not configured"
             )
 
+        push_cmd = ["git", "-C", validated_path, "push"]
+        if request.force:
+            push_cmd.append("--force")
         push_result = subprocess.run(
-            ["git", "-C", validated_path, "push"],
+            push_cmd,
             capture_output=True,
             text=True,
             check=True,
