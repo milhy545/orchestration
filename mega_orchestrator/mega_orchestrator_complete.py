@@ -670,6 +670,12 @@ class MegaOrchestrator:
         
     def _get_service_for_tool(self, tool: str, mode: SAGEMode) -> Optional[str]:
         """Find appropriate service based on tool and SAGE mode"""
+        # Forced routing for specific tools
+        if tool in {"store_semantic_memory", "semantic_search", "vector_search"}:
+            return "advanced_memory"
+        if tool in {"store_memory", "search_memories"}:
+            return "memory"
+
         # Primary: tool + mode match
         for service_name, config in self.services.items():
             if tool in (config.tools or []) and mode in (config.sage_modes or []):
