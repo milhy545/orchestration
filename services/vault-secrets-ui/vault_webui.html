@@ -237,6 +237,22 @@
             <div class="scanlines"></div>
             <div class="glow-overlay"></div>
 
+            <!-- LOGIN OVERLAY -->
+            <div id="login-overlay" class="absolute inset-0 z-50 flex flex-col justify-center items-center bg-black/95 backdrop-blur-sm transition-opacity duration-500">
+                <div class="w-full max-w-md p-8 border-2 shadow-2xl relative" style="border-color: var(--primary); background: var(--casing-bg);">
+                    <div class="scanlines"></div>
+                    <h2 class="text-4xl font-bold pip-text mb-2 text-center" data-translate="login_title">SYSTEM LOCK</h2>
+                    <p class="text-center opacity-70 mb-8" data-translate="login_desc">AUTH_KEY REQUIRED FOR ACCESS</p>
+                    
+                    <div class="mb-6 relative z-10">
+                        <input type="password" id="auth-key-input" class="pip-input text-center text-2xl tracking-[0.5em]" placeholder="****" onkeypress="handleLoginKeyPress(event)">
+                        <div id="login-error" class="text-red-500 text-center mt-2 opacity-0 transition-opacity" data-translate="login_error">ACCESS DENIED</div>
+                    </div>
+                    
+                    <button onclick="attemptLogin()" class="pip-btn w-full text-xl py-3 relative z-10" data-translate="login_btn">AUTHENTICATE</button>
+                </div>
+            </div>
+
             <header class="flex justify-between items-start border-b-2 pb-2 mb-6 z-10 shrink-0 relative" style="border-color: var(--primary);">
                 <h1 class="text-4xl md:text-6xl font-bold pip-text tracking-widest">VAULT_OS</h1>
                 <div class="flex flex-col items-end gap-1 mt-2">
@@ -292,8 +308,9 @@
     </div>
 
     <script>
-        let lang = "EN";
-        let themeIndex = 0;
+        let lang = localStorage.getItem('vaultLang') || "EN";
+        let themeIndex = parseInt(localStorage.getItem('vaultTheme')) || 0;
+        let isAuthenticated = sessionStorage.getItem('vaultAuth') === 'true';
         const serviceCatalog = {{SERVICE_METADATA_JSON}};
 
         const themes = [
@@ -309,7 +326,11 @@
                 editor: "SECRET PAYLOAD (JSON)",
                 inject: "UPLOAD",
                 reload: "SYNC FROM VAULT",
-                format: "ALIGN BUFFER"
+                format: "ALIGN BUFFER",
+                login_title: "SYSTEM LOCK",
+                login_desc: "AUTH_KEY REQUIRED FOR ACCESS",
+                login_btn: "AUTHENTICATE",
+                login_error: "ACCESS DENIED"
             },
             CS: {
                 title: "VKLADANI KLICU",
@@ -317,9 +338,48 @@
                 editor: "SECRET PAYLOAD (JSON)",
                 inject: "NAHRAT",
                 reload: "NACIST Z VAULTU",
-                format: "SROVNAT BUFFER"
+                format: "SROVNAT BUFFER",
+                login_title: "ZAMEK SYSTEMU",
+                login_desc: "VYZADOVAN AUTORIZACNI KLIC",
+                login_btn: "AUTORIZOVAT",
+                login_error: "PRISTUP ODEPREN"
             }
         };
+
+        function checkAuth() {
+            if (isAuthenticated) {
+                const overlay = document.getElementById('login-overlay');
+                overlay.style.opacity = '0';
+                setTimeout(() => overlay.style.display = 'none', 500);
+            } else {
+                document.getElementById('auth-key-input').focus();
+            }
+        }
+
+        function attemptLogin() {
+            const input = document.getElementById('auth-key-input').value;
+            const errorDiv = document.getElementById('login-error');
+            
+            // Hardcoded client-side check matching the default Vault dev token
+            if (input === 'dev-root-token') {
+                isAuthenticated = true;
+                sessionStorage.setItem('vaultAuth', 'true');
+                errorDiv.style.opacity = '0';
+                checkAuth();
+                logLine("Authentication successful.", false);
+            } else {
+                errorDiv.style.opacity = '1';
+                setTimeout(() => errorDiv.style.opacity = '0', 2000);
+                document.getElementById('auth-key-input').value = '';
+                logLine("Authentication failed.", true);
+            }
+        }
+
+        function handleLoginKeyPress(e) {
+            if (e.key === 'Enter') {
+                attemptLogin();
+            }
+        }
 
         function logLine(message, isError) {
             const consoleEl = document.getElementById("console");
@@ -337,6 +397,7 @@
         function applyTheme() {
             document.body.className = themes[themeIndex].class;
             document.getElementById("theme-label").textContent = themes[themeIndex].short;
+            localStorage.setItem('vaultTheme', themeIndex);
             logLine("Theme set: " + themes[themeIndex].full, false);
         }
 
@@ -349,8 +410,11 @@
             document.getElementById("lang-label").textContent = lang;
             document.querySelectorAll("[data-translate]").forEach((node) => {
                 const key = node.getAttribute("data-translate");
-                node.textContent = translations[lang][key];
+                if (translations[lang][key]) {
+                    node.textContent = translations[lang][key];
+                }
             });
+            localStorage.setItem('vaultLang', lang);
         }
 
         function toggleLang() {
@@ -410,6 +474,10 @@
         }
 
         async function saveSecrets() {
+            if (!isAuthenticated) {
+                logLine("UNAUTHORIZED. Please authenticate first.", true);
+                return;
+            }
             const service = currentService();
             const input = document.getElementById("secret-json");
             let data;
@@ -450,6 +518,7 @@
 
         applyTheme();
         applyLanguage();
+        checkAuth();
         updateServiceMetadata();
         loadSecrets();
     </script>

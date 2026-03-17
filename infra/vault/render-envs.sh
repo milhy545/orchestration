@@ -114,6 +114,11 @@ render_all() {
     "EMAIL_ADDRESS EMAIL_PASSWORD IMAP_SERVER SMTP_SERVER SMTP_PORT"
 
   render_env_file \
+    "elevenlabs-mcp" \
+    "secret/orchestration/elevenlabs-mcp" \
+    "ELEVENLABS_API_KEY"
+
+  render_env_file \
     "security-mcp" \
     "secret/orchestration/internal-auth" \
     "JWT_SECRET=JWT_SECRET_KEY"

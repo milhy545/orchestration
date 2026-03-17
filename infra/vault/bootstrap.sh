@@ -89,6 +89,9 @@ seed_secret "secret/orchestration/gmail-mcp" \
   SMTP_SERVER="smtp.gmail.com" \
   SMTP_PORT="587"
 
+seed_secret "secret/orchestration/elevenlabs-mcp" \
+  ELEVENLABS_API_KEY=""
+
 seed_secret "secret/orchestration/internal-auth" \
   JWT_SECRET="change_me_market_jwt"
 

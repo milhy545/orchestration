@@ -91,6 +91,16 @@ SERVICE_CONFIGS = {
             "SMTP_PORT": "SMTP_PORT",
         },
     },
+    "elevenlabs-mcp": {
+        "label": "ELEVENLABS MCP",
+        "vault_path": "orchestration/elevenlabs-mcp",
+        "env_file": "/vault/runtime/elevenlabs-mcp.env",
+        "restart_target": "elevenlabs-mcp",
+        "description": "API keys and configuration for ElevenLabs text-to-speech services.",
+        "runtime_keys": {
+            "ELEVENLABS_API_KEY": "ELEVENLABS_API_KEY",
+        },
+    },
     "security-mcp": {
         "label": "SECURITY MCP",
         "vault_path": "orchestration/internal-auth",
