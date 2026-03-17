@@ -100,7 +100,7 @@ class MegaOrchestrator:
         return {
             "filesystem": MCPServiceConfig(
                 name="Filesystem MCP",
-                host="filesystem-mcp",
+                host="mcp-filesystem",
                 port=7001,
                 tools=["file_read", "file_write", "file_list", "file_search", "file_analyze"],
                 sage_modes=[SAGEMode.FILESYSTEM, SAGEMode.CODE, SAGEMode.DOCS],
@@ -108,7 +108,7 @@ class MegaOrchestrator:
             ),
             "git": MCPServiceConfig(
                 name="Git MCP", 
-                host="git-mcp",
+                host="mcp-git",
                 port=7002,
                 tools=["git_status", "git_commit", "git_push", "git_log", "git_diff"],
                 sage_modes=[SAGEMode.CODE],
@@ -116,7 +116,7 @@ class MegaOrchestrator:
             ),
             "terminal": MCPServiceConfig(
                 name="Terminal MCP",
-                host="terminal-mcp",
+                host="mcp-terminal",
                 port=7003,
                 tools=["terminal_exec", "shell_command", "system_info", "create_terminal", "execute_command"],
                 sage_modes=[SAGEMode.DEBUG, SAGEMode.TERMINAL],
@@ -124,7 +124,7 @@ class MegaOrchestrator:
             ),
             "database": MCPServiceConfig(
                 name="Database MCP",
-                host="database-mcp",
+                host="mcp-database",
                 port=7004,
                 tools=["db_query", "db_connect", "db_schema", "db_backup"],
                 sage_modes=[SAGEMode.ANALYZE],
@@ -132,7 +132,7 @@ class MegaOrchestrator:
             ),
             "memory": MCPServiceConfig(
                 name="Memory MCP",
-                host="memory-mcp",
+                host="mcp-memory",
                 port=7005,
                 tools=["store_memory", "search_memories", "get_context", "memory_stats", "list_memories"],
                 sage_modes=[SAGEMode.MEMORY, SAGEMode.CHAT],
@@ -140,7 +140,7 @@ class MegaOrchestrator:
             ),
             "research": MCPServiceConfig(
                 name="Research MCP",
-                host="research-mcp",
+                host="mcp-research",
                 port=7011,
                 tools=["research_query", "perplexity_search", "web_search", "search_web"],
                 sage_modes=[SAGEMode.ANALYZE, SAGEMode.DOCS],
@@ -148,7 +148,7 @@ class MegaOrchestrator:
             ),
             "advanced_memory": MCPServiceConfig(
                 name="Advanced Memory MCP",
-                host="advanced-memory-mcp",
+                host="mcp-advanced-memory",
                 port=7012,
                 tools=["vector_search", "semantic_similarity", "semantic_search", "store_semantic_memory", "store_memory"],
                 sage_modes=[SAGEMode.MEMORY, SAGEMode.ANALYZE, SAGEMode.CHAT, SAGEMode.DOCS, SAGEMode.CODE],
@@ -156,7 +156,7 @@ class MegaOrchestrator:
             ),
             "advanced_memory_v2": MCPServiceConfig(
                 name="Advanced Memory v2",
-                host="gmail-mcp",
+                host="mcp-gmail",
                 port=7015,
                 tools=["conversation_thread", "file_deduplication", "context_continuation"],
                 sage_modes=[SAGEMode.MEMORY, SAGEMode.CHAT],
@@ -164,7 +164,7 @@ class MegaOrchestrator:
             ),
             "transcriber": MCPServiceConfig(
                 name="Transcriber MCP",
-                host="transcriber-mcp",
+                host="mcp-transcriber",
                 port=7013,
                 tools=["transcribe_webm", "transcribe_url", "audio_convert"],
                 sage_modes=[SAGEMode.ANALYZE],
@@ -173,7 +173,7 @@ class MegaOrchestrator:
             ),
             "video_processing": MCPServiceConfig(
                 name="Video Processing MCP",
-                host="forai-mcp",
+                host="mcp-forai",
                 port=7016,
                 tools=["process_video", "extract_frames", "video_analysis"],
                 sage_modes=[SAGEMode.ANALYZE],
@@ -182,7 +182,7 @@ class MegaOrchestrator:
             ),
             "marketplace": MCPServiceConfig(
                 name="Marketplace MCP",
-                host="marketplace-mcp",
+                host="mcp-marketplace",
                 port=7034,
                 tools=[
                     "skills_list",
