@@ -402,7 +402,7 @@ curl -X POST http://192.168.0.58:8020/mcp \
 **Response**:
 ```json
 {
-  "stdout": "zen-coordinator\\tUp 26 hours\\nmcp-filesystem\\tUp 26 hours",
+  "stdout": "mega-orchestrator\\tUp 26 hours\\nmcp-filesystem\\tUp 26 hours",
   "stderr": "",
   "exit_code": 0,
   "execution_time": "0.234s",
@@ -698,7 +698,7 @@ curl -X POST http://192.168.0.58:8020/mcp \
 ```json
 {
   "content": "The ZEN Coordinator handles all external API requests and routes them to appropriate MCP services",
-  "tags": ["architecture", "zen-coordinator", "api"],  // Optional: categorization tags
+  "tags": ["architecture", "mega-orchestrator", "api"],  // Optional: categorization tags
   "context": "Documentation about system architecture",  // Optional: context information
   "importance": 0.8,                    // Optional: importance score (0.0-1.0)
   "metadata": {                         // Optional: additional metadata
@@ -753,7 +753,7 @@ curl -X POST http://192.168.0.58:8020/mcp \
       "id": "mem_20250817_001234",
       "content": "The ZEN Coordinator handles all external API requests...",
       "similarity": 0.92,
-      "tags": ["architecture", "zen-coordinator", "api"],
+      "tags": ["architecture", "mega-orchestrator", "api"],
       "metadata": {
         "source": "documentation",
         "author": "system"
@@ -874,7 +874,7 @@ curl -X POST http://192.168.0.58:8020/mcp \
     {
       "id": "mem_20250817_001234",
       "content": "The ZEN Coordinator handles all external API requests...",
-      "tags": ["architecture", "zen-coordinator", "api"],
+      "tags": ["architecture", "mega-orchestrator", "api"],
       "importance": 0.8,
       "created_at": "2025-08-17T03:24:38Z",
       "size": 156

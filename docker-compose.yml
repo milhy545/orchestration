@@ -256,7 +256,8 @@ services:
     depends_on:
       - postgresql
       - redis
-    restart: unless-stopped
+    profiles: ["disabled"]
+    restart: "no"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
@@ -272,7 +273,8 @@ services:
     ports:
       - "7014:8000"
     working_dir: /app
-    restart: unless-stopped
+    profiles: ["disabled"]
+    restart: "no"
     networks:
       - mcp-network
 

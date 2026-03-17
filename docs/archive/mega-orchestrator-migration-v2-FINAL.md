@@ -153,7 +153,7 @@ npm install -g @google/generative-ai-cli
 ### **Současný stav (HAS):**
 ```
 ✅ Fungující služby:
-- zen-coordinator (port 7000→8020) - bude přejmenován na Mega-Orchestrator
+- mega-orchestrator (port 7000→8020) - bude přejmenován na Mega-Orchestrator
 - filesystem-mcp (port 7001→8000)
 - git-mcp (port 7002→8001)
 - terminal-mcp (port 7003→8002)
@@ -218,12 +218,12 @@ cat package.json
 
 #### **2.1 Current System Analysis**
 - [ ] Backup současné konfigurace
-- [ ] Analýza současného zen-coordinator kódu
+- [ ] Analýza současného mega-orchestrator kódu
 - [ ] Identifikace komponent pro přejmenování na Mega-Orchestrator
 - [ ] Dokumentace současných MCP služeb
 
 #### **2.2 Mega-Orchestrator Implementation**
-- [ ] Refaktorování zen-coordinator → Mega-Orchestrator
+- [ ] Refaktorování mega-orchestrator → Mega-Orchestrator
 - [ ] Implementace Provider Registry
 - [ ] SAGE Mode Router dokončení
 - [ ] Conversation Memory v2
