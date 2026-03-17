@@ -36,3 +36,12 @@
 ## Security and Configuration
 - Copy `.env.example` to `.env` before starting the stack
 - Never commit secrets; use `.env`, Vault, or another secure external store
+
+## 🧠 FORAI Memory Integration & Tagging System
+
+All AI agents operating within this repository MUST use the **FORAI** tagging system when storing or retrieving context in the Memory MCP.
+
+### Usage for Agents:
+1. **Storing:** Always inject `"FORAI"` along with contextual keywords into the `metadata.tags` array (e.g., `{"tags": ["FORAI", "architecture", "refactor"]}`).
+2. **Retrieving:** Use the `vector_search` tool with the `FORAI` filter or `semantic_search` focusing on FORAI concepts.
+3. **Mega-Orchestrator:** Route all memory requests through `mega-orchestrator` on port 7000 using `store_semantic_memory` or `store_memory` tools.

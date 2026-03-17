@@ -120,3 +120,12 @@ Compatibility namespaces still exist in the Vault overlay for legacy secret mapp
 - `tests/`: repository-level tests, including documentation coverage checks
 - `docs/`: active product and operator documentation
 - `archive/` and `docs/archive/`: retained historical material not guaranteed to match the current runtime
+
+## 🏷️ FORAI Tagging System & AI Memory
+
+This repository utilizes an advanced AI Memory system (`advanced-memory-mcp`) accessible through the `mega-orchestrator`. All automated agents and tools operating within this repository **MUST** use the **FORAI** tagging system.
+
+### How to use Memory MCP with FORAI
+1. **Storing Information:** Always inject the tag `"FORAI"` into the `metadata.tags` array when storing context (e.g., `{"tags": ["FORAI", "architecture", "refactor"]}`). Use the `store_semantic_memory` tool for abstract context and `store_memory` for factual data.
+2. **Retrieving Context:** Use the `vector_search` tool with the `FORAI` filter or `semantic_search` to recall historical decisions, chat histories, or codebase rationale.
+3. **Master AI Node:** External agents (like PPLX Comet) can access this memory pool directly via the exposed Tailscale Funnel.
