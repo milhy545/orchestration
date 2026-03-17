@@ -294,12 +294,28 @@ class GeminiModelProvider(ModelProvider):
 
     def count_tokens(self, text: str, model_name: str) -> int:
         """Count tokens for the given text using Gemini's tokenizer."""
-        self._resolve_model_name(model_name)
+        resolved_name = self._resolve_model_name(model_name)
 
-        # For now, use a simple estimation
-        # TODO: Use actual Gemini tokenizer when available in SDK
-        # Rough estimation: ~4 characters per token for English text
-        return len(text) // 4
+        # Use cache if available
+        cache_key = f"{resolved_name}:{hash(text)}"
+        if cache_key in self._token_counters:
+            return self._token_counters[cache_key]
+
+        try:
+            # Use actual Gemini tokenizer from SDK
+            response = self.client.models.count_tokens(
+                model=resolved_name,
+                contents=text,
+            )
+            count = response.total_tokens
+            self._token_counters[cache_key] = count
+            return count
+        except Exception as e:
+            # Fall back to simple estimation on error
+            # Rough estimation: ~4 characters per token for English text
+            count = len(text) // 4
+            logger.warning(f"Error counting tokens with Gemini SDK for {resolved_name}, falling back to estimation: {e}")
+            return count
 
     def get_provider_type(self) -> ProviderType:
         """Get the provider type."""
