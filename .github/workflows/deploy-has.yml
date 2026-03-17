@@ -1,0 +1,38 @@
+name: CD - Auto Deploy to HAS
+
+on:
+  workflow_run:
+    workflows: ["CI - Tests & Security"]
+    branches: [master]
+    types:
+      - completed
+
+jobs:
+  deploy:
+    name: Deploy to HAS Production
+    runs-on: ubuntu-latest
+    # Only run this if the tests passed successfully
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.HAS_SSH_HOST }}
+          username: ${{ secrets.HAS_SSH_USER }}
+          key: ${{ secrets.HAS_SSH_PRIVATE_KEY }}
+          # Můžeme přidat port, pokud používáš port 2222, ale standardní je 22. Pokud používáš 2222, můžeme to upravit.
+          port: 22 
+          script: |
+            echo "🚀 Spouštím automatický deployment na HAS..."
+            cd /home/orchestration || exit 1
+            
+            # Stáhneme nejnovější změny z masteru
+            git fetch origin master
+            git reset --hard origin/master
+            
+            # Aplikujeme změny v prostředí bez nutnosti celkového restartu, pokud to není nutné
+            # Použijeme oba compose soubory (hlavní + vault) pro jistotu
+            docker-compose -f docker-compose.yml -f docker-compose.vault.yml up -d --remove-orphans
+            
+            echo "✅ Deployment úspěšný!"
