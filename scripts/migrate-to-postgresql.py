@@ -9,19 +9,24 @@ import psycopg2
 import json
 import os
 from datetime import datetime
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
 
 # Database configurations
 SQLITE_DATABASES = {
-    "cldmemory": "/home/orchestration/data/databases/cldmemory.db",
-    "unified_memory": "/home/orchestration/data/databases/unified_memory_forai.db"
+    "cldmemory": os.getenv("SQLITE_CLDMEMORY_PATH", "/home/orchestration/data/databases/cldmemory.db"),
+    "unified_memory": os.getenv("SQLITE_UNIFIED_MEMORY_PATH", "/home/orchestration/data/databases/unified_memory_forai.db")
 }
 
 POSTGRES_CONFIG = {
-    "host": "localhost",
-    "port": 5432,
-    "database": "mcp_unified",
-    "user": "mcp_admin",
-    "password": "mcp_secure_2024"
+    "host": os.getenv("POSTGRES_HOST", "localhost"),
+    "port": int(os.getenv("POSTGRES_PORT", 5432)),
+    "database": os.getenv("POSTGRES_DB", "mcp_unified"),
+    "user": os.getenv("POSTGRES_USER", "mcp_admin"),
+    "password": os.getenv("POSTGRES_PASSWORD")
 }
 
 def create_postgres_tables():
