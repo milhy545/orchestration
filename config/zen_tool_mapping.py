@@ -13,7 +13,12 @@ TOOL_MAPPING = {
     'git_execute': {'service': 'git', 'tool': 'git_status', 'port': 7002},
     'git_status': {'service': 'git', 'tool': 'git_status', 'port': 7002},
     
-    # Memory tools - fungující
+    # Memory tools - basic (SQL)
     'search_memories': {'service': 'memory', 'tool': 'search_memories', 'port': 7005},
     'store_memory': {'service': 'memory', 'tool': 'store_memory', 'port': 7005},
+    
+    # Advanced Memory tools (Semantic/Vector)
+    'semantic_search': {'service': 'advanced-memory', 'tool': 'semantic_similarity', 'port': 7012},
+    'store_semantic_memory': {'service': 'advanced-memory', 'tool': 'store_memory', 'port': 7012},
+    'vector_search': {'service': 'advanced-memory', 'tool': 'vector_search', 'port': 7012},
 }
