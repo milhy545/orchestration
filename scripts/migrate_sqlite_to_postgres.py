@@ -1,90 +1,72 @@
 #!/usr/bin/env python3
-"""
-Simple migration script: SQLite databases -> PostgreSQL
-"""
-
 import sqlite3
 import psycopg2
+from psycopg2.extras import execute_values
 import json
 import os
 from datetime import datetime
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
 
 POSTGRES_CONFIG = {
-    "host": "localhost",
-    "port": 5432,
-    "database": "mcp_unified",
-    "user": "mcp_admin",
-    "password": "mcp_secure_2024"
+    "host": os.getenv("POSTGRES_HOST", "localhost"),
+    "port": int(os.getenv("POSTGRES_PORT", 5432)),
+    "database": os.getenv("POSTGRES_DB", "mcp_unified"),
+    "user": os.getenv("POSTGRES_USER", "mcp_admin"),
+    "password": os.getenv("POSTGRES_PASSWORD")
 }
 
 def create_postgres_tables():
-    """Create unified tables in PostgreSQL"""
     conn = psycopg2.connect(**POSTGRES_CONFIG)
-    cursor = conn.cursor()
+    cur = conn.cursor()
     
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS unified_memory (
+    # Simple table for generic memory migration
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS unified_memories (
             id SERIAL PRIMARY KEY,
-            source_db VARCHAR(50),
-            content TEXT,
+            content TEXT NOT NULL,
             metadata JSONB,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        );
+        )
     """)
     
     conn.commit()
-    cursor.close()
+    cur.close()
     conn.close()
-    print("✅ PostgreSQL tables created")
 
-def migrate_database(db_name, db_path):
-    """Migrate single SQLite database"""
-    if not os.path.exists(db_path):
-        print(f"⚠️ Database not found: {db_path}")
-        return 0
-    
+def migrate_sqlite_file(sqlite_path):
+    if not os.path.exists(sqlite_path):
+        print(f"File not found: {sqlite_path}")
+        return
+
+    print(f"Migrating {sqlite_path}...")
     pg_conn = psycopg2.connect(**POSTGRES_CONFIG)
-    pg_cursor = pg_conn.cursor()
+    pg_cur = pg_conn.cursor()
     
-    sqlite_conn = sqlite3.connect(db_path)
-    sqlite_cursor = sqlite_conn.cursor()
+    sl_conn = sqlite3.connect(sqlite_path)
+    sl_cur = sl_conn.cursor()
     
-    # Get tables
-    sqlite_cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
-    tables = sqlite_cursor.fetchall()
-    
-    total_records = 0
-    for (table_name,) in tables:
-        print(f"  📋 Migrating {table_name}")
-
-        # Get data
-        # lgtm[py/sql-injection] - Safe: table_name comes from sqlite_master, not user input
-        sqlite_cursor.execute(f'SELECT * FROM "{table_name}"')
-        rows = sqlite_cursor.fetchall()
+    try:
+        sl_cur.execute("SELECT content, metadata, created_at FROM memories")
+        rows = sl_cur.fetchall()
         
-        for row in rows:
-            content = json.dumps(list(row), default=str)
-            metadata = json.dumps({"table": table_name, "source": db_name})
-            
-            pg_cursor.execute("""
-                INSERT INTO unified_memory (source_db, content, metadata)
-                VALUES (%s, %s, %s)
-            """, (f"{db_name}_{table_name}", content, metadata))
-            total_records += 1
-    
-    pg_conn.commit()
-    pg_cursor.close()
-    pg_conn.close()
-    sqlite_conn.close()
-    
-    return total_records
+        execute_values(pg_cur, 
+            "INSERT INTO unified_memories (content, metadata, created_at) VALUES %s",
+            rows)
+        
+        pg_conn.commit()
+        print(f"Successfully migrated {len(rows)} rows")
+    except Exception as e:
+        print(f"Error migrating {sqlite_path}: {e}")
+    finally:
+        sl_conn.close()
+        pg_cur.close()
+        pg_conn.close()
 
 if __name__ == "__main__":
-    print("🚀 Starting migration...")
     create_postgres_tables()
-    
-    total = 0
-    total += migrate_database("cldmemory", "/home/orchestration/data/databases/cldmemory.db")
-    total += migrate_database("unified_memory", "/home/orchestration/data/databases/unified_memory_forai.db")
-    
-    print(f"✅ Migration completed! Total: {total} records")
+    # Example usage:
+    # migrate_sqlite_file("data/databases/cldmemory.db")

@@ -294,11 +294,37 @@ class GeminiModelProvider(ModelProvider):
 
     def count_tokens(self, text: str, model_name: str) -> int:
         """Count tokens for the given text using Gemini's tokenizer."""
-        self._resolve_model_name(model_name)
+        if not text:
+            return 0
 
-        # For now, use a simple estimation
-        # TODO: Use actual Gemini tokenizer when available in SDK
-        # Rough estimation: ~4 characters per token for English text
+        # Resolve model name to canonical form
+        resolved_name = self._resolve_model_name(model_name)
+
+        # Check cache first
+        cache_key = f"{resolved_name}:{hash(text)}"
+        if cache_key in self._token_counters:
+            return self._token_counters[cache_key]
+
+        try:
+            # Use actual Gemini tokenizer via SDK
+            # Note: This requires an API call but provides exact counts
+            response = self.client.models.count_tokens(
+                model=resolved_name,
+                contents=[text]
+            )
+            
+            # Extract count from response
+            token_count = getattr(response, 'total_tokens', 0)
+            
+            # Cache and return
+            if token_count > 0:
+                self._token_counters[cache_key] = token_count
+                return token_count
+
+        except Exception as e:
+            logger.warning(f"Failed to count tokens using Gemini SDK for {resolved_name}: {e}. Falling back to estimation.")
+
+        # Fallback to character-based estimation: ~4 characters per token for English text
         return len(text) // 4
 
     def get_provider_type(self) -> ProviderType:
