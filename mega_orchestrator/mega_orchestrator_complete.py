@@ -150,7 +150,7 @@ class MegaOrchestrator:
                 name="Advanced Memory MCP",
                 host="advanced-memory-mcp",
                 port=7012,
-                tools=["vector_search", "semantic_similarity"],
+                tools=["vector_search", "semantic_similarity", "semantic_search", "store_semantic_memory", "store_memory"],
                 sage_modes=[SAGEMode.MEMORY, SAGEMode.ANALYZE],
                 priority=2
             ),
@@ -975,6 +975,23 @@ class MegaOrchestrator:
                         "limit": arguments.get("limit", 10),
                     },
                 }
+
+        if service.name == "Advanced Memory MCP":
+            # Map aliases to canonical tool names
+            target_tool = tool
+            if tool == "store_semantic_memory":
+                target_tool = "store_memory"
+            elif tool == "semantic_search":
+                target_tool = "semantic_similarity"
+                
+            return {
+                "method": "POST",
+                "url": f"{base_url}/tools/call",
+                "payload": {
+                    "name": target_tool,
+                    "arguments": arguments,
+                }
+            }
 
         if service.name == "Marketplace MCP":
             return {
