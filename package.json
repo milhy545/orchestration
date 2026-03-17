@@ -1,6 +1,6 @@
 {
-  "dependencies": {
-    "24": "^0.0.0",
-    "node": "^24.10.0"
-  }
+  "name": "orchestration",
+  "version": "1.0.0",
+  "description": "MCP Orchestration System",
+  "private": true
 }
