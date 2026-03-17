@@ -1,6 +1,7 @@
 import json
 import os
 import uuid
+import logging
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
@@ -8,20 +9,15 @@ import asyncpg
 import httpx
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
-from qdrant_client import QdrantClient
-from qdrant_client.http.models import (
-    Distance,
-    FieldCondition,
-    Filter,
-    MatchValue,
-    PointStruct,
-    VectorParams,
-)
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("advanced-memory-mcp")
 
 app = FastAPI(
     title="Advanced Memory MCP API",
-    description="Advanced memory storage with vector search via Qdrant and external embeddings.",
-    version="1.0.0",
+    description="Advanced memory storage with vector search via Qdrant REST and external embeddings.",
+    version="1.1.0",
     docs_url="/docs",
     redoc_url="/redoc",
 )
@@ -31,21 +27,20 @@ DATABASE_URL = os.getenv(
     "MCP_DATABASE_URL",
     "postgresql://mcp_admin:change_me_in_production@postgresql:5432/mcp_unified",
 )
-QDRANT_URL = os.getenv("QDRANT_URL", "http://qdrant-vector:6333")
+QDRANT_URL = os.getenv("QDRANT_URL", "http://qdrant-vector:6333").rstrip('/')
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 EMBEDDING_DIM = 768  # Gemini text-embedding-004 uses 768 dimensions
 COLLECTION_NAME = "advanced_memories"
 
 # Globals initialized at startup
 db_pool: Optional[asyncpg.Pool] = None
-qdrant: Optional[QdrantClient] = None
 http_client: Optional[httpx.AsyncClient] = None
 
 
 async def encode_text(text: str) -> List[float]:
     """Encode text into a vector using external Gemini API."""
     if not GEMINI_API_KEY:
-        # Fallback dummy embedding if key is missing (for local dev/tests without API key)
+        logger.warning("GEMINI_API_KEY not set, returning dummy embedding")
         return [0.0] * EMBEDDING_DIM
         
     url = f"https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent?key={GEMINI_API_KEY}"
@@ -57,12 +52,12 @@ async def encode_text(text: str) -> List[float]:
     }
     
     try:
-        response = await http_client.post(url, json=payload, timeout=10.0)
+        response = await http_client.post(url, json=payload, timeout=15.0)
         response.raise_for_status()
         data = response.json()
         return data.get("embedding", {}).get("values", [0.0] * EMBEDDING_DIM)
     except Exception as e:
-        print(f"Error calling embedding API: {e}")
+        logger.error(f"Error calling embedding API: {e}")
         return [0.0] * EMBEDDING_DIM
 
 
@@ -81,36 +76,40 @@ async def ensure_pg_table():
         """)
 
 
-def ensure_qdrant_collection():
-    """Create the Qdrant collection if it doesn't exist."""
-    collections = [c.name for c in qdrant.get_collections().collections]
-    if COLLECTION_NAME not in collections:
-        qdrant.create_collection(
-            collection_name=COLLECTION_NAME,
-            vectors_config=VectorParams(size=EMBEDDING_DIM, distance=Distance.COSINE),
-        )
+async def ensure_qdrant_collection():
+    """Create the Qdrant collection via REST if it doesn't exist."""
+    try:
+        # Check if collection exists
+        res = await http_client.get(f"{QDRANT_URL}/collections/{COLLECTION_NAME}")
+        if res.status_code == 404:
+            logger.info(f"Creating Qdrant collection: {COLLECTION_NAME}")
+            create_payload = {
+                "vectors": {
+                    "size": EMBEDDING_DIM,
+                    "distance": "Cosine"
+                }
+            }
+            await http_client.put(f"{QDRANT_URL}/collections/{COLLECTION_NAME}", json=create_payload)
+    except Exception as e:
+        logger.error(f"Failed to ensure Qdrant collection: {e}")
 
 
 @app.on_event("startup")
 async def startup_event():
-    """Initialize connections and HTTP client on startup."""
-    global db_pool, qdrant, http_client
+    """Initialize connections on startup."""
+    global db_pool, http_client
 
     http_client = httpx.AsyncClient()
 
-    # Connect to Qdrant
-    try:
-        qdrant = QdrantClient(url=QDRANT_URL, timeout=10)
-        ensure_qdrant_collection()
-    except Exception as e:
-        print(f"Warning: Qdrant connection failed: {e}")
+    # Ensure Qdrant collection
+    await ensure_qdrant_collection()
 
     # Connect to PostgreSQL
     try:
         db_pool = await asyncpg.create_pool(DATABASE_URL, min_size=2, max_size=10)
         await ensure_pg_table()
     except Exception as e:
-        print(f"Warning: PostgreSQL connection failed: {e}")
+        logger.error(f"PostgreSQL connection failed: {e}")
 
 
 @app.on_event("shutdown")
@@ -127,7 +126,7 @@ async def shutdown_event():
 @app.get("/health")
 async def health_check():
     """Health check endpoint."""
-    status = {"status": "healthy", "service": "advanced-memory-mcp", "version": "1.0.0"}
+    status = {"status": "healthy", "service": "advanced-memory-mcp", "version": "1.1.0"}
     try:
         if db_pool:
             async with db_pool.acquire() as conn:
@@ -139,15 +138,14 @@ async def health_check():
         status["database"] = "error"
 
     try:
-        if qdrant:
-            qdrant.get_collections()
+        res = await http_client.get(f"{QDRANT_URL}/collections")
+        if res.is_success:
             status["qdrant"] = "connected"
         else:
-            status["qdrant"] = "disconnected"
+            status["qdrant"] = f"error ({res.status_code})"
     except Exception:
-        status["qdrant"] = "error"
+        status["qdrant"] = "disconnected"
 
-    status["model_loaded"] = True  # External API
     status["timestamp"] = datetime.now().isoformat()
     return status
 
@@ -176,7 +174,7 @@ async def list_tools():
             },
             {
                 "name": "search_memories",
-                "description": "Search memories by text content using PostgreSQL ILIKE (backward compatible)",
+                "description": "Search memories by text content using PostgreSQL ILIKE",
                 "parameters": {
                     "query": "string (required, search query)",
                     "limit": "integer (optional, default 5, max results)",
@@ -184,7 +182,7 @@ async def list_tools():
             },
             {
                 "name": "semantic_similarity",
-                "description": "Find semantically similar memories using vector cosine similarity in Qdrant",
+                "description": "Find semantically similar memories using vector cosine similarity",
                 "parameters": {
                     "query": "string (required, search query)",
                     "limit": "integer (optional, default 5)",
@@ -193,19 +191,11 @@ async def list_tools():
             },
             {
                 "name": "vector_search",
-                "description": "Full vector search with optional category filter via Qdrant",
+                "description": "Full vector search with optional category filter",
                 "parameters": {
                     "query": "string (required, search query)",
                     "limit": "integer (optional, default 10)",
                     "category": "string (optional, filter by category)",
-                },
-            },
-            {
-                "name": "get_context",
-                "description": "Retrieve related memories combining text and vector search",
-                "parameters": {
-                    "topic": "string (required, the topic to get context for)",
-                    "depth": "integer (optional, default 3, number of results per method)",
                 },
             },
         ]
@@ -220,7 +210,6 @@ async def call_tool(request: ToolCallRequest):
         "search_memories": handle_search_memories,
         "semantic_similarity": handle_semantic_similarity,
         "vector_search": handle_vector_search,
-        "get_context": handle_get_context,
     }
     handler = handlers.get(request.name)
     if not handler:
@@ -228,10 +217,9 @@ async def call_tool(request: ToolCallRequest):
     try:
         result = await handler(request.arguments)
         return {"success": True, "result": result}
-    except HTTPException:
-        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Tool execution failed: {str(e)}")
+        logger.error(f"Tool {request.name} failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # --- Tool Handlers ---
@@ -247,31 +235,27 @@ async def handle_store_memory(args: Dict[str, Any]) -> Dict[str, Any]:
 
     # Generate embedding
     vector = await encode_text(content)
-
-    # Generate unique ID for the Qdrant point
     embedding_id = str(uuid.uuid4())
 
-    # Store vector in Qdrant
-    if not qdrant:
-        raise HTTPException(status_code=503, detail="Qdrant not available")
-    qdrant.upsert(
-        collection_name=COLLECTION_NAME,
-        points=[
-            PointStruct(
-                id=embedding_id,
-                vector=vector,
-                payload={
+    # Store vector in Qdrant via REST
+    point_payload = {
+        "points": [
+            {
+                "id": embedding_id,
+                "vector": vector,
+                "payload": {
                     "content": content,
                     "category": category,
                     "metadata": metadata,
-                },
-            )
-        ],
-    )
+                }
+            }
+        ]
+    }
+    
+    res = await http_client.put(f"{QDRANT_URL}/collections/{COLLECTION_NAME}/points?wait=true", json=point_payload)
+    res.raise_for_status()
 
     # Store metadata in PostgreSQL
-    if not db_pool:
-        raise HTTPException(status_code=503, detail="Database not available")
     async with db_pool.acquire() as conn:
         row = await conn.fetchrow(
             """
@@ -299,9 +283,6 @@ async def handle_search_memories(args: Dict[str, Any]) -> List[Dict[str, Any]]:
         raise HTTPException(status_code=400, detail="query is required")
     limit = min(args.get("limit", 5), 100)
 
-    if not db_pool:
-        raise HTTPException(status_code=503, detail="Database not available")
-
     async with db_pool.acquire() as conn:
         rows = await conn.fetch(
             """
@@ -320,9 +301,7 @@ async def handle_search_memories(args: Dict[str, Any]) -> List[Dict[str, Any]]:
             "id": row["id"],
             "content": row["content"],
             "category": row["category"],
-            "metadata": (
-                json.loads(row["metadata_json"]) if row["metadata_json"] else {}
-            ),
+            "metadata": json.loads(row["metadata_json"]) if row["metadata_json"] else {},
             "created_at": row["created_at"].isoformat(),
         }
         for row in rows
@@ -336,24 +315,26 @@ async def handle_semantic_similarity(args: Dict[str, Any]) -> List[Dict[str, Any
     limit = min(args.get("limit", 5), 100)
     threshold = args.get("threshold", 0.7)
 
-    if not qdrant:
-        raise HTTPException(status_code=503, detail="Qdrant not available")
-
     query_vector = await encode_text(query)
-    results = qdrant.search(
-        collection_name=COLLECTION_NAME,
-        query_vector=query_vector,
-        limit=limit,
-        score_threshold=threshold,
-    )
+    
+    search_payload = {
+        "vector": query_vector,
+        "limit": limit,
+        "score_threshold": threshold,
+        "with_payload": True
+    }
+    
+    res = await http_client.post(f"{QDRANT_URL}/collections/{COLLECTION_NAME}/points/search", json=search_payload)
+    res.raise_for_status()
+    results = res.json().get("result", [])
 
     return [
         {
-            "content": hit.payload.get("content", ""),
-            "category": hit.payload.get("category", ""),
-            "metadata": hit.payload.get("metadata", {}),
-            "similarity_score": round(hit.score, 4),
-            "embedding_id": hit.id,
+            "content": hit.get("payload", {}).get("content", ""),
+            "category": hit.get("payload", {}).get("category", ""),
+            "metadata": hit.get("payload", {}).get("metadata", {}),
+            "similarity_score": round(hit.get("score", 0.0), 4),
+            "embedding_id": hit.get("id"),
         }
         for hit in results
     ]
@@ -366,72 +347,36 @@ async def handle_vector_search(args: Dict[str, Any]) -> List[Dict[str, Any]]:
     limit = min(args.get("limit", 10), 100)
     category = args.get("category")
 
-    if not qdrant:
-        raise HTTPException(status_code=503, detail="Qdrant not available")
-
     query_vector = await encode_text(query)
 
-    search_filter = None
+    search_payload = {
+        "vector": query_vector,
+        "limit": limit,
+        "with_payload": True
+    }
+    
     if category:
-        search_filter = Filter(
-            must=[FieldCondition(key="category", match=MatchValue(value=category))]
-        )
+        search_payload["filter"] = {
+            "must": [{"key": "category", "match": {"value": category}}]
+        }
 
-    results = qdrant.search(
-        collection_name=COLLECTION_NAME,
-        query_vector=query_vector,
-        limit=limit,
-        query_filter=search_filter,
-    )
+    res = await http_client.post(f"{QDRANT_URL}/collections/{COLLECTION_NAME}/points/search", json=search_payload)
+    res.raise_for_status()
+    results = res.json().get("result", [])
 
     return [
         {
-            "content": hit.payload.get("content", ""),
-            "category": hit.payload.get("category", ""),
-            "metadata": hit.payload.get("metadata", {}),
-            "similarity_score": round(hit.score, 4),
-            "embedding_id": hit.id,
+            "content": hit.get("payload", {}).get("content", ""),
+            "category": hit.get("payload", {}).get("category", ""),
+            "metadata": hit.get("payload", {}).get("metadata", {}),
+            "similarity_score": round(hit.get("score", 0.0), 4),
+            "embedding_id": hit.get("id"),
         }
         for hit in results
     ]
 
 
-async def handle_get_context(args: Dict[str, Any]) -> Dict[str, Any]:
-    topic = args.get("topic")
-    if not topic:
-        raise HTTPException(status_code=400, detail="topic is required")
-    depth = min(args.get("depth", 3), 20)
-
-    # Text search via PostgreSQL
-    text_results = await handle_search_memories({"query": topic, "limit": depth})
-
-    # Vector search via Qdrant
-    vector_results = []
-    if qdrant:
-        vector_results = await handle_semantic_similarity(
-            {"query": topic, "limit": depth, "threshold": 0.5}
-        )
-
-    # Deduplicate by content
-    seen_contents = set()
-    combined = []
-    for item in vector_results + text_results:
-        content = item.get("content", "")
-        if content not in seen_contents:
-            seen_contents.add(content)
-            combined.append(item)
-
-    return {
-        "topic": topic,
-        "text_matches": len(text_results),
-        "vector_matches": len(vector_results),
-        "combined_results": combined,
-        "total_unique": len(combined),
-    }
-
-
 if __name__ == "__main__":
     import uvicorn
-
     port = int(os.getenv("MCP_SERVER_PORT", "8000"))
     uvicorn.run(app, host="0.0.0.0", port=port)
