@@ -11,6 +11,7 @@ RUN apt-get update && apt-get install -y \
 
 # Set working directory
 WORKDIR /app
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
 # Copy requirements files
 COPY requirements.txt ./
@@ -20,8 +21,7 @@ RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
 # Install Python dependencies
-RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
-    pip install --no-cache-dir -r requirements.txt
+RUN uv pip install --system --no-cache -r requirements.txt
 
 # ===========================================
 # STAGE 2: Runtime image
@@ -55,6 +55,7 @@ ENV PATH="/opt/venv/bin:$PATH"
 
 # Set working directory
 WORKDIR /app
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
 # Copy application code
 COPY --chown=zenuser:zenuser . .

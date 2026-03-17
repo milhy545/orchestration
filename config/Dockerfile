@@ -1,6 +1,7 @@
 FROM python:3.12-slim
 
 WORKDIR /app
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
@@ -11,7 +12,7 @@ RUN apt-get update && apt-get install -y \
 COPY config/requirements.txt ./requirements.txt
 
 # Install Python dependencies
-RUN pip install --no-cache-dir -r requirements.txt
+RUN uv pip install --system --no-cache -r requirements.txt
 
 # Copy orchestrator bootstrap + package
 COPY config/mega_orchestrator.py ./mega_orchestrator.py
