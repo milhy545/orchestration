@@ -420,7 +420,7 @@ services:
     depends_on: [mcp-postgresql]
     
   # Coordinator (Only service with external port)
-  zen-coordinator:
+  mega-orchestrator:
     build: ./coordinator
     ports: ["8020:8020"]
     networks: [orchestration_network]
@@ -441,7 +441,7 @@ services:
           memory: 512M
           cpus: 0.5
           
-  zen-coordinator:
+  mega-orchestrator:
     deploy:
       replicas: 2  # Load balanced
       resources:
@@ -580,7 +580,7 @@ MAX_AUDIO_SIZE=500MB
 {
   "timestamp": "2025-08-17T03:24:38.371865Z",
   "level": "INFO",
-  "service": "zen-coordinator",
+  "service": "mega-orchestrator",
   "tool": "file_read",
   "request_id": "req_123456",
   "execution_time": "0.045s",

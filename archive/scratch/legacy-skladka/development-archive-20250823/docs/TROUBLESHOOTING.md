@@ -37,7 +37,7 @@ if curl -s http://localhost:8020/health >/dev/null; then
     echo "✅ ZEN Coordinator: Running"
 else
     echo "❌ ZEN Coordinator: Failed"
-    echo "Fix: docker-compose restart zen-coordinator"
+    echo "Fix: docker-compose restart mega-orchestrator"
 fi
 
 # Check critical services
@@ -91,7 +91,7 @@ docker network inspect orchestration_default
 ### Service-Specific Diagnostics
 ```bash
 # ZEN Coordinator logs
-docker logs zen-coordinator --tail=50
+docker logs mega-orchestrator --tail=50
 
 # All MCP service logs
 docker logs mcp-filesystem --tail=20
@@ -118,10 +118,10 @@ docker logs mcp-redis --tail=30
 **Diagnosis:**
 ```bash
 # Check coordinator status
-docker ps | grep zen-coordinator
+docker ps | grep mega-orchestrator
 
 # Check coordinator logs
-docker logs zen-coordinator --tail=100
+docker logs mega-orchestrator --tail=100
 
 # Check if port is in use
 netstat -tlnp | grep :8020
@@ -131,7 +131,7 @@ netstat -tlnp | grep :8020
 
 **Solution A: Simple Restart**
 ```bash
-docker-compose restart zen-coordinator
+docker-compose restart mega-orchestrator
 sleep 10
 curl http://localhost:8020/health
 ```
@@ -139,14 +139,14 @@ curl http://localhost:8020/health
 **Solution B: Full Rebuild**
 ```bash
 # Stop and remove coordinator
-docker-compose stop zen-coordinator
-docker-compose rm -f zen-coordinator
+docker-compose stop mega-orchestrator
+docker-compose rm -f mega-orchestrator
 
 # Rebuild and start
-docker-compose up -d zen-coordinator
+docker-compose up -d mega-orchestrator
 
 # Verify startup
-docker logs zen-coordinator -f
+docker logs mega-orchestrator -f
 ```
 
 **Solution C: Check Dependencies**
@@ -166,7 +166,7 @@ for port in 8001 8002 8003 8004 8005 8011 8012; do
 done
 
 # Start coordinator after services are up
-docker-compose restart zen-coordinator
+docker-compose restart mega-orchestrator
 ```
 
 ### 2. MCP Service Communication Errors
@@ -191,7 +191,7 @@ docker logs mcp-filesystem | grep -i "mcp\|protocol\|error"
 **Solution A: Restart Problematic Service**
 ```bash
 # Identify which service is failing from ZEN Coordinator logs
-docker logs zen-coordinator | grep -i "error\|failed"
+docker logs mega-orchestrator | grep -i "error\|failed"
 
 # Restart specific service (example for filesystem)
 docker-compose restart mcp-filesystem
@@ -213,14 +213,14 @@ docker exec mcp-filesystem netstat -tlnp
 **Solution C: Protocol Debugging**
 ```bash
 # Enable debug mode in coordinator
-docker-compose stop zen-coordinator
+docker-compose stop mega-orchestrator
 
 # Edit docker-compose.yml to add debug environment
 # Then restart with debug logging
-docker-compose up -d zen-coordinator
+docker-compose up -d mega-orchestrator
 
 # Monitor debug logs
-docker logs zen-coordinator -f
+docker logs mega-orchestrator -f
 ```
 
 ### 3. Database Connection Issues
@@ -385,7 +385,7 @@ docker-compose up -d
 # Add memory limits to docker-compose.yml
 version: '3.8'
 services:
-  zen-coordinator:
+  mega-orchestrator:
     mem_limit: 512m
   mcp-filesystem:
     mem_limit: 256m

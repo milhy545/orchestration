@@ -222,9 +222,9 @@ version: "3.8"
 
 services:
   # ZEN Coordinator - Master Controller
-  zen-coordinator:
+  mega-orchestrator:
     build: ./config
-    container_name: zen-coordinator
+    container_name: mega-orchestrator
     ports:
       - "7000:8020"
     environment:
@@ -503,7 +503,7 @@ docker stats
 
 ```bash
 # ZEN Coordinator logs
-docker logs zen-coordinator
+docker logs mega-orchestrator
 
 # Specific service logs
 docker logs mcp-filesystem
@@ -580,7 +580,7 @@ export ENABLE_METRICS=true
 version: "3.8"
 
 services:
-  zen-coordinator:
+  mega-orchestrator:
     build: ./config
     restart: always
     environment:
@@ -691,10 +691,10 @@ CREATE INDEX idx_importance ON memories(importance);
 
 ```yaml
 # Multiple ZEN Coordinator instances
-zen-coordinator-1:
+mega-orchestrator-1:
   ports:
     - "7000:8020"
-zen-coordinator-2:
+mega-orchestrator-2:
   ports:
     - "7051:8020"
 ```

@@ -2,11 +2,11 @@ version: "3.8"
 
 services:
   # ============================================================================
-  # 7000: Mega-Orchestrator / ZEN Coordinator - Master Controller (HTTP ↔ MCP Bridge)
+  # 7000: Mega-Orchestrator - Master Controller (HTTP ↔ MCP Bridge)
   # ============================================================================
-  zen-coordinator:
+  mega-orchestrator:
     build: ./config
-    container_name: zen-coordinator
+    container_name: mega-orchestrator
     ports:
       - "7000:8020"
     environment:

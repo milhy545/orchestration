@@ -4,9 +4,9 @@ services:
   # ============================================================================
   # 8020: ZEN Coordinator - Master Controller (HTTP ↔ MCP Bridge)  
   # ============================================================================
-  zen-coordinator:
+  mega-orchestrator:
     build: ./config
-    container_name: zen-coordinator
+    container_name: mega-orchestrator
     ports:
       - "8020:8020"
     environment:

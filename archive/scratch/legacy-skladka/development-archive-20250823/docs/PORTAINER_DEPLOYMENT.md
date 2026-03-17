@@ -671,7 +671,7 @@ curl -X GET "$PORTAINER_URL/api/endpoints/$ENDPOINT_ID/docker/containers/json" \
   -H "Authorization: Bearer $PORTAINER_TOKEN" | jq
 
 # Check logs for any errors
-curl -X GET "$PORTAINER_URL/api/endpoints/$ENDPOINT_ID/docker/containers/zen-coordinator/logs?stdout=true&stderr=true&tail=100" \
+curl -X GET "$PORTAINER_URL/api/endpoints/$ENDPOINT_ID/docker/containers/mega-orchestrator/logs?stdout=true&stderr=true&tail=100" \
   -H "Authorization: Bearer $PORTAINER_TOKEN"
 ```
 
@@ -821,7 +821,7 @@ docker-compose ps
 2. **Review Service Logs:**
 ```bash
 # Check coordinator logs
-docker logs zen-coordinator --tail=50
+docker logs mega-orchestrator --tail=50
 
 # Check specific service logs
 docker logs mcp-filesystem --tail=20
@@ -830,7 +830,7 @@ docker logs mcp-filesystem --tail=20
 3. **Restart Services:**
 ```bash
 # Restart specific service
-docker-compose restart zen-coordinator
+docker-compose restart mega-orchestrator
 
 # Or restart entire stack via Portainer UI
 ```
@@ -846,7 +846,7 @@ docker-compose restart zen-coordinator
 1. **Verify Environment Variables:**
 ```bash
 # Check container environment
-docker exec zen-coordinator env | grep -E "(POSTGRES|REDIS|JWT)"
+docker exec mega-orchestrator env | grep -E "(POSTGRES|REDIS|JWT)"
 ```
 
 2. **Update Stack Configuration:**

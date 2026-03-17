@@ -86,7 +86,7 @@ Create `docker-compose.prod.yml`:
 version: "3.8"
 
 services:
-  zen-coordinator:
+  mega-orchestrator:
     restart: always
     deploy:
       resources:
@@ -246,7 +246,7 @@ save 300 10
 version: "3.8"
 
 services:
-  zen-coordinator:
+  mega-orchestrator:
     deploy:
       replicas: 3
     ports:
@@ -267,7 +267,7 @@ backend orchestration
 #### Common Issues
 ```bash
 # Check service logs
-docker-compose logs zen-coordinator
+docker-compose logs mega-orchestrator
 
 # Database connection issues
 docker exec -it mcp-postgresql psql -U $POSTGRES_USER -d $POSTGRES_DB

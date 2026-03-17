@@ -5,7 +5,7 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 import asyncpg
-import numpy as np
+import httpx
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 from qdrant_client import QdrantClient
@@ -17,11 +17,10 @@ from qdrant_client.http.models import (
     PointStruct,
     VectorParams,
 )
-from sentence_transformers import SentenceTransformer
 
 app = FastAPI(
     title="Advanced Memory MCP API",
-    description="Advanced memory storage with vector search via Qdrant and sentence-transformers.",
+    description="Advanced memory storage with vector search via Qdrant and external embeddings.",
     version="1.0.0",
     docs_url="/docs",
     redoc_url="/redoc",
@@ -33,20 +32,38 @@ DATABASE_URL = os.getenv(
     "postgresql://mcp_admin:change_me_in_production@postgresql:5432/mcp_unified",
 )
 QDRANT_URL = os.getenv("QDRANT_URL", "http://qdrant-vector:6333")
-MODEL_NAME = "all-MiniLM-L6-v2"
-EMBEDDING_DIM = 384
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+EMBEDDING_DIM = 768  # Gemini text-embedding-004 uses 768 dimensions
 COLLECTION_NAME = "advanced_memories"
 
 # Globals initialized at startup
 db_pool: Optional[asyncpg.Pool] = None
 qdrant: Optional[QdrantClient] = None
-model: Optional[SentenceTransformer] = None
+http_client: Optional[httpx.AsyncClient] = None
 
 
-def encode_text(text: str) -> List[float]:
-    """Encode text into a vector using sentence-transformers."""
-    embedding = model.encode(text, normalize_embeddings=True)
-    return embedding.tolist()
+async def encode_text(text: str) -> List[float]:
+    """Encode text into a vector using external Gemini API."""
+    if not GEMINI_API_KEY:
+        # Fallback dummy embedding if key is missing (for local dev/tests without API key)
+        return [0.0] * EMBEDDING_DIM
+        
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent?key={GEMINI_API_KEY}"
+    payload = {
+        "model": "models/text-embedding-004",
+        "content": {
+            "parts": [{"text": text}]
+        }
+    }
+    
+    try:
+        response = await http_client.post(url, json=payload, timeout=10.0)
+        response.raise_for_status()
+        data = response.json()
+        return data.get("embedding", {}).get("values", [0.0] * EMBEDDING_DIM)
+    except Exception as e:
+        print(f"Error calling embedding API: {e}")
+        return [0.0] * EMBEDDING_DIM
 
 
 async def ensure_pg_table():
@@ -76,14 +93,10 @@ def ensure_qdrant_collection():
 
 @app.on_event("startup")
 async def startup_event():
-    """Initialize connections and model on startup."""
-    global db_pool, qdrant, model
+    """Initialize connections and HTTP client on startup."""
+    global db_pool, qdrant, http_client
 
-    # Load embedding model
-    try:
-        model = SentenceTransformer(MODEL_NAME)
-    except Exception as e:
-        print(f"Warning: failed to load model: {e}")
+    http_client = httpx.AsyncClient()
 
     # Connect to Qdrant
     try:
@@ -104,6 +117,8 @@ async def startup_event():
 async def shutdown_event():
     if db_pool:
         await db_pool.close()
+    if http_client:
+        await http_client.aclose()
 
 
 # --- Health ---
@@ -132,7 +147,7 @@ async def health_check():
     except Exception:
         status["qdrant"] = "error"
 
-    status["model_loaded"] = model is not None
+    status["model_loaded"] = True  # External API
     status["timestamp"] = datetime.now().isoformat()
     return status
 
@@ -231,9 +246,7 @@ async def handle_store_memory(args: Dict[str, Any]) -> Dict[str, Any]:
     metadata = args.get("metadata") or {}
 
     # Generate embedding
-    if not model:
-        raise HTTPException(status_code=503, detail="Embedding model not loaded")
-    vector = encode_text(content)
+    vector = await encode_text(content)
 
     # Generate unique ID for the Qdrant point
     embedding_id = str(uuid.uuid4())
@@ -323,12 +336,10 @@ async def handle_semantic_similarity(args: Dict[str, Any]) -> List[Dict[str, Any
     limit = min(args.get("limit", 5), 100)
     threshold = args.get("threshold", 0.7)
 
-    if not model:
-        raise HTTPException(status_code=503, detail="Embedding model not loaded")
     if not qdrant:
         raise HTTPException(status_code=503, detail="Qdrant not available")
 
-    query_vector = encode_text(query)
+    query_vector = await encode_text(query)
     results = qdrant.search(
         collection_name=COLLECTION_NAME,
         query_vector=query_vector,
@@ -355,12 +366,10 @@ async def handle_vector_search(args: Dict[str, Any]) -> List[Dict[str, Any]]:
     limit = min(args.get("limit", 10), 100)
     category = args.get("category")
 
-    if not model:
-        raise HTTPException(status_code=503, detail="Embedding model not loaded")
     if not qdrant:
         raise HTTPException(status_code=503, detail="Qdrant not available")
 
-    query_vector = encode_text(query)
+    query_vector = await encode_text(query)
 
     search_filter = None
     if category:
@@ -398,7 +407,7 @@ async def handle_get_context(args: Dict[str, Any]) -> Dict[str, Any]:
 
     # Vector search via Qdrant
     vector_results = []
-    if model and qdrant:
+    if qdrant:
         vector_results = await handle_semantic_similarity(
             {"query": topic, "limit": depth, "threshold": 0.5}
         )

@@ -159,7 +159,7 @@ docker-compose up -d
 docker-compose ps
 
 # View logs
-docker-compose logs -f zen-coordinator
+docker-compose logs -f mega-orchestrator
 ```
 
 3. **Health Verification**:
@@ -403,7 +403,7 @@ docker-compose up -d
 
 ```bash
 # Check ZEN Coordinator logs
-docker logs zen-coordinator
+docker logs mega-orchestrator
 
 # Test MCP tool directly
 curl -X POST http://localhost:8020/mcp \
@@ -411,7 +411,7 @@ curl -X POST http://localhost:8020/mcp \
   -d '{"tool":"system_info","arguments":{}}'
 
 # Restart coordinator if needed
-docker-compose restart zen-coordinator
+docker-compose restart mega-orchestrator
 ```
 
 #### 4. Memory/Performance Issues

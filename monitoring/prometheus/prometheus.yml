@@ -18,7 +18,7 @@ scrape_configs:
     static_configs:
       - targets: ['localhost:9090']
 
-  # ZEN Coordinator - Master Controller
+  # Mega-Orchestrator - Master Controller
   - job_name: 'mega-orchestrator'
     static_configs:
       - targets: ['mega-orchestrator:7000']

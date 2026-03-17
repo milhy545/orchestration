@@ -66,11 +66,11 @@ OS: Alpine Linux (produkční)
 
 #### **2.1 Backup & Analysis**
 - [ ] Backup HAS: `tar -czf mega_orchestrator_backup_$(date +%Y%m%d_%H%M%S).tar.gz /home/orchestration/`
-- [ ] Analýza zen-coordinator kódu
+- [ ] Analýza mega-orchestrator kódu
 - [ ] Identifikace komponent pro přejmenování
 
 #### **2.2 Mega-Orchestrator Implementation**
-- [ ] Refaktorování zen-coordinator → Mega-Orchestrator
+- [ ] Refaktorování mega-orchestrator → Mega-Orchestrator
 - [ ] Implementace Provider Registry
 - [ ] SAGE Mode Router dokončení
 - [ ] Conversation Memory v2
