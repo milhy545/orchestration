@@ -28,7 +28,19 @@ DATABASE_URL = os.getenv(
     "postgresql://mcp_admin:change_me_in_production@postgresql:5432/mcp_unified",
 )
 QDRANT_URL = os.getenv("QDRANT_URL", "http://qdrant-vector:6333").rstrip('/')
+
+# Load API Key from environment or Vault file
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+GEMINI_API_KEY_FILE = os.getenv("GEMINI_API_KEY_FILE", "")
+
+if not GEMINI_API_KEY and GEMINI_API_KEY_FILE and os.path.exists(GEMINI_API_KEY_FILE):
+    try:
+        with open(GEMINI_API_KEY_FILE, 'r') as f:
+            GEMINI_API_KEY = f.read().strip()
+            logger.info(f"Loaded Gemini API key from {GEMINI_API_KEY_FILE}")
+    except Exception as e:
+        logger.error(f"Failed to load Gemini API key from file: {e}")
+
 EMBEDDING_DIM = 768  # Gemini text-embedding-004 uses 768 dimensions
 COLLECTION_NAME = "advanced_memories"
 
