@@ -151,7 +151,7 @@ class MegaOrchestrator:
                 host="advanced-memory-mcp",
                 port=7012,
                 tools=["vector_search", "semantic_similarity", "semantic_search", "store_semantic_memory", "store_memory"],
-                sage_modes=[SAGEMode.MEMORY, SAGEMode.ANALYZE, SAGEMode.CHAT, SAGEMode.DOCS, SAGEMode.CODE, SAGEMode.RESEARCH],
+                sage_modes=[SAGEMode.MEMORY, SAGEMode.ANALYZE, SAGEMode.CHAT, SAGEMode.DOCS, SAGEMode.CODE],
                 priority=2
             ),
             "advanced_memory_v2": MCPServiceConfig(
