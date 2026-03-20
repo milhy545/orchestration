@@ -1,34 +1,31 @@
-# .github/dependabot.yml
 version: 2
 updates:
-  # Enable version updates for npm in root
-  - package-ecosystem: "npm"
-    directory: "/"
-    schedule:
-      interval: "weekly"
-    # Ignore archived development folder
-    ignore:
-      - dependency-name: "*"
-        update-types: ["version-update:semver-major", "version-update:semver-minor"]
-    open-pull-requests-limit: 5
-
-  # Ignore npm dependencies in archived folders
-  - package-ecosystem: "npm"
-    directory: "/Skladka/development-archive-20250823"
-    schedule:
-      interval: "monthly"
-    open-pull-requests-limit: 0  # Don't create PRs for archived code
-
-  # Python dependencies (if we add requirements.txt)
+  # Python - Mega Orchestrator Core
   - package-ecosystem: "pip"
     directory: "/"
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 10
 
-  # Docker dependencies
+  # Docker - Unified fleet
   - package-ecosystem: "docker"
     directory: "/"
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 5
+
+  # NPM - Explicitly only for active services (if any)
+  # We block root npm to prevent archive crawling
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    ignore:
+      - dependency-name: "*"
+    open-pull-requests-limit: 0
+
+  # Github Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
