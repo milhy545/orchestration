@@ -46,9 +46,7 @@ logger = logging.getLogger("mqtt-mcp")
 class MQTTMCPServer:
     def __init__(self):
         self.mqtt_client = None
-        self.mqtt_broker = os.getenv(
-            "MQTT_BROKER", "mqtt-broker"
-        )  # Docker service name
+        self.mqtt_broker = os.getenv("MQTT_BROKER", "mqtt-broker")  # Docker service name
         self.mqtt_port = int(os.getenv("MQTT_PORT", "1883"))
         self.mqtt_username = os.getenv("MQTT_USERNAME", "mcp_admin")
         # lgtm[py/hardcoded-credentials] - Default for development; use MQTT_PASSWORD env var in production
@@ -60,9 +58,7 @@ class MQTTMCPServer:
         """Connect to MQTT broker"""
         try:
             self.mqtt_client = gmqtt.Client("mcp-mqtt-server")
-            self.mqtt_client.set_auth_credentials(
-                self.mqtt_username, self.mqtt_password
-            )
+            self.mqtt_client.set_auth_credentials(self.mqtt_username, self.mqtt_password)
 
             # Set event handlers
             self.mqtt_client.on_connect = self.on_mqtt_connect
@@ -70,9 +66,7 @@ class MQTTMCPServer:
             self.mqtt_client.on_disconnect = self.on_mqtt_disconnect
 
             await self.mqtt_client.connect(self.mqtt_broker, self.mqtt_port)
-            logger.info(
-                f"Connected to MQTT broker at {self.mqtt_broker}:{self.mqtt_port}"
-            )
+            logger.info(f"Connected to MQTT broker at {self.mqtt_broker}:{self.mqtt_port}")
             self.connected = True
 
         except Exception as e:
@@ -163,9 +157,7 @@ class MQTTMCPServer:
             "connected": self.connected,
             "broker": f"{self.mqtt_broker}:{self.mqtt_port}",
             "subscribed_topics": list(self.subscribed_topics.keys()),
-            "total_messages": sum(
-                len(messages) for messages in self.subscribed_topics.values()
-            ),
+            "total_messages": sum(len(messages) for messages in self.subscribed_topics.values()),
             "timestamp": datetime.now().isoformat(),
         }
 

@@ -44,9 +44,7 @@ def get_memory_connection():
     try:
         return psycopg2.connect(DATABASE_URL, connect_timeout=10)
     except psycopg2.Error as e:
-        raise HTTPException(
-            status_code=500, detail=f"Database connection failed: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Database connection failed: {str(e)}")
 
 
 def ensure_table_exists():
@@ -54,7 +52,8 @@ def ensure_table_exists():
     conn = get_memory_connection()
     try:
         with conn.cursor() as cursor:
-            cursor.execute("""
+            cursor.execute(
+                """
                 CREATE TABLE IF NOT EXISTS unified_memory (
                     id SERIAL PRIMARY KEY,
                     content TEXT NOT NULL,
@@ -64,7 +63,8 @@ def ensure_table_exists():
                     timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     metadata JSONB DEFAULT '{}'
                 )
-                """)
+                """
+            )
             conn.commit()
     except Exception as e:
         conn.rollback()
@@ -86,9 +86,7 @@ class MemoryEntry(BaseModel):
     @validator("content")
     def validate_content_size(cls, v):
         if len(v) > MAX_CONTENT_SIZE:
-            raise ValueError(
-                f"Content too large. Maximum size: {MAX_CONTENT_SIZE} bytes"
-            )
+            raise ValueError(f"Content too large. Maximum size: {MAX_CONTENT_SIZE} bytes")
         return v
 
 
@@ -214,9 +212,7 @@ async def list_memories(
                 )
             return memories
     except Exception as e:
-        raise HTTPException(
-            status_code=500, detail=f"Failed to list memories: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Failed to list memories: {str(e)}")
     finally:
         try:
             conn.close()
@@ -266,9 +262,7 @@ async def search_memories(
                 )
             return memories
     except Exception as e:
-        raise HTTPException(
-            status_code=500, detail=f"Failed to search memories: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Failed to search memories: {str(e)}")
     finally:
         try:
             conn.close()
@@ -291,9 +285,7 @@ async def delete_memory(memory_id: int):
         raise
     except Exception as e:
         conn.rollback()
-        raise HTTPException(
-            status_code=500, detail=f"Failed to delete memory: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Failed to delete memory: {str(e)}")
     finally:
         try:
             conn.close()
@@ -307,14 +299,16 @@ async def memory_stats():
     conn = get_memory_connection()
     try:
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cursor:
-            cursor.execute("""
+            cursor.execute(
+                """
                 SELECT
                     COUNT(*) as total_memories,
                     AVG(importance) as avg_importance,
                     COUNT(DISTINCT agent) as unique_agents,
                     COUNT(DISTINCT type) as unique_types
                 FROM unified_memory
-                """)
+                """
+            )
             stats = cursor.fetchone()
             return {
                 "total_memories": stats["total_memories"],

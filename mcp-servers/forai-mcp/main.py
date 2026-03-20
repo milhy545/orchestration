@@ -84,9 +84,7 @@ def _analyze_python_file(filepath: str) -> Dict[str, Any]:
                 for b in node.bases
             ]
             classes.append({"name": node.name, "bases": bases, "line": node.lineno})
-        elif isinstance(node, ast.FunctionDef) or isinstance(
-            node, ast.AsyncFunctionDef
-        ):
+        elif isinstance(node, ast.FunctionDef) or isinstance(node, ast.AsyncFunctionDef):
             functions.append(
                 {
                     "name": node.name,
@@ -107,9 +105,7 @@ def _analyze_python_file(filepath: str) -> Dict[str, Any]:
                 if isinstance(target, ast.Name) and target.id == "__all__":
                     if isinstance(node.value, (ast.List, ast.Tuple)):
                         for elt in node.value.elts:
-                            if isinstance(elt, ast.Constant) and isinstance(
-                                elt.value, str
-                            ):
+                            if isinstance(elt, ast.Constant) and isinstance(elt.value, str):
                                 exports.append(elt.value)
 
     return {
@@ -179,18 +175,14 @@ def forai_process(path: str, recursive: bool = True) -> Dict[str, Any]:
     for f in files[:200]:
         analysis = _analyze_python_file(str(f))
         if "error" in analysis:
-            processed.append(
-                {"file": str(f), "status": "skipped", "error": analysis["error"]}
-            )
+            processed.append({"file": str(f), "status": "skipped", "error": analysis["error"]})
             continue
         header = _generate_forai_header(analysis)
         content = f.read_text(encoding="utf-8", errors="replace")
         # Remove existing FORAI header
         import re
 
-        content = re.sub(
-            r"# FORAI:START.*?# FORAI:END\n?", "", content, flags=re.DOTALL
-        )
+        content = re.sub(r"# FORAI:START.*?# FORAI:END\n?", "", content, flags=re.DOTALL)
         new_content = header + "\n\n" + content.lstrip("\n")
         f.write_text(new_content, encoding="utf-8")
         processed.append({"file": str(f), "status": "processed"})
@@ -290,9 +282,7 @@ TOOLS = [
 
 TOOL_DISPATCH = {
     "forai_analyze": lambda args: forai_analyze(args["path"]),
-    "forai_process": lambda args: forai_process(
-        args["path"], args.get("recursive", True)
-    ),
+    "forai_process": lambda args: forai_process(args["path"], args.get("recursive", True)),
     "forai_query": lambda args: forai_query(args["path"], args["query"]),
 }
 

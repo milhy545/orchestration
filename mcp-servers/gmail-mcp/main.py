@@ -126,9 +126,7 @@ async def get_email_content(email_id: str):
 
 @app.post("/gmail/count")
 async def count_daily_emails(start_date: str, end_date: str):
-    return await _call_tool(
-        "count-daily-emails", {"start_date": start_date, "end_date": end_date}
-    )
+    return await _call_tool("count-daily-emails", {"start_date": start_date, "end_date": end_date})
 
 
 @app.get("/gmail/labels")
