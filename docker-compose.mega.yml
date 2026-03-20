@@ -1,612 +1,542 @@
-version: "3.8"
-
+networks:
+  mcp-network:
+    driver: bridge
 services:
-  # ============================================================================
-  # 7000: Mega-Orchestrator - Master Controller (HTTP ↔ MCP Bridge)
-  # ============================================================================
-  mega-orchestrator:
-    build: ./config
-    container_name: mega-orchestrator
-    ports:
-      - "7000:8020"
-    environment:
-      - MCP_DATABASE_URL=${MCP_DATABASE_URL:-}
-      - REDIS_URL=${REDIS_URL:-redis://redis:6379}
-      - MARKETPLACE_JWT_TOKEN=${MARKETPLACE_JWT_TOKEN:-}
-    depends_on:
-      - postgresql
-      - redis
-    restart: unless-stopped
-    networks:
-      - mcp-network
-
-  # ============================================================================
-  # 7001-7010: Core MCP Services (Základní služby)
-  # ============================================================================
-  
-  # 7001: Filesystem MCP - File Operations
-  filesystem-mcp:
-    build: /home/orchestration/mcp-servers/filesystem-mcp
-    container_name: mcp-filesystem
-    ports:
-      - "7001:8000"
-    volumes:
-      - /home/orchestration/data/workspaces:/workspace
-      - /home/orchestration:/home/orchestration
-      - /home:/home:ro
-      - /tmp:/tmp
-    environment:
-      - MCP_DATABASE_URL=${MCP_DATABASE_URL:-}
-      - REDIS_URL=redis://redis:6379
-    depends_on:
-      - postgresql
-      - redis
-    restart: unless-stopped
-    networks:
-      - mcp-network
-
-  # 7002: Git MCP - Version Control
-  git-mcp:
-    build: /home/orchestration/mcp-servers/git-mcp
-    container_name: mcp-git
-    ports:
-      - "7002:8000"
-    volumes:
-      - /home/orchestration/data/repositories:/repositories
-      - /home/orchestration/data/workspaces:/workspace
-      - /home/orchestration:/home/orchestration
-      - /home:/home:ro
-      - /tmp:/tmp
-    environment:
-      - MCP_DATABASE_URL=${MCP_DATABASE_URL:-}
-      - REDIS_URL=redis://redis:6379
-    depends_on:
-      - postgresql
-      - redis
-    restart: unless-stopped
-    networks:
-      - mcp-network
-
-  # 7003: Terminal MCP - Command Execution
-  terminal-mcp:
-    build: /home/orchestration/mcp-servers/terminal-mcp
-    container_name: mcp-terminal
-    ports:
-      - "7003:8000"
-    # privileged: true bylo odstraněno pro zvýšení bezpečnosti.
-    # Místo toho používáme sudo uvnitř kontejneru s omezenými právy.
-    # Pro specifické potřeby lze přidat jednotlivé capabilities.
-    cap_add:
-      - SYS_PTRACE # Příklad: Povolí debuggování procesů, pokud je potřeba.
-    security_opt:
-      - no-new-privileges:true # Zabrání procesu získat nová oprávnění.
-    environment:
-      - MCP_DATABASE_URL=${MCP_DATABASE_URL:-}
-      - REDIS_URL=redis://redis:6379
-    depends_on:
-      - postgresql
-      - redis
-    restart: unless-stopped
-    networks:
-      - mcp-network
-
-  # 7017: Orchestrator CLI - Lightweight Management
-  orchestrator-cli:
-    build: /home/orchestration/orchestrator-cli
-    container_name: mcp-orchestrator-cli
-    ports:
-      - "7017:8000"
-    volumes:
-      - /home/orchestration:/home/orchestration
-      - /home/orchestration/data/repositories:/repositories
-      - /home/orchestration/data/workspaces:/workspace
-    environment:
-      - MCP_DATABASE_URL=${MCP_DATABASE_URL:-}
-      - REDIS_URL=redis://redis:6379
-    depends_on:
-      - postgresql
-      - redis
-    restart: unless-stopped
-    networks:
-      - mcp-network
-
-  # 7004: Database MCP - Data Operations
-  database-mcp:
-    build: /home/orchestration/mcp-servers/database-mcp
-    container_name: mcp-database
-    ports:
-      - "7004:8000"
-    volumes:
-      - /home/orchestration/data/database:/data
-    environment:
-      - MCP_DATABASE_URL=${MCP_DATABASE_URL:-}
-      - REDIS_URL=redis://redis:6379
-    depends_on:
-      - postgresql
-      - redis
-    restart: unless-stopped
-    networks:
-      - mcp-network
-
-  # 7005: Memory MCP - Simple Storage
-  memory-mcp:
-    build: /home/orchestration/mcp-servers/memory-mcp
-    container_name: mcp-memory
-    ports:
-      - "7005:8000"
-    volumes:
-      - /home/orchestration/data/databases:/home/orchestration/data/databases
-    environment:
-      - MCP_DATABASE_URL=${MCP_DATABASE_URL:-}
-      - REDIS_URL=redis://redis:6379
-    depends_on:
-      - postgresql
-      - redis
-    restart: unless-stopped
-    networks:
-      - mcp-network
-
-  # 7006: Network MCP - Network Operations (placeholder - to be implemented)
-  network-mcp:
-    build: /home/orchestration/mcp-servers/network-mcp
-    container_name: mcp-network-service
-    ports:
-      - "7006:8000"
-    working_dir: /app
-    networks:
-      - mcp-network
-
-  # 7007: System MCP - System Info (placeholder - to be implemented)  
-  system-mcp:
-    build: /home/orchestration/mcp-servers/system-mcp
-    container_name: mcp-system
-    ports:
-      - "7007:8000"
-    working_dir: /app
-    networks:
-      - mcp-network
-
-  # 7008: Security MCP - Security Operations (placeholder - to be implemented)
-  security-mcp:
-    build: /home/orchestration/mcp-servers/security-mcp
-    container_name: mcp-security
-    ports:
-      - "7008:8000"
-    environment:
-      - JWT_SECRET_KEY=${JWT_SECRET:-}
-    working_dir: /app
-    restart: unless-stopped
-    networks:
-      - mcp-network
-
-  # 7009: Config MCP - Configuration Management (placeholder - to be implemented)
-  config-mcp:
-    build: /home/orchestration/mcp-servers/config-mcp
-    container_name: mcp-config
-    ports:
-      - "7009:8000"
-    working_dir: /app
-    restart: unless-stopped
-    networks:
-      - mcp-network
-
-  # 7010: Log MCP - Logging Operations (placeholder - to be implemented)
-  log-mcp:
-    build: /home/orchestration/mcp-servers/log-mcp
-    container_name: mcp-log
-    ports:
-      - "7010:8000"
-    working_dir: /app
-    restart: unless-stopped
-    networks:
-      - mcp-network
-
-  # ============================================================================
-  # 7011-7017: AI/Enhanced Services (Pokročilé AI služby)
-  # ============================================================================
-
-  # 7011: Perplexity HUB - Research Retrieval + Synthesis
-  perplexity-hub:
-    build: /home/orchestration/mcp-servers/perplexity-hub
-    container_name: mcp-perplexity-hub
-    ports:
-      - "7011:8000"
-    environment:
-      - MCP_DATABASE_URL=${MCP_DATABASE_URL:-}
-      - REDIS_URL=redis://redis:6379
-    depends_on:
-      - postgresql
-      - redis
-    restart: unless-stopped
-    networks:
-      - mcp-network
-
-  # 7012: Advanced Memory MCP - AI Memory (vector search, semantic similarity)
   advanced-memory-mcp:
     build: /home/orchestration/mcp-servers/advanced-memory-mcp
     container_name: mcp-advanced-memory
-    ports:
-      - "7012:8000"
-    environment:
-      - MCP_DATABASE_URL=${MCP_DATABASE_URL:-}
-      - REDIS_URL=redis://redis:6379
-      - QDRANT_URL=http://qdrant-vector:6333
-      - EMBEDDING_PROVIDER=${EMBEDDING_PROVIDER:-local}
-      - GENERATION_PROVIDER=${GENERATION_PROVIDER:-none}
-      - LOCAL_EMBEDDING_MODEL=${LOCAL_EMBEDDING_MODEL:-all-MiniLM-L6-v2}
-      - GEMINI_EMBED_MODEL=${GEMINI_EMBED_MODEL:-gemini-embedding-001}
-      - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://127.0.0.1:11434}
-      - OLLAMA_EMBED_MODEL=${OLLAMA_EMBED_MODEL:-nomic-embed-text}
-      - OLLAMA_CHAT_MODEL=${OLLAMA_CHAT_MODEL:-llama3.2}
-      - OPENAI_COMPAT_BASE_URL=${OPENAI_COMPAT_BASE_URL:-}
-      - OPENAI_COMPAT_EMBED_MODEL=${OPENAI_COMPAT_EMBED_MODEL:-}
-      - OPENAI_COMPAT_CHAT_MODEL=${OPENAI_COMPAT_CHAT_MODEL:-}
-      - INCEPTION_BASE_URL=${INCEPTION_BASE_URL:-https://api.inceptionlabs.ai/v1}
-      - INCEPTION_MODEL=${INCEPTION_MODEL:-mercury}
-      - MCP_SERVER_PORT=8000
     depends_on:
-      - postgresql
-      - redis
-      - qdrant-vector
-    restart: unless-stopped
+    - postgresql
+    - redis
+    - qdrant-vector
+    environment:
+    - MCP_DATABASE_URL=${MCP_DATABASE_URL:-}
+    - REDIS_URL=redis://redis:6379
+    - QDRANT_URL=http://qdrant-vector:6333
+    - EMBEDDING_PROVIDER=${EMBEDDING_PROVIDER:-local}
+    - GENERATION_PROVIDER=${GENERATION_PROVIDER:-none}
+    - LOCAL_EMBEDDING_MODEL=${LOCAL_EMBEDDING_MODEL:-all-MiniLM-L6-v2}
+    - GEMINI_EMBED_MODEL=${GEMINI_EMBED_MODEL:-gemini-embedding-001}
+    - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://127.0.0.1:11434}
+    - OLLAMA_EMBED_MODEL=${OLLAMA_EMBED_MODEL:-nomic-embed-text}
+    - OLLAMA_CHAT_MODEL=${OLLAMA_CHAT_MODEL:-llama3.2}
+    - OPENAI_COMPAT_BASE_URL=${OPENAI_COMPAT_BASE_URL:-}
+    - OPENAI_COMPAT_EMBED_MODEL=${OPENAI_COMPAT_EMBED_MODEL:-}
+    - OPENAI_COMPAT_CHAT_MODEL=${OPENAI_COMPAT_CHAT_MODEL:-}
+    - INCEPTION_BASE_URL=${INCEPTION_BASE_URL:-https://api.inceptionlabs.ai/v1}
+    - INCEPTION_MODEL=${INCEPTION_MODEL:-mercury}
+    - MCP_SERVER_PORT=8000
     networks:
-      - mcp-network
-
-  # 7013: Transcriber MCP - Audio Processing
+    - mcp-network
+    ports:
+    - 7012:8000
+    restart: unless-stopped
+  backup-service:
+    build: /home/orchestration/mcp-servers/system-mcp
+    container_name: mcp-backup
+    networks:
+    - mcp-network
+    ports:
+    - 7029:8000
+    restart: unless-stopped
+    volumes:
+    - /home/orchestration/data:/data:ro
+    - /home/orchestration/data/backups:/backups
+    working_dir: /app
+  config-mcp:
+    build: /home/orchestration/mcp-servers/config-mcp
+    container_name: mcp-config
+    networks:
+    - mcp-network
+    ports:
+    - 7009:8000
+    restart: unless-stopped
+    working_dir: /app
+  database-mcp:
+    build: /home/orchestration/mcp-servers/database-mcp
+    container_name: mcp-database
+    depends_on:
+    - postgresql
+    - redis
+    environment:
+    - MCP_DATABASE_URL=${MCP_DATABASE_URL:-}
+    - REDIS_URL=redis://redis:6379
+    networks:
+    - mcp-network
+    ports:
+    - 7004:8000
+    restart: unless-stopped
+    volumes:
+    - /home/orchestration/data/database:/data
+  filesystem-mcp:
+    build: /home/orchestration/mcp-servers/filesystem-mcp
+    container_name: mcp-filesystem
+    depends_on:
+    - postgresql
+    - redis
+    environment:
+    - MCP_DATABASE_URL=${MCP_DATABASE_URL:-}
+    - REDIS_URL=redis://redis:6379
+    networks:
+    - mcp-network
+    ports:
+    - 7001:8000
+    restart: unless-stopped
+    volumes:
+    - /home/orchestration/data/workspaces:/workspace
+    - /tmp:/tmp
+    - /home/chat-transcripts:/home/chat-transcripts
+    - /home/orchestration:/home/orchestration
+    - /home:/home:ro
+  git-mcp:
+    build: /home/orchestration/mcp-servers/git-mcp
+    container_name: mcp-git
+    depends_on:
+    - postgresql
+    - redis
+    environment:
+    - MCP_DATABASE_URL=${MCP_DATABASE_URL:-}
+    - REDIS_URL=redis://redis:6379
+    networks:
+    - mcp-network
+    ports:
+    - 7002:8000
+    restart: unless-stopped
+    volumes:
+    - /home/orchestration/data/repositories:/repositories
+    - /home/orchestration/data/workspaces:/workspace
+    - /home/orchestration:/home/orchestration
+    - /home:/home:ro
+  grafana:
+    container_name: mcp-grafana
+    depends_on:
+    - prometheus
+    - loki
+    environment:
+    - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
+    - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
+    - GF_USERS_ALLOW_SIGN_UP=false
+    - GF_SERVER_ROOT_URL=http://localhost:7031
+    - GF_INSTALL_PLUGINS=grafana-clock-panel,grafana-simple-json-datasource
+    image: grafana/grafana:latest
+    networks:
+    - mcp-network
+    ports:
+    - 7031:3000
+    restart: unless-stopped
+    volumes:
+    - /home/user/orchestration/monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+    - grafana-data:/var/lib/grafana
+  log-mcp:
+    build: /home/orchestration/mcp-servers/log-mcp
+    container_name: mcp-log
+    networks:
+    - mcp-network
+    ports:
+    - 7010:8000
+    restart: unless-stopped
+    working_dir: /app
+  loki:
+    command: -config.file=/etc/loki/local-config.yaml
+    container_name: mcp-loki
+    image: grafana/loki:latest
+    networks:
+    - mcp-network
+    ports:
+    - 7032:3100
+    restart: unless-stopped
+    volumes:
+    - /home/orchestration/monitoring/loki/loki-config.yml:/etc/loki/local-config.yaml:ro
+    - loki-data:/loki
+  marketplace-mcp:
+    build: /home/orchestration/mcp-servers/marketplace-mcp
+    container_name: mcp-marketplace
+    environment:
+    - MARKET_CATALOG_PATH=/app/catalog
+    - MARKET_BASE_URL=${MARKET_BASE_URL:-http://localhost:7034}
+    - JWT_SECRET=${JWT_SECRET:-}
+    networks:
+    - mcp-network
+    ports:
+    - 7034:8000
+    restart: unless-stopped
+    volumes:
+    - /home/orchestration/mcp-servers/marketplace-mcp/catalog:/app/catalog:ro
+  mega-orchestrator:
+    build:
+      context: .
+      dockerfile: config/Dockerfile
+    container_name: mega-orchestrator
+    depends_on:
+    - postgresql
+    - redis
+    environment:
+    - MCP_DATABASE_URL=${MCP_DATABASE_URL:-}
+    - REDIS_URL=${REDIS_URL:-redis://redis:6379}
+    - MARKETPLACE_JWT_TOKEN=${MARKETPLACE_JWT_TOKEN:-}
+    networks:
+    - mcp-network
+    ports:
+    - 7000:7000
+    restart: unless-stopped
+  memory-mcp:
+    build: /home/orchestration/mcp-servers/memory-mcp
+    container_name: mcp-memory
+    depends_on:
+    - postgresql
+    - redis
+    environment:
+    - MCP_DATABASE_URL=${MCP_DATABASE_URL:-}
+    - REDIS_URL=redis://redis:6379
+    networks:
+    - mcp-network
+    ports:
+    - 7005:8000
+    restart: unless-stopped
+    volumes:
+    - /home/orchestration/data/databases:/home/orchestration/data/databases
+  message-queue:
+    command: redis-server --appendonly yes
+    container_name: mcp-message-queue
+    image: redis:7-alpine
+    networks:
+    - mcp-network
+    ports:
+    - 7030:6379
+    restart: unless-stopped
+    volumes:
+    - /home/orchestration/data/queue:/data
+  mqtt-broker:
+    container_name: mqtt-broker
+    image: eclipse-mosquitto:2
+    networks:
+    - mcp-network
+    ports:
+    - 7018:1883
+    restart: unless-stopped
+    volumes:
+    - /home/orchestration/mcp-servers/mqtt-broker/config:/mosquitto/config
+    - /home/orchestration/data/mqtt-data:/mosquitto/data
+    - /home/orchestration/data/mqtt-log:/mosquitto/log
+  mqtt-mcp:
+    build: /home/orchestration/mcp-servers/mqtt-mcp
+    container_name: mcp-mqtt
+    depends_on:
+    - mqtt-broker
+    environment:
+    - MQTT_BROKER=mqtt-broker
+    - MQTT_PORT=1883
+    - MQTT_USERNAME=${MQTT_USERNAME:-mcp_admin}
+    - MQTT_PASSWORD=${MQTT_PASSWORD:-}
+    networks:
+    - mcp-network
+    ports:
+    - 7019:8000
+    restart: unless-stopped
+  network-mcp:
+    build: /home/orchestration/mcp-servers/network-mcp
+    container_name: mcp-network-service
+    networks:
+    - mcp-network
+    ports:
+    - 7006:8000
+    working_dir: /app
+  orchestrator-cli:
+    build: /home/orchestration/orchestrator-cli
+    container_name: mcp-orchestrator-cli
+    depends_on:
+    - postgresql
+    - redis
+    environment:
+    - MCP_DATABASE_URL=${MCP_DATABASE_URL:-}
+    - REDIS_URL=redis://redis:6379
+    networks:
+    - mcp-network
+    ports:
+    - 7017:8000
+    restart: unless-stopped
+    volumes:
+    - /home/orchestration:/home/orchestration
+    - /home/orchestration/data/repositories:/repositories
+    - /home/orchestration/data/workspaces:/workspace
+  perplexity-hub:
+    build: /home/orchestration/mcp-servers/perplexity-hub
+    container_name: mcp-perplexity-hub
+    depends_on:
+    - postgresql
+    - redis
+    environment:
+    - MCP_DATABASE_URL=${MCP_DATABASE_URL:-}
+    - REDIS_URL=redis://redis:6379
+    networks:
+    - mcp-network
+    ports:
+    - 7011:8000
+    restart: unless-stopped
+  postgresql:
+    container_name: mcp-postgresql
+    environment:
+    - POSTGRES_DB=${POSTGRES_DB:-mcp_unified}
+    - POSTGRES_USER=${POSTGRES_USER:-mcp_admin}
+    - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-}
+    healthcheck:
+      interval: 10s
+      retries: 5
+      test:
+      - CMD-SHELL
+      - pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB
+      timeout: 5s
+    image: postgres:15
+    networks:
+    - mcp-network
+    ports:
+    - 7021:5432
+    restart: unless-stopped
+    volumes:
+    - /home/orchestration/data/postgresql:/var/lib/postgresql/data
+    - /home/orchestration/data/backups:/backups
+  postgresql-mcp-wrapper:
+    build: /home/orchestration/mcp-servers/postgresql-mcp
+    container_name: mcp-postgresql-wrapper
+    depends_on:
+    - postgresql
+    environment:
+    - DATABASE_URL=${MCP_DATABASE_URL:-}
+    networks:
+    - mcp-network
+    ports:
+    - 7024:8000
+    restart: unless-stopped
+  prometheus:
+    command:
+    - --config.file=/etc/prometheus/prometheus.yml
+    - --storage.tsdb.path=/prometheus
+    - --web.console.libraries=/usr/share/prometheus/console_libraries
+    - --web.console.templates=/usr/share/prometheus/consoles
+    - --web.enable-lifecycle
+    container_name: mcp-prometheus
+    image: prom/prometheus:latest
+    networks:
+    - mcp-network
+    ports:
+    - 7028:9090
+    restart: unless-stopped
+    volumes:
+    - /home/orchestration/monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    - prometheus-data:/prometheus
+  promtail:
+    command: -config.file=/etc/promtail/config.yml
+    container_name: mcp-promtail
+    depends_on:
+    - loki
+    image: grafana/promtail:latest
+    networks:
+    - mcp-network
+    restart: unless-stopped
+    volumes:
+    - /home/orchestration/monitoring/promtail/promtail-config.yml:/etc/promtail/config.yml:ro
+    - /var/lib/docker/containers:/var/lib/docker/containers:ro
+    - /var/run/docker.sock:/var/run/docker.sock:ro
+  qdrant-mcp-wrapper:
+    build: /home/orchestration/mcp-servers/qdrant-mcp
+    container_name: mcp-qdrant-wrapper
+    depends_on:
+    - qdrant-vector
+    environment:
+    - QDRANT_URL=http://qdrant-vector:6333
+    networks:
+    - mcp-network
+    ports:
+    - 7026:8000
+    restart: unless-stopped
+  qdrant-vector:
+    container_name: mcp-qdrant
+    environment:
+    - QDRANT__SERVICE__HTTP_PORT=6333
+    - QDRANT__SERVICE__GRPC_PORT=6334
+    image: qdrant/qdrant:latest
+    networks:
+    - mcp-network
+    ports:
+    - 7023:6333
+    - 7027:6334
+    restart: unless-stopped
+    volumes:
+    - /home/orchestration/data/qdrant:/qdrant/storage
+  redis:
+    container_name: mcp-redis
+    healthcheck:
+      interval: 10s
+      retries: 5
+      test:
+      - CMD
+      - redis-cli
+      - ping
+      timeout: 5s
+    image: redis:7-alpine
+    networks:
+    - mcp-network
+    ports:
+    - 7022:6379
+    restart: unless-stopped
+    volumes:
+    - /home/orchestration/data/redis:/data
+  redis-mcp-wrapper:
+    build: /home/orchestration/mcp-servers/redis-mcp
+    container_name: mcp-redis-wrapper
+    depends_on:
+    - redis
+    environment:
+    - REDIS_URL=redis://redis:6379
+    networks:
+    - mcp-network
+    ports:
+    - 7025:8000
+    restart: unless-stopped
+  security-mcp:
+    build: /home/orchestration/mcp-servers/security-mcp
+    container_name: mcp-security
+    environment:
+    - JWT_SECRET_KEY=${JWT_SECRET:-}
+    networks:
+    - mcp-network
+    ports:
+    - 7008:8000
+    restart: unless-stopped
+    working_dir: /app
+  system-mcp:
+    build: /home/orchestration/mcp-servers/system-mcp
+    container_name: mcp-system
+    networks:
+    - mcp-network
+    ports:
+    - 7007:8000
+    working_dir: /app
+  terminal-mcp:
+    build: /home/orchestration/mcp-servers/terminal-mcp
+    cap_add:
+    - SYS_PTRACE
+    container_name: mcp-terminal
+    depends_on:
+    - postgresql
+    - redis
+    environment:
+    - MCP_DATABASE_URL=${MCP_DATABASE_URL:-}
+    - REDIS_URL=redis://redis:6379
+    networks:
+    - mcp-network
+    ports:
+    - 7003:8000
+    restart: unless-stopped
+    security_opt:
+    - no-new-privileges:true
+    volumes:
+    - /home/orchestration/data/workspaces:/workspace
+    - /home/orchestration:/home/orchestration
   transcriber-mcp:
     build: /home/orchestration/mcp-servers/webm-transcriber
     container_name: mcp-transcriber
-    ports:
-      - "7013:8000"
-    volumes:
-      - /home/orchestration/data/transcripts:/transcripts
-      - /tmp:/tmp
-    environment:
-      - MCP_DATABASE_URL=${MCP_DATABASE_URL:-}
-      - REDIS_URL=redis://redis:6379
     depends_on:
-      - postgresql
-      - redis
-    restart: unless-stopped
+    - postgresql
+    - redis
+    environment:
+    - MCP_DATABASE_URL=${MCP_DATABASE_URL:-}
+    - REDIS_URL=redis://redis:6379
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
-      timeout: 10s
       retries: 3
+      test:
+      - CMD
+      - curl
+      - -f
+      - http://localhost:8000/health
+      timeout: 10s
     networks:
-      - mcp-network
-
-  # 7014-7016: Placeholders for future AI services
+    - mcp-network
+    ports:
+    - 7013:8000
+    profiles:
+    - disabled
+    restart: 'no'
+    volumes:
+    - /home/orchestration/data/workspaces:/workspace
+    - /home/orchestration:/home/orchestration
+    - /home/orchestration/data/transcripts:/transcripts
   vision-mcp:
     build: /home/orchestration/mcp-servers/system-mcp
     container_name: mcp-vision
-    ports:
-      - "7014:8000"
-    working_dir: /app
-    restart: unless-stopped
     networks:
-      - mcp-network
-
-  # 7017: ZEN MCP Server - MCP Tools Orchestration
+    - mcp-network
+    ports:
+    - 7014:8000
+    profiles:
+    - disabled
+    restart: 'no'
+    working_dir: /app
   zen-mcp-server:
     build:
       context: /home/orchestration/data/repositories/zen-mcp-server
       dockerfile: Dockerfile
       target: runtime
     container_name: zen-mcp-server
-    ports:
-      - "7017:8000"
     environment:
-      - DEFAULT_MODEL=${DEFAULT_MODEL:-auto}
-      - GEMINI_API_KEY=${GEMINI_API_KEY}
-      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
-      - XAI_API_KEY=${XAI_API_KEY}
-      - DIAL_API_KEY=${DIAL_API_KEY}
-      - DIAL_API_HOST=${DIAL_API_HOST}
-      - DIAL_API_VERSION=${DIAL_API_VERSION}
-      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
-      - CUSTOM_API_URL=${CUSTOM_API_URL}
-      - CUSTOM_API_KEY=${CUSTOM_API_KEY}
-      - CUSTOM_MODEL_NAME=${CUSTOM_MODEL_NAME}
-      - LOG_LEVEL=${LOG_LEVEL:-INFO}
-      - LOG_MAX_SIZE=${LOG_MAX_SIZE:-10MB}
-      - LOG_BACKUP_COUNT=${LOG_BACKUP_COUNT:-5}
-      - DEFAULT_THINKING_MODE_THINKDEEP=${DEFAULT_THINKING_MODE_THINKDEEP:-high}
-      - DISABLED_TOOLS=${DISABLED_TOOLS}
-      - MAX_MCP_OUTPUT_TOKENS=${MAX_MCP_OUTPUT_TOKENS}
-      - PYTHONUNBUFFERED=1
-      - PYTHONPATH=/app
-      - TZ=${TZ:-UTC}
-    volumes:
-      - zen-mcp-logs:/app/logs
-      - zen-mcp-config:/app/conf
-      - /etc/localtime:/etc/localtime:ro
+    - DEFAULT_MODEL=${DEFAULT_MODEL:-auto}
+    - GEMINI_API_KEY=${GEMINI_API_KEY}
+    - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+    - OPENAI_API_KEY=${OPENAI_API_KEY}
+    - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+    - XAI_API_KEY=${XAI_API_KEY}
+    - DIAL_API_KEY=${DIAL_API_KEY}
+    - DIAL_API_HOST=${DIAL_API_HOST}
+    - DIAL_API_VERSION=${DIAL_API_VERSION}
+    - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+    - CUSTOM_API_URL=${CUSTOM_API_URL}
+    - CUSTOM_API_KEY=${CUSTOM_API_KEY}
+    - CUSTOM_MODEL_NAME=${CUSTOM_MODEL_NAME}
+    - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    - LOG_MAX_SIZE=${LOG_MAX_SIZE:-10MB}
+    - LOG_BACKUP_COUNT=${LOG_BACKUP_COUNT:-5}
+    - DEFAULT_THINKING_MODE_THINKDEEP=${DEFAULT_THINKING_MODE_THINKDEEP:-high}
+    - DISABLED_TOOLS=${DISABLED_TOOLS}
+    - MAX_MCP_OUTPUT_TOKENS=${MAX_MCP_OUTPUT_TOKENS}
+    - PYTHONUNBUFFERED=1
+    - PYTHONPATH=/app
+    - TZ=${TZ:-UTC}
     healthcheck:
-      test: ["CMD", "python", "/usr/local/bin/healthcheck.py"]
       interval: 30s
-      timeout: 10s
       retries: 3
       start_period: 40s
+      test:
+      - CMD
+      - python
+      - /usr/local/bin/healthcheck.py
+      timeout: 10s
+    networks:
+    - mcp-network
+    ports:
+    - 7017:8000
+    read_only: true
     restart: unless-stopped
     security_opt:
-      - no-new-privileges:true
-    read_only: true
+    - no-new-privileges:true
     tmpfs:
-      - /tmp:noexec,nosuid,size=100m
-      - /app/tmp:noexec,nosuid,size=50m
-    networks:
-      - mcp-network
-
-  # 7034: Marketplace MCP - Private Skills Catalog + MCP Subregistry
-  marketplace-mcp:
-    build: /home/orchestration/mcp-servers/marketplace-mcp
-    container_name: mcp-marketplace
-    ports:
-      - "7034:8000"
-    environment:
-      - MARKET_CATALOG_PATH=/app/catalog
-      - MARKET_BASE_URL=${MARKET_BASE_URL:-http://localhost:7034}
-      - JWT_SECRET=${JWT_SECRET:-}
+    - /tmp:noexec,nosuid,size=100m
+    - /app/tmp:noexec,nosuid,size=50m
     volumes:
-      - /home/orchestration/mcp-servers/marketplace-mcp/catalog:/app/catalog:ro
-    restart: unless-stopped
-    networks:
-      - mcp-network
-
-  # 7024: PostgreSQL MCP Wrapper - Database Operations API
-  postgresql-mcp-wrapper:
-    build: /home/orchestration/mcp-servers/postgresql-mcp
-    container_name: mcp-postgresql-wrapper
-    ports:
-      - "7024:8000"
-    environment:
-      - DATABASE_URL=${MCP_DATABASE_URL:-}
-    depends_on:
-      - postgresql
-    restart: unless-stopped
-    networks:
-      - mcp-network
-
-  # 7025: Redis MCP Wrapper - Cache and Session Management API
-  redis-mcp-wrapper:
-    build: /home/orchestration/mcp-servers/redis-mcp
-    container_name: mcp-redis-wrapper
-    ports:
-      - "7025:8000"
-    environment:
-      - REDIS_URL=redis://redis:6379
-    depends_on:
-      - redis
-    restart: unless-stopped
-    networks:
-      - mcp-network
-
-  # 7026: Qdrant MCP Wrapper - Vector Database Operations API
-  qdrant-mcp-wrapper:
-    build: /home/orchestration/mcp-servers/qdrant-mcp
-    container_name: mcp-qdrant-wrapper
-    ports:
-      - "7026:8000"
-    environment:
-      - QDRANT_URL=http://qdrant-vector:6333
-    depends_on:
-      - qdrant-vector
-    restart: unless-stopped
-    networks:
-      - mcp-network
-
-  # ============================================================================
-  # 7021-7023: Support Services (Podporné databáze a cache)
-  # ============================================================================
-
-  # 7021: PostgreSQL - Primary Database
-  postgresql:
-    image: postgres:15
-    container_name: mcp-postgresql
-    environment:
-      - POSTGRES_DB=${POSTGRES_DB:-mcp_unified}
-      - POSTGRES_USER=${POSTGRES_USER:-mcp_admin}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-}
-    ports:
-      - "7021:5432"
-    volumes:
-      - /home/orchestration/data/postgresql:/var/lib/postgresql/data
-      - /home/orchestration/data/backups:/backups
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    restart: unless-stopped
-    networks:
-      - mcp-network
-
-  # 7022: Redis - Cache/Sessions
-  redis:
-    image: redis:7-alpine
-    container_name: mcp-redis
-    ports:
-      - "7022:6379"
-    volumes:
-      - /home/orchestration/data/redis:/data
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    restart: unless-stopped
-    networks:
-      - mcp-network
-
-  # 7023: Qdrant Vector DB - Vector Storage
-  qdrant-vector:
-    image: qdrant/qdrant:latest
-    container_name: mcp-qdrant
-    ports:
-      - "7023:6333"
-      - "7027:6334"
-    volumes:
-      - /home/orchestration/data/qdrant:/qdrant/storage
-    environment:
-      - QDRANT__SERVICE__HTTP_PORT=6333
-      - QDRANT__SERVICE__GRPC_PORT=6334
-    restart: unless-stopped
-    networks:
-      - mcp-network
-
-  # ============================================================================
-  # 7028-7032: Management Services (Správa a monitoring)
-  # ============================================================================
-
-  # 7028: Prometheus - Metrics Collection & Storage
-  prometheus:
-    image: prom/prometheus:latest
-    container_name: mcp-prometheus
-    ports:
-      - "7028:9090"
-    volumes:
-      - /home/orchestration/monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-      - prometheus-data:/prometheus
-    command:
-      - "--config.file=/etc/prometheus/prometheus.yml"
-      - "--storage.tsdb.path=/prometheus"
-      - "--web.console.libraries=/usr/share/prometheus/console_libraries"
-      - "--web.console.templates=/usr/share/prometheus/consoles"
-      - "--web.enable-lifecycle"
-    restart: unless-stopped
-    networks:
-      - mcp-network
-
-  # 7031: Grafana - Dashboards & Visualization
-  grafana:
-    image: grafana/grafana:latest
-    container_name: mcp-grafana
-    ports:
-      - "7031:3000"
-    volumes:
-      - /home/user/orchestration/monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
-      - grafana-data:/var/lib/grafana
-    environment:
-      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
-      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
-      - GF_USERS_ALLOW_SIGN_UP=false
-      - GF_SERVER_ROOT_URL=http://localhost:7031
-      - GF_INSTALL_PLUGINS=grafana-clock-panel,grafana-simple-json-datasource
-    depends_on:
-      - prometheus
-      - loki
-    restart: unless-stopped
-    networks:
-      - mcp-network
-
-  # 7032: Loki - Log Aggregation
-  loki:
-    image: grafana/loki:latest
-    container_name: mcp-loki
-    ports:
-      - "7032:3100"
-    volumes:
-      - /home/orchestration/monitoring/loki/loki-config.yml:/etc/loki/local-config.yaml:ro
-      - loki-data:/loki
-    command: -config.file=/etc/loki/local-config.yaml
-    restart: unless-stopped
-    networks:
-      - mcp-network
-
-  # Promtail - Log Collection Agent (no external port needed)
-  promtail:
-    image: grafana/promtail:latest
-    container_name: mcp-promtail
-    volumes:
-      - /home/orchestration/monitoring/promtail/promtail-config.yml:/etc/promtail/config.yml:ro
-      - /var/lib/docker/containers:/var/lib/docker/containers:ro
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-    command: -config.file=/etc/promtail/config.yml
-    depends_on:
-      - loki
-    restart: unless-stopped
-    networks:
-      - mcp-network
-
-  # 7029: Backup Service - Automated backups
-  backup-service:
-    build: /home/orchestration/mcp-servers/system-mcp
-    container_name: mcp-backup
-    ports:
-      - "7029:8000"
-    working_dir: /app
-    volumes:
-      - /home/orchestration/data:/data:ro
-      - /home/orchestration/data/backups:/backups
-    restart: unless-stopped
-    networks:
-      - mcp-network
-
-  # 7030: Message Queue - Task queuing
-  message-queue:
-    image: redis:7-alpine
-    container_name: mcp-message-queue
-    ports:
-      - "7030:6379"
-    volumes:
-      - /home/orchestration/data/queue:/data
-    command: redis-server --appendonly yes
-    restart: unless-stopped
-    networks:
-      - mcp-network
-
-
-  # ============================================================================
-  # 7018-7019: MQTT Services (Message Queue and IoT Communication)  
-  # ============================================================================
-
-  # 7018: MQTT Broker - Mosquitto Message Broker
-  mqtt-broker:
-    image: eclipse-mosquitto:2
-    container_name: mqtt-broker
-    ports:
-      - "7018:1883"
-    volumes:
-      - /home/orchestration/mcp-servers/mqtt-broker/config:/mosquitto/config
-      - /home/orchestration/data/mqtt-data:/mosquitto/data
-      - /home/orchestration/data/mqtt-log:/mosquitto/log
-    restart: unless-stopped
-    networks:
-      - mcp-network
-
-  # 7019: MQTT MCP Server - MQTT Operations via MCP Protocol
-  mqtt-mcp:
-    build: /home/orchestration/mcp-servers/mqtt-mcp
-    container_name: mcp-mqtt
-    ports:
-      - "7019:8000"
-    environment:
-      - MQTT_BROKER=mqtt-broker
-      - MQTT_PORT=1883
-      - MQTT_USERNAME=${MQTT_USERNAME:-mcp_admin}
-      - MQTT_PASSWORD=${MQTT_PASSWORD:-}
-    depends_on:
-      - mqtt-broker
-    restart: unless-stopped
-    networks:
-      - mcp-network
-
-networks:
-  mcp-network:
-    driver: bridge
-
+    - /home/orchestration/data/workspaces:/workspace
+    - /home/orchestration:/home/orchestration
+    - zen-mcp-logs:/app/logs
+    - zen-mcp-config:/app/conf
+    - /etc/localtime:/etc/localtime:ro
+version: '3.8'
 volumes:
-  # Monitoring data persistence
-  prometheus-data:
-    driver: local
   grafana-data:
     driver: local
   loki-data:
     driver: local
-  # ZEN MCP persistence
-  zen-mcp-logs:
+  prometheus-data:
     driver: local
   zen-mcp-config:
+    driver: local
+  zen-mcp-logs:
     driver: local

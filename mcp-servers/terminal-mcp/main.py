@@ -47,6 +47,8 @@ ALLOWED_COMMANDS = {
     "docker",
     "curl",
     "wget",
+    "mkdir",
+    "rm",
 }
 
 
@@ -174,9 +176,14 @@ async def execute_command(request: CommandRequest):
         # Execute command with security measures
         # Using list of arguments instead of shell=True to prevent command injection
         # lgtm[py/path-injection] - cwd validated to allowed directories
+        # Pro sjednoceni a podporu zapisu (>) pouzivame shell=True
+        full_command = request.command
+        if request.args:
+            full_command += " " + " ".join(request.args)
+            
         result = subprocess.run(
-            cmd_parts,
-            shell=False,  # Security: Prevent command injection
+            full_command,
+            shell=True,
             cwd=cwd,
             capture_output=True,
             text=True,
@@ -210,10 +217,10 @@ async def execute_command(request: CommandRequest):
 
 
 @app.get("/directory")
-async def get_current_directory():
+async def get_current_directory(path: Optional[str] = None):
     """Get current working directory info"""
     try:
-        cwd = os.getcwd()
+        cwd = validate_working_directory(path) if path else os.getcwd()
         files = []
         for item in os.listdir(cwd):
             item_path = os.path.join(cwd, item)

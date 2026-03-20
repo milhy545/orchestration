@@ -19,8 +19,8 @@ This inventory reflects the services declared in `docker-compose.yml`. The table
 | `log-mcp` | `7010` | MCP tool service | Log analysis and log search |
 | `research-mcp` | `7011` | MCP HTTP | Research APIs |
 | `advanced-memory-mcp` | `7012` | MCP tool service | Vector memory and semantic recall |
-| `transcriber-mcp` | `7013` | MCP HTTP | Audio transcription |
-| `vision-mcp` | `7014` | scaffold | Reserved scaffold service reusing the system image |
+| `transcriber-mcp` | `7013` | **DISABLED** | Audio transcription (HW limited) |
+| `vision-mcp` | `7014` | **DISABLED** | Scaffold service (HW limited) |
 | `gmail-mcp` | `7015` | MCP HTTP | Gmail search and message operations |
 | `forai-mcp` | `7016` | MCP tool service | FORAI media tools |
 | `zen-mcp-server` | `7017` | MCP stdio | Multi-model reasoning and code tools |

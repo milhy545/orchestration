@@ -13,7 +13,7 @@ MCP_TOOL_DEFINITIONS: Dict[str, Dict[str, Any]] = {
             "type": "object",
             "properties": {
                 "path": {"type": "string", "description": "Absolute file path to read."},
-                "max_size": {"type": "integer", "description": "Maximum bytes to return.", "default": 1000000},
+                "max_size": {"type": "integer", "description": "Maximum bytes to return.", "default": 10000},
             },
             "required": ["path"],
         },

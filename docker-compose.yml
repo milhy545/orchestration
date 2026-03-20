@@ -38,8 +38,9 @@ services:
       - "7001:8000"
     volumes:
       - ${DATA_ROOT:-./data}/workspaces:/workspace
-      - ${HOST_HOME_PATH:-/home}:/home:ro
       - /tmp:/tmp
+      - /home/chat-transcripts:/home/chat-transcripts
+      - ${HOST_HOME_PATH:-/home}:/home:ro
     environment:
       - MCP_DATABASE_URL=${MCP_DATABASE_URL:-postgresql://mcp_admin:change_me_in_production@postgresql:5432/mcp_unified}
       - REDIS_URL=redis://redis:6379
@@ -59,6 +60,7 @@ services:
     volumes:
       - ${DATA_ROOT:-./data}/repositories:/repositories
       - ${DATA_ROOT:-./data}/workspaces:/workspace
+      - /tmp:/tmp
     environment:
       - MCP_DATABASE_URL=${MCP_DATABASE_URL:-postgresql://mcp_admin:change_me_in_production@postgresql:5432/mcp_unified}
       - REDIS_URL=redis://redis:6379
@@ -82,6 +84,10 @@ services:
       - SYS_PTRACE # Příklad: Povolí debuggování procesů, pokud je potřeba.
     security_opt:
       - no-new-privileges:true # Zabrání procesu získat nová oprávnění.
+    volumes:
+      - /tmp:/tmp
+      - ${DATA_ROOT:-./data}/workspaces:/workspace
+      - ${PROJECT_ROOT:-.}:/home/orchestration
     environment:
       - MCP_DATABASE_URL=${MCP_DATABASE_URL:-postgresql://mcp_admin:change_me_in_production@postgresql:5432/mcp_unified}
       - REDIS_URL=redis://redis:6379
@@ -99,6 +105,8 @@ services:
     ports:
       - "7004:8000"
     volumes:
+      - ${DATA_ROOT:-./data}/workspaces:/workspace
+      - ${PROJECT_ROOT:-.}:/home/orchestration
       - ${DATA_ROOT:-./data}/database:/data
     environment:
       - MCP_DATABASE_URL=${MCP_DATABASE_URL:-postgresql://mcp_admin:change_me_in_production@postgresql:5432/mcp_unified}
@@ -117,6 +125,8 @@ services:
     ports:
       - "7005:8000"
     volumes:
+      - ${DATA_ROOT:-./data}/workspaces:/workspace
+      - ${PROJECT_ROOT:-.}:/home/orchestration
       - ${DATA_ROOT:-./data}/databases:/home/orchestration/data/databases
     environment:
       - MCP_DATABASE_URL=${MCP_DATABASE_URL:-postgresql://mcp_admin:change_me_in_production@postgresql:5432/mcp_unified}
@@ -248,8 +258,9 @@ services:
     ports:
       - "7013:8000"
     volumes:
+      - ${DATA_ROOT:-./data}/workspaces:/workspace
+      - ${PROJECT_ROOT:-.}:/home/orchestration
       - ${DATA_ROOT:-./data}/transcripts:/transcripts
-      - /tmp:/tmp
     environment:
       - MCP_DATABASE_URL=${MCP_DATABASE_URL:-postgresql://mcp_admin:change_me_in_production@postgresql:5432/mcp_unified}
       - REDIS_URL=redis://redis:6379
@@ -314,6 +325,8 @@ services:
     depends_on:
       - redis
     volumes:
+      - ${DATA_ROOT:-./data}/workspaces:/workspace
+      - ${PROJECT_ROOT:-.}:/home/orchestration
       - zen-mcp-logs:/app/logs
       - zen-mcp-config:/app/conf
       - /etc/localtime:/etc/localtime:ro
@@ -344,6 +357,8 @@ services:
       - MARKET_BASE_URL=${MARKET_BASE_URL:-http://localhost:7034}
       - JWT_SECRET=${JWT_SECRET:-change_me_market_jwt}
     volumes:
+      - ${DATA_ROOT:-./data}/workspaces:/workspace
+      - ${PROJECT_ROOT:-.}:/home/orchestration
       - ${PROJECT_ROOT:-.}/mcp-servers/marketplace-mcp/catalog:/app/catalog:ro
     restart: unless-stopped
     networks:
@@ -406,6 +421,8 @@ services:
     ports:
       - "7021:5432"
     volumes:
+      - ${DATA_ROOT:-./data}/workspaces:/workspace
+      - ${PROJECT_ROOT:-.}:/home/orchestration
       - ${DATA_ROOT:-./data}/postgresql:/var/lib/postgresql/data
       - ${DATA_ROOT:-./data}/backups:/backups
     healthcheck:
@@ -424,6 +441,8 @@ services:
     ports:
       - "7022:6379"
     volumes:
+      - ${DATA_ROOT:-./data}/workspaces:/workspace
+      - ${PROJECT_ROOT:-.}:/home/orchestration
       - ${DATA_ROOT:-./data}/redis:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
@@ -442,6 +461,8 @@ services:
       - "7023:6333"
       - "7027:6334"
     volumes:
+      - ${DATA_ROOT:-./data}/workspaces:/workspace
+      - ${PROJECT_ROOT:-.}:/home/orchestration
       - ${DATA_ROOT:-./data}/qdrant:/qdrant/storage
     environment:
       - QDRANT__SERVICE__HTTP_PORT=6333
@@ -461,6 +482,8 @@ services:
     ports:
       - "7028:9090"
     volumes:
+      - ${DATA_ROOT:-./data}/workspaces:/workspace
+      - ${PROJECT_ROOT:-.}:/home/orchestration
       - ${MONITORING_ROOT:-.}/monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - prometheus-data:/prometheus
     command:
@@ -480,6 +503,8 @@ services:
     ports:
       - "7031:3000"
     volumes:
+      - ${DATA_ROOT:-./data}/workspaces:/workspace
+      - ${PROJECT_ROOT:-.}:/home/orchestration
       - ${MONITORING_ROOT:-.}/monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
       - grafana-data:/var/lib/grafana
     environment:
@@ -502,6 +527,8 @@ services:
     ports:
       - "7032:3100"
     volumes:
+      - ${DATA_ROOT:-./data}/workspaces:/workspace
+      - ${PROJECT_ROOT:-.}:/home/orchestration
       - ${MONITORING_ROOT:-.}/monitoring/loki/loki-config.yml:/etc/loki/local-config.yaml:ro
       - loki-data:/loki
     command: -config.file=/etc/loki/local-config.yaml
@@ -514,6 +541,8 @@ services:
     image: grafana/promtail:latest
     container_name: mcp-promtail
     volumes:
+      - ${DATA_ROOT:-./data}/workspaces:/workspace
+      - ${PROJECT_ROOT:-.}:/home/orchestration
       - ${MONITORING_ROOT:-.}/monitoring/promtail/promtail-config.yml:/etc/promtail/config.yml:ro
       - /var/lib/docker/containers:/var/lib/docker/containers:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
@@ -532,6 +561,8 @@ services:
       - "7029:8000"
     working_dir: /app
     volumes:
+      - ${DATA_ROOT:-./data}/workspaces:/workspace
+      - ${PROJECT_ROOT:-.}:/home/orchestration
       - ${DATA_ROOT:-./data}:/data:ro
       - ${DATA_ROOT:-./data}/backups:/backups
     restart: unless-stopped
@@ -545,6 +576,8 @@ services:
     ports:
       - "7030:6379"
     volumes:
+      - ${DATA_ROOT:-./data}/workspaces:/workspace
+      - ${PROJECT_ROOT:-.}:/home/orchestration
       - ${DATA_ROOT:-./data}/queue:/data
     command: redis-server --appendonly yes
     restart: unless-stopped
@@ -563,6 +596,8 @@ services:
     ports:
       - "7018:1883"
     volumes:
+      - ${DATA_ROOT:-./data}/workspaces:/workspace
+      - ${PROJECT_ROOT:-.}:/home/orchestration
       - ${PROJECT_ROOT:-.}/mcp-servers/mqtt-broker/config:/mosquitto/config
       - ${DATA_ROOT:-./data}/mqtt-data:/mosquitto/data
       - ${DATA_ROOT:-./data}/mqtt-log:/mosquitto/log
@@ -599,6 +634,8 @@ services:
     environment:
       - NEO4J_AUTH=neo4j/${NEO4J_PASSWORD:-neo4j_password}
     volumes:
+      - ${DATA_ROOT:-./data}/workspaces:/workspace
+      - ${PROJECT_ROOT:-.}:/home/orchestration
       - ${DATA_ROOT:-./data}/neo4j:/data
     restart: unless-stopped
     networks:
@@ -615,6 +652,8 @@ services:
     ports:
       - "7016:8000"
     volumes:
+      - ${DATA_ROOT:-./data}/workspaces:/workspace
+      - ${PROJECT_ROOT:-.}:/home/orchestration
       - ${PROJECT_ROOT:-.}:/workspace:ro
     environment:
       - MCP_SERVER_PORT=8000
@@ -633,6 +672,8 @@ services:
     ports:
       - "7020:8000"
     volumes:
+      - ${DATA_ROOT:-./data}/workspaces:/workspace
+      - ${PROJECT_ROOT:-.}:/home/orchestration
       - ${PROJECT_ROOT:-.}:/workspace:ro
     environment:
       - NEO4J_URL=bolt://neo4j:7687

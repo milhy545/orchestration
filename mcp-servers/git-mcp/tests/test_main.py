@@ -107,6 +107,27 @@ class TestGitLog:
         assert "-n10" in args
 
 
+    @patch(f"{MODULE_NAME}.validate_repository_path", return_value="/tmp/repo")
+    @patch('subprocess.run')
+    def test_git_log_empty_repository(self, mock_run, mock_validate_repo):
+        """Test git log on a repository without commits yet."""
+        rev_list_result = MagicMock()
+        rev_list_result.stdout = "0\n"
+        rev_list_result.stderr = ""
+        mock_run.return_value = rev_list_result
+
+        response = client.get("/git/tmp/repo/log")
+        assert response.status_code == 200
+
+        data = response.json()
+        assert data["log"] == []
+        assert data["count"] == 0
+        assert data["repository"] == "/tmp/repo"
+        mock_run.assert_called_once()
+        args = mock_run.call_args[0][0]
+        assert args == ["git", "-C", "/tmp/repo", "rev-list", "--count", "--all"]
+
+
 class TestGitDiff:
     """Test git diff functionality"""
 

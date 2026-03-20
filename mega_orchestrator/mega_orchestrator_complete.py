@@ -772,7 +772,7 @@ class MegaOrchestrator:
                     "method": "GET",
                     "url": f"{base_url}/file/{encoded_path}",
                     "params": {
-                        "max_size": arguments.get("max_size", 1_000_000),
+                        "max_size": arguments.get("max_size", 10_000),
                     },
                 }
             if tool == "file_write":
@@ -787,16 +787,18 @@ class MegaOrchestrator:
                     },
                 }
             if tool == "file_search":
+                params = {
+                    "root": arguments.get("root", arguments.get("directory", "/tmp")),
+                    "pattern": arguments.get("pattern", "*"),
+                    "limit": arguments.get("limit", 100),
+                    "content_query": arguments.get("content_query"),
+                    "include_hidden": "true" if arguments.get("include_hidden", False) else "false",
+                }
+                params = {k: v for k, v in params.items() if v is not None}
                 return {
                     "method": "GET",
                     "url": f"{base_url}/search/files",
-                    "params": {
-                        "root": arguments.get("root", arguments.get("directory", "/tmp")),
-                        "pattern": arguments.get("pattern", "*"),
-                        "limit": arguments.get("limit", 100),
-                        "content_query": arguments.get("content_query"),
-                        "include_hidden": "true" if arguments.get("include_hidden", False) else "false",
-                    },
+                    "params": params,
                 }
             if tool == "file_analyze":
                 analyze_path = arguments.get("path", arguments.get("file_path", "/tmp"))
@@ -937,9 +939,12 @@ class MegaOrchestrator:
                     "url": f"{base_url}/processes",
                 }
             if tool == "create_terminal":
+                cwd_param = arguments.get("cwd", arguments.get("path"))
+                params = {"path": cwd_param} if cwd_param else {}
                 return {
                     "method": "GET",
                     "url": f"{base_url}/directory",
+                    "params": params
                 }
 
         if service.name == "Database MCP":

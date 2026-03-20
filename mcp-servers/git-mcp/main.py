@@ -193,6 +193,17 @@ async def git_log(
         # Validate repository path
         validated_path = validate_repository_path(path)
 
+        # Fast path for empty repositories: treat them as a valid repo with no history.
+        rev_list = subprocess.run(
+            ["git", "-C", validated_path, "rev-list", "--count", "--all"],
+            capture_output=True,
+            text=True,
+            check=True,
+            timeout=GIT_TIMEOUT,
+        )
+        if int(rev_list.stdout.strip() or "0") == 0:
+            return GitLog(log=[], count=0, repository=validated_path)
+
         # lgtm[py/path-injection] - validated_path is restricted to allowed repositories
         result = subprocess.run(
             ["git", "-C", validated_path, "log", f"-n{limit}", "--oneline"],

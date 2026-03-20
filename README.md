@@ -33,8 +33,8 @@ Orchestration is a Docker-based MCP platform for running a mixed fleet of HTTP s
 | --- | --- | --- |
 | `research-mcp` | `7011` | News, domain, academic, structured, and generic research APIs |
 | `advanced-memory-mcp` | `7012` | Vector-backed memory search through `/tools/list` and `/tools/call` |
-| `transcriber-mcp` | `7013` | Audio and URL transcription |
-| `vision-mcp` | `7014` | reserved scaffold service currently reusing the system image; no distinct public contract |
+| `transcriber-mcp` | `7013` | **DISABLED** (Audio and URL transcription) |
+| `vision-mcp` | `7014` | **DISABLED** (reserved scaffold service) |
 | `gmail-mcp` | `7015` | Gmail search, send, forward, labels, move, and generic tool dispatch |
 | `forai-mcp` | `7016` | Media-oriented tool server with `forai_*` tools |
 | `zen-mcp-server` | `7017` | Multi-model MCP stdio server for code and reasoning tools |
