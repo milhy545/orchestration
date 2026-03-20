@@ -12,7 +12,6 @@ from typing import Any, Dict, Optional
 
 from mega_orchestrator.mcp_tooling import MCP_TOOL_DEFINITIONS, build_mcp_tools
 
-
 MEGA_BASE_URL = os.getenv("MEGA_ORCHESTRATOR_URL", "http://127.0.0.1:7000").rstrip("/")
 RPC_URL = f"{MEGA_BASE_URL}/mcp/rpc"
 SCHEMA_URL = f"{MEGA_BASE_URL}/mcp/schema"

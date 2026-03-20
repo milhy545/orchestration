@@ -44,4 +44,17 @@ All AI agents operating within this repository MUST use the **FORAI** tagging sy
 ### Usage for Agents:
 1. **Storing:** Always inject `"FORAI"` along with contextual keywords into the `metadata.tags` array (e.g., `{"tags": ["FORAI", "architecture", "refactor"]}`).
 2. **Retrieving:** Use the `vector_search` tool with the `FORAI` filter or `semantic_search` focusing on FORAI concepts.
-3. **Mega-Orchestrator:** Route all memory requests through `mega-orchestrator` on port 7000 using `store_semantic_memory` or `store_memory` tools.
+3. **Mega-Orchestrator:** Route all memory requests through `mega-orchestrator` on port 7000 (standard endpoint is `/mcp`).
+4. **Tool Names:** When using the hybrid Mega-Orchestrator, use internal tool names: `file_list` (for filesystem), `terminal_exec` (for terminal), and `store_semantic_memory` / `semantic_search` (for AI memory).
+
+## 🎙️ Audio Interaction (Gemini CLI only)
+- If you are operating as Gemini CLI, you have the `gemini-speak` skill installed.
+- After generating a long response, the user can trigger `/speak`.
+- You can proactively suggest this to the user for complex technical reports.
+
+## ⚡ Performance & Package Management
+- This repository has been migrated to **Astral `uv`**.
+- DO NOT use `pip` for local environment management or Docker changes.
+- Use `uv pip install` and `uv run` for all Python-related tasks.
+- Docker builds are now optimized using `uv` binaries. Refer to `docs/UV_MIGRATION_GUIDE.md` for details.
+

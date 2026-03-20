@@ -65,9 +65,7 @@ def validate_repository_path(path: str) -> str:
 
     # Verify it's actually a git repository
     if not (resolved_path / ".git").exists():  # lgtm[py/path-injection]
-        raise HTTPException(
-            status_code=400, detail=f"Path {resolved_path} is not a git repository"
-        )
+        raise HTTPException(status_code=400, detail=f"Path {resolved_path} is not a git repository")
 
     # Ensure Git safe.directory is set for this repository
     try:
@@ -134,9 +132,7 @@ async def health():
     try:
         # Check git is available
         # lgtm[py/path-injection] - validated_path is restricted to allowed repositories
-        result = subprocess.run(
-            ["git", "--version"], capture_output=True, text=True, timeout=5
-        )
+        result = subprocess.run(["git", "--version"], capture_output=True, text=True, timeout=5)
         return {
             "status": "healthy",
             "service": "Git MCP",
@@ -174,17 +170,13 @@ async def git_status(path: str):
     except subprocess.CalledProcessError as e:
         raise HTTPException(status_code=500, detail=f"Git command failed: {e.stderr}")
     except Exception as e:
-        raise HTTPException(
-            status_code=500, detail=f"Failed to get git status: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Failed to get git status: {str(e)}")
 
 
 @app.get("/git/{path:path}/log", response_model=GitLog)
 async def git_log(
     path: str,
-    limit: int = Query(
-        5, ge=1, le=MAX_LOG_ENTRIES, description="Number of commits to show"
-    ),
+    limit: int = Query(5, ge=1, le=MAX_LOG_ENTRIES, description="Number of commits to show"),
 ):
     """
     Get git commit log with limits.
@@ -320,9 +312,7 @@ async def git_commit(path: str, request: GitCommitRequest):
 
         commit_hash = head_result.stdout.strip()
         if not commit_hash:
-            raise HTTPException(
-                status_code=500, detail="Commit succeeded but hash is unavailable"
-            )
+            raise HTTPException(status_code=500, detail="Commit succeeded but hash is unavailable")
 
         return GitCommitResponse(
             success=True,
@@ -339,9 +329,7 @@ async def git_commit(path: str, request: GitCommitRequest):
         stderr = (e.stderr or "").strip()
         raise HTTPException(status_code=500, detail=f"Git command failed: {stderr}")
     except Exception as e:
-        raise HTTPException(
-            status_code=500, detail=f"Failed to create git commit: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Failed to create git commit: {str(e)}")
 
 
 @app.post("/git/{path:path}/push", response_model=GitPushResponse)
@@ -399,20 +387,14 @@ async def git_push(path: str, request: GitPushRequest):
                 timeout=GIT_TIMEOUT,
             )
         except subprocess.CalledProcessError:
-            raise HTTPException(
-                status_code=400, detail="Upstream branch is not configured"
-            )
+            raise HTTPException(status_code=400, detail="Upstream branch is not configured")
 
         upstream = upstream_result.stdout.strip()
         if not upstream or "/" not in upstream:
-            raise HTTPException(
-                status_code=400, detail="Upstream branch is not configured"
-            )
+            raise HTTPException(status_code=400, detail="Upstream branch is not configured")
         remote, _, upstream_branch = upstream.partition("/")
         if not remote or not upstream_branch:
-            raise HTTPException(
-                status_code=400, detail="Upstream branch is not configured"
-            )
+            raise HTTPException(status_code=400, detail="Upstream branch is not configured")
 
         push_cmd = ["git", "-C", validated_path, "push"]
         if request.force:
@@ -443,6 +425,4 @@ async def git_push(path: str, request: GitPushRequest):
         stderr = (e.stderr or "").strip()
         raise HTTPException(status_code=500, detail=f"Git command failed: {stderr}")
     except Exception as e:
-        raise HTTPException(
-            status_code=500, detail=f"Failed to push git branch: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Failed to push git branch: {str(e)}")

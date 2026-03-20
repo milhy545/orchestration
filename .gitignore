@@ -102,3 +102,7 @@ claude-agent/__pycache__/
 
 # Documentation build output
 site/
+
+# Private history import tools and data
+scripts/mega-import-history.py
+data/history-imports/
