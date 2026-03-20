@@ -48,9 +48,7 @@ class ProcessListRequest(BaseModel):
     name_filter: Optional[str] = None
     user_filter: Optional[str] = None
     sort_by: Optional[str] = "memory"  # memory, cpu, pid, name
-    limit: Optional[int] = Field(
-        50, ge=1, le=1000, description="Maximum processes to return"
-    )
+    limit: Optional[int] = Field(50, ge=1, le=1000, description="Maximum processes to return")
 
 
 class ProcessInfo(BaseModel):
@@ -203,9 +201,7 @@ async def resource_monitor_tool(request: ResourceMonitorRequest) -> Dict[str, An
 
     except Exception as e:
         logger.error(f"Resource monitoring failed: {str(e)}")
-        raise HTTPException(
-            status_code=500, detail=f"Resource monitoring failed: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Resource monitoring failed: {str(e)}")
 
 
 @app.post("/tools/process_list")
@@ -227,10 +223,7 @@ async def process_list_tool(request: ProcessListRequest) -> Dict[str, Any]:
                 pinfo = proc.info
 
                 # Apply name filter
-                if (
-                    request.name_filter
-                    and request.name_filter.lower() not in pinfo["name"].lower()
-                ):
+                if request.name_filter and request.name_filter.lower() not in pinfo["name"].lower():
                     continue
 
                 # Apply user filter
@@ -250,9 +243,7 @@ async def process_list_tool(request: ProcessListRequest) -> Dict[str, Any]:
                     cpu_percent=round(cpu_percent, 2),
                     memory_percent=round(memory_percent, 2),
                     memory_mb=round(memory_info.rss / (1024**2), 2),
-                    create_time=datetime.fromtimestamp(
-                        pinfo["create_time"]
-                    ).isoformat(),
+                    create_time=datetime.fromtimestamp(pinfo["create_time"]).isoformat(),
                     cmdline=pinfo["cmdline"] or [],
                 )
 
@@ -348,9 +339,7 @@ async def disk_usage_tool() -> Dict[str, Any]:
 
     except Exception as e:
         logger.error(f"Disk usage check failed: {str(e)}")
-        raise HTTPException(
-            status_code=500, detail=f"Disk usage check failed: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Disk usage check failed: {str(e)}")
 
 
 @app.post("/tools/system_info")
@@ -375,9 +364,7 @@ async def system_info_tool() -> Dict[str, Any]:
                 f"{psutil.cpu_freq().max:.2f} MHz" if psutil.cpu_freq() else "Unknown"
             ),
             "current_frequency": (
-                f"{psutil.cpu_freq().current:.2f} MHz"
-                if psutil.cpu_freq()
-                else "Unknown"
+                f"{psutil.cpu_freq().current:.2f} MHz" if psutil.cpu_freq() else "Unknown"
             ),
         }
 
@@ -442,9 +429,7 @@ async def system_info_tool() -> Dict[str, Any]:
 
     except Exception as e:
         logger.error(f"System info retrieval failed: {str(e)}")
-        raise HTTPException(
-            status_code=500, detail=f"System info retrieval failed: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"System info retrieval failed: {str(e)}")
 
 
 @app.get("/tools/list")

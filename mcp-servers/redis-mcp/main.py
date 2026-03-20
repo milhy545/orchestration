@@ -187,9 +187,7 @@ async def cache_tool(request: CacheRequest) -> Dict[str, Any]:
 
         elif request.operation == "set":
             if request.value is None:
-                raise HTTPException(
-                    status_code=400, detail="Value required for set operation"
-                )
+                raise HTTPException(status_code=400, detail="Value required for set operation")
 
             value_str = json.dumps(request.value)
             kwargs = {}
@@ -235,9 +233,7 @@ async def cache_tool(request: CacheRequest) -> Dict[str, Any]:
 
         elif request.operation == "expire":
             if not request.ttl:
-                raise HTTPException(
-                    status_code=400, detail="TTL required for expire operation"
-                )
+                raise HTTPException(status_code=400, detail="TTL required for expire operation")
 
             success = await client.expire(request.key, request.ttl)
 
@@ -250,9 +246,7 @@ async def cache_tool(request: CacheRequest) -> Dict[str, Any]:
             }
 
         else:
-            raise HTTPException(
-                status_code=400, detail=f"Unknown operation: {request.operation}"
-            )
+            raise HTTPException(status_code=400, detail=f"Unknown operation: {request.operation}")
 
         await client.aclose()
 
@@ -282,10 +276,7 @@ async def session_tool(request: SessionRequest) -> Dict[str, Any]:
             if not request.session_data:
                 raise HTTPException(status_code=400, detail="Session data required")
 
-            session_id = (
-                request.session_id
-                or f"sess_{datetime.now().strftime('%Y%m%d_%H%M%S_%f')}"
-            )
+            session_id = request.session_id or f"sess_{datetime.now().strftime('%Y%m%d_%H%M%S_%f')}"
             session_key = f"{session_prefix}{session_id}"
 
             session_info = {
@@ -302,9 +293,7 @@ async def session_tool(request: SessionRequest) -> Dict[str, Any]:
                 "session_id": session_id,
                 "session_data": request.session_data,
                 "ttl": request.ttl,
-                "expires_at": (
-                    datetime.now() + timedelta(seconds=request.ttl)
-                ).isoformat(),
+                "expires_at": (datetime.now() + timedelta(seconds=request.ttl)).isoformat(),
                 "timestamp": datetime.now().isoformat(),
             }
 
@@ -338,9 +327,7 @@ async def session_tool(request: SessionRequest) -> Dict[str, Any]:
 
         elif request.operation == "update":
             if not request.session_id or not request.session_data:
-                raise HTTPException(
-                    status_code=400, detail="Session ID and data required"
-                )
+                raise HTTPException(status_code=400, detail="Session ID and data required")
 
             session_key = f"{session_prefix}{request.session_id}"
             existing_data = await client.get(session_key)
@@ -409,9 +396,7 @@ async def session_tool(request: SessionRequest) -> Dict[str, Any]:
                             )
                             count += 1
                         except json.JSONDecodeError:
-                            logger.warning(
-                                f"Failed to parse session data for key: {key}"
-                            )
+                            logger.warning(f"Failed to parse session data for key: {key}")
                             continue
 
                 # cursor = 0 means scan complete
@@ -428,9 +413,7 @@ async def session_tool(request: SessionRequest) -> Dict[str, Any]:
             }
 
         else:
-            raise HTTPException(
-                status_code=400, detail=f"Unknown operation: {request.operation}"
-            )
+            raise HTTPException(status_code=400, detail=f"Unknown operation: {request.operation}")
 
         await client.aclose()
 

@@ -153,9 +153,7 @@ async def jwt_token_tool(request: TokenRequest) -> Dict[str, Any]:
 
     except Exception as e:
         logger.error(f"JWT token generation failed: {str(e)}")
-        raise HTTPException(
-            status_code=500, detail=f"Token generation failed: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Token generation failed: {str(e)}")
 
 
 @app.post("/tools/password_hash")
@@ -216,9 +214,7 @@ async def password_hash_tool(request: PasswordHashRequest) -> Dict[str, Any]:
 
     except Exception as e:
         logger.error(f"Password hashing failed: {str(e)}")
-        raise HTTPException(
-            status_code=500, detail=f"Password hashing failed: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Password hashing failed: {str(e)}")
 
 
 @app.post("/tools/password_verify")
@@ -239,9 +235,7 @@ async def password_verify_tool(request: PasswordVerifyRequest) -> Dict[str, Any]
 
     except Exception as e:
         logger.error(f"Password verification failed: {str(e)}")
-        raise HTTPException(
-            status_code=500, detail=f"Password verification failed: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Password verification failed: {str(e)}")
 
 
 @app.post("/tools/encrypt")
@@ -303,9 +297,7 @@ async def decrypt_tool(request: DecryptionRequest) -> Dict[str, Any]:
             # Derive key from password and salt
             password_bytes = request.password.encode()
             # Note: In real implementation, salt would be stored/transmitted with encrypted data
-            salt = base64.urlsafe_b64decode(
-                request.password.encode()
-            )  # Simplified for demo
+            salt = base64.urlsafe_b64decode(request.password.encode())  # Simplified for demo
             kdf = PBKDF2HMAC(
                 algorithm=hashes.SHA256(),
                 length=32,
@@ -392,9 +384,7 @@ async def ssl_check_tool(request: SSLCheckRequest) -> Dict[str, Any]:
             detail=f"SSL check timeout for {request.hostname}:{request.port}",
         )
     except socket.gaierror:
-        raise HTTPException(
-            status_code=404, detail=f"Hostname {request.hostname} not found"
-        )
+        raise HTTPException(status_code=404, detail=f"Hostname {request.hostname} not found")
     except ssl.SSLError as e:
         raise HTTPException(status_code=400, detail=f"SSL error: {str(e)}")
     except Exception as e:

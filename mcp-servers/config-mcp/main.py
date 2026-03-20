@@ -164,9 +164,7 @@ async def env_vars_tool(request: EnvVarRequest) -> Dict[str, Any]:
     try:
         if request.operation == "get":
             if not request.key:
-                raise HTTPException(
-                    status_code=400, detail="Key required for get operation"
-                )
+                raise HTTPException(status_code=400, detail="Key required for get operation")
 
             value = os.environ.get(request.key)
             return {
@@ -198,9 +196,7 @@ async def env_vars_tool(request: EnvVarRequest) -> Dict[str, Any]:
             env_vars = dict(os.environ)
 
             if request.prefix:
-                env_vars = {
-                    k: v for k, v in env_vars.items() if k.startswith(request.prefix)
-                }
+                env_vars = {k: v for k, v in env_vars.items() if k.startswith(request.prefix)}
 
             return {
                 "operation": "list",
@@ -212,9 +208,7 @@ async def env_vars_tool(request: EnvVarRequest) -> Dict[str, Any]:
 
         elif request.operation == "delete":
             if not request.key:
-                raise HTTPException(
-                    status_code=400, detail="Key required for delete operation"
-                )
+                raise HTTPException(status_code=400, detail="Key required for delete operation")
 
             old_value = os.environ.get(request.key)
             if old_value is not None:
@@ -229,9 +223,7 @@ async def env_vars_tool(request: EnvVarRequest) -> Dict[str, Any]:
             }
 
         else:
-            raise HTTPException(
-                status_code=400, detail=f"Unknown operation: {request.operation}"
-            )
+            raise HTTPException(status_code=400, detail=f"Unknown operation: {request.operation}")
 
     except HTTPException:
         raise
@@ -299,9 +291,7 @@ async def config_file_tool(request: ConfigFileRequest) -> Dict[str, Any]:
             elif request.format == "ini":
                 config = configparser.ConfigParser()
                 config.read_string(content)
-                parsed_content = {
-                    section: dict(config[section]) for section in config.sections()
-                }
+                parsed_content = {section: dict(config[section]) for section in config.sections()}
             elif request.format == "env":
                 parsed_content = {}
                 for line in content.strip().split("\n"):
@@ -316,17 +306,13 @@ async def config_file_tool(request: ConfigFileRequest) -> Dict[str, Any]:
                 "raw_content": content,
                 "parsed_content": parsed_content,
                 "file_size": file_path.stat().st_size,
-                "modified_time": datetime.fromtimestamp(
-                    file_path.stat().st_mtime
-                ).isoformat(),
+                "modified_time": datetime.fromtimestamp(file_path.stat().st_mtime).isoformat(),
                 "timestamp": datetime.now().isoformat(),
             }
 
         elif request.operation == "write":
             if request.content is None:
-                raise HTTPException(
-                    status_code=400, detail="Content required for write operation"
-                )
+                raise HTTPException(status_code=400, detail="Content required for write operation")
 
             # Ensure directory exists
             file_path.parent.mkdir(parents=True, exist_ok=True)
@@ -407,9 +393,7 @@ async def config_file_tool(request: ConfigFileRequest) -> Dict[str, Any]:
             }
 
         else:
-            raise HTTPException(
-                status_code=400, detail=f"Unknown operation: {request.operation}"
-            )
+            raise HTTPException(status_code=400, detail=f"Unknown operation: {request.operation}")
 
     except HTTPException:
         raise
@@ -444,29 +428,17 @@ async def validate_tool(request: ConfigValidateRequest) -> Dict[str, Any]:
                 value = request.config_data[key]
 
                 if expected_type == "string" and not isinstance(value, str):
-                    type_errors.append(
-                        f"Key '{key}' should be string, got {type(value).__name__}"
-                    )
+                    type_errors.append(f"Key '{key}' should be string, got {type(value).__name__}")
                 elif expected_type == "integer" and not isinstance(value, int):
-                    type_errors.append(
-                        f"Key '{key}' should be integer, got {type(value).__name__}"
-                    )
+                    type_errors.append(f"Key '{key}' should be integer, got {type(value).__name__}")
                 elif expected_type == "float" and not isinstance(value, (int, float)):
-                    type_errors.append(
-                        f"Key '{key}' should be float, got {type(value).__name__}"
-                    )
+                    type_errors.append(f"Key '{key}' should be float, got {type(value).__name__}")
                 elif expected_type == "boolean" and not isinstance(value, bool):
-                    type_errors.append(
-                        f"Key '{key}' should be boolean, got {type(value).__name__}"
-                    )
+                    type_errors.append(f"Key '{key}' should be boolean, got {type(value).__name__}")
                 elif expected_type == "list" and not isinstance(value, list):
-                    type_errors.append(
-                        f"Key '{key}' should be list, got {type(value).__name__}"
-                    )
+                    type_errors.append(f"Key '{key}' should be list, got {type(value).__name__}")
                 elif expected_type == "dict" and not isinstance(value, dict):
-                    type_errors.append(
-                        f"Key '{key}' should be dict, got {type(value).__name__}"
-                    )
+                    type_errors.append(f"Key '{key}' should be dict, got {type(value).__name__}")
 
         validation_errors.extend(type_errors)
 
@@ -478,12 +450,8 @@ async def validate_tool(request: ConfigValidateRequest) -> Dict[str, Any]:
                 if value != value.strip():
                     warnings.append(f"Key '{key}' has leading/trailing whitespace")
             elif isinstance(value, (int, float)):
-                if value < 0 and key.lower().endswith(
-                    ("_port", "_timeout", "_count", "_size")
-                ):
-                    validation_errors.append(
-                        f"Key '{key}' should be positive, got {value}"
-                    )
+                if value < 0 and key.lower().endswith(("_port", "_timeout", "_count", "_size")):
+                    validation_errors.append(f"Key '{key}' should be positive, got {value}")
 
         # Schema validation if provided
         schema_errors = []
@@ -531,9 +499,7 @@ async def backup_tool(request: ConfigBackupRequest) -> Dict[str, Any]:
 
         if request.operation == "create":
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            backup_name = validate_backup_name(
-                request.backup_name or f"backup_{timestamp}"
-            )
+            backup_name = validate_backup_name(request.backup_name or f"backup_{timestamp}")
             backup_path = _ensure_within(backup_dir, backup_dir / backup_name)
 
             if backup_path.exists():  # lgtm[py/path-injection]
@@ -544,19 +510,13 @@ async def backup_tool(request: ConfigBackupRequest) -> Dict[str, Any]:
 
             # Copy files matching patterns
             for pattern in validate_backup_patterns(request.file_patterns or []):
-                for file_path in CONFIG_BASE_PATH.glob(
-                    pattern
-                ):  # lgtm[py/path-injection]
+                for file_path in CONFIG_BASE_PATH.glob(pattern):  # lgtm[py/path-injection]
                     resolved_source = _ensure_within(CONFIG_BASE_PATH, file_path)
                     if resolved_source.is_file() and not resolved_source.is_relative_to(
                         backup_dir.resolve()
                     ):
-                        relative_path = resolved_source.relative_to(
-                            CONFIG_BASE_PATH.resolve()
-                        )
-                        backup_file_path = _ensure_within(
-                            backup_path, backup_path / relative_path
-                        )
+                        relative_path = resolved_source.relative_to(CONFIG_BASE_PATH.resolve())
+                        backup_file_path = _ensure_within(backup_path, backup_path / relative_path)
                         _ensure_within(backup_path, backup_file_path.parent).mkdir(
                             parents=True, exist_ok=True
                         )
@@ -617,12 +577,8 @@ async def backup_tool(request: ConfigBackupRequest) -> Dict[str, Any]:
             for backup_file in backup_path.rglob("*"):  # lgtm[py/path-injection]
                 if backup_file.is_file():
                     relative_path = backup_file.relative_to(backup_path)
-                    target_path = _ensure_within(
-                        CONFIG_BASE_PATH, CONFIG_BASE_PATH / relative_path
-                    )
-                    target_path.parent.mkdir(
-                        parents=True, exist_ok=True
-                    )  # lgtm[py/path-injection]
+                    target_path = _ensure_within(CONFIG_BASE_PATH, CONFIG_BASE_PATH / relative_path)
+                    target_path.parent.mkdir(parents=True, exist_ok=True)  # lgtm[py/path-injection]
                     shutil.copy2(
                         str(_ensure_within(backup_path, backup_file)), str(target_path)
                     )  # lgtm[py/path-injection]
@@ -654,9 +610,7 @@ async def backup_tool(request: ConfigBackupRequest) -> Dict[str, Any]:
             }
 
         else:
-            raise HTTPException(
-                status_code=400, detail=f"Unknown operation: {request.operation}"
-            )
+            raise HTTPException(status_code=400, detail=f"Unknown operation: {request.operation}")
 
     except HTTPException:
         raise
