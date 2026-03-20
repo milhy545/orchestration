@@ -338,9 +338,7 @@ def detect_circular_imports(path: str) -> Dict[str, Any]:
             if neighbor not in visited:
                 _dfs(neighbor, path_so_far + [neighbor])
             elif neighbor in rec_stack:
-                cycle_start = (
-                    path_so_far.index(neighbor) if neighbor in path_so_far else -1
-                )
+                cycle_start = path_so_far.index(neighbor) if neighbor in path_so_far else -1
                 if cycle_start >= 0:
                     cycles.append(path_so_far[cycle_start:] + [neighbor])
                 else:

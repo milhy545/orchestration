@@ -52,14 +52,10 @@ def validate_identifier(identifier: str, identifier_type: str = "identifier") ->
         HTTPException: If identifier is invalid
     """
     if not identifier:
-        raise HTTPException(
-            status_code=400, detail=f"{identifier_type} cannot be empty"
-        )
+        raise HTTPException(status_code=400, detail=f"{identifier_type} cannot be empty")
 
     if len(identifier) > 63:  # PostgreSQL identifier length limit
-        raise HTTPException(
-            status_code=400, detail=f"{identifier_type} too long (max 63 chars)"
-        )
+        raise HTTPException(status_code=400, detail=f"{identifier_type} too long (max 63 chars)")
 
     if not IDENTIFIER_PATTERN.match(identifier):
         raise HTTPException(
@@ -167,9 +163,7 @@ def build_select_query(
                 filter_clauses.append(f'"{condition.column}" {op} {placeholder}')
             else:
                 placeholder = add_param(condition.value)
-                filter_clauses.append(
-                    f'"{condition.column}" {condition.op} {placeholder}'
-                )
+                filter_clauses.append(f'"{condition.column}" {condition.op} {placeholder}')
         if filter_clauses:
             sql += " WHERE " + " AND ".join(filter_clauses)
 
@@ -177,9 +171,7 @@ def build_select_query(
         order_clauses = []
         for order in request.order_by:
             if order.column not in allowed_columns:
-                raise HTTPException(
-                    status_code=400, detail=f"Unknown order column: {order.column}"
-                )
+                raise HTTPException(status_code=400, detail=f"Unknown order column: {order.column}")
             order_clauses.append(f'"{order.column}" {order.direction.upper()}')
         if order_clauses:
             sql += " ORDER BY " + ", ".join(order_clauses)
@@ -203,9 +195,7 @@ async def lifespan(app: FastAPI):
             "DATABASE_URL",
             "postgresql://mcp_admin:change_me_in_production@postgresql:5432/mcp_unified",
         )
-        db_pool = await asyncpg.create_pool(
-            db_url, min_size=5, max_size=20, command_timeout=60
-        )
+        db_pool = await asyncpg.create_pool(db_url, min_size=5, max_size=20, command_timeout=60)
         logger.info("Database pool created successfully")
     except Exception as e:
         logger.error(f"Failed to create database pool: {e}")
@@ -316,16 +306,12 @@ async def query_tool(request: SelectQueryRequest) -> Dict[str, Any]:
     try:
         async with db_pool.acquire() as connection:
             start_time = datetime.now()
-            allowed_columns = await get_table_columns(
-                connection, validated_schema, validated_table
-            )
+            allowed_columns = await get_table_columns(connection, validated_schema, validated_table)
             sql, params, selected_columns = build_select_query(
                 request, validated_schema, validated_table, allowed_columns
             )
 
-            logger.info(
-                f"Executing structured query on {validated_schema}.{validated_table}"
-            )
+            logger.info(f"Executing structured query on {validated_schema}.{validated_table}")
 
             result = await connection.fetch(sql, *params)  # lgtm[py/sql-injection]
             rows = [dict(row) for row in result]
@@ -375,7 +361,6 @@ async def schema_tool(request: SchemaRequest) -> Dict[str, Any]:
 
     try:
         async with db_pool.acquire() as connection:
-
             if request.operation == "describe":
                 if validated_table:
                     # Describe specific table (uses parameterized queries - SAFE)
@@ -386,9 +371,7 @@ async def schema_tool(request: SchemaRequest) -> Dict[str, Any]:
                     WHERE table_schema = $1 AND table_name = $2
                     ORDER BY ordinal_position
                     """
-                    result = await connection.fetch(
-                        query, validated_schema, validated_table
-                    )
+                    result = await connection.fetch(query, validated_schema, validated_table)
                     columns = [dict(row) for row in result]
 
                     # Get table indexes (parameterized - SAFE)
@@ -402,9 +385,7 @@ async def schema_tool(request: SchemaRequest) -> Dict[str, Any]:
                     )
                     indexes = [dict(row) for row in index_result]
 
-                    logger.info(
-                        f"Described table: {validated_schema}.{validated_table}"
-                    )
+                    logger.info(f"Described table: {validated_schema}.{validated_table}")
 
                     return {
                         "operation": "describe",
@@ -425,9 +406,7 @@ async def schema_tool(request: SchemaRequest) -> Dict[str, Any]:
                     result = await connection.fetch(query, validated_schema)
                     tables = [dict(row) for row in result]
 
-                    logger.info(
-                        f"Listed {len(tables)} tables in schema: {validated_schema}"
-                    )
+                    logger.info(f"Listed {len(tables)} tables in schema: {validated_schema}")
 
                     return {
                         "operation": "describe",
@@ -446,9 +425,7 @@ async def schema_tool(request: SchemaRequest) -> Dict[str, Any]:
                 result = await connection.fetch(query, validated_schema)
                 tables = [dict(row) for row in result]
 
-                logger.info(
-                    f"Listed {len(tables)} tables in schema: {validated_schema}"
-                )
+                logger.info(f"Listed {len(tables)} tables in schema: {validated_schema}")
 
                 return {
                     "operation": "list",
@@ -481,7 +458,6 @@ async def connection_tool(request: ConnectionRequest) -> Dict[str, Any]:
 
     try:
         async with db_pool.acquire() as connection:
-
             if request.operation == "status":
                 # Get database connection status
                 query = "SELECT version(), current_database(), current_user, inet_server_addr(), inet_server_port()"
@@ -514,7 +490,9 @@ async def connection_tool(request: ConnectionRequest) -> Dict[str, Any]:
                 stats = dict(result)
 
                 # Get database size
-                size_query = "SELECT pg_size_pretty(pg_database_size(current_database())) as database_size"
+                size_query = (
+                    "SELECT pg_size_pretty(pg_database_size(current_database())) as database_size"
+                )
                 size_result = await connection.fetchrow(size_query)
                 stats.update(dict(size_result))
 

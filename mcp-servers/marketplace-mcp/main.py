@@ -146,9 +146,7 @@ def _require_scopes(required: List[str]):
 
         scopes = _extract_scopes(payload)
         if any(scope not in scopes for scope in required):
-            raise HTTPException(
-                status_code=403, detail=f"Missing required scopes: {required}"
-            )
+            raise HTTPException(status_code=403, detail=f"Missing required scopes: {required}")
 
         return payload
 
@@ -422,9 +420,7 @@ async def skills_index(
     compat_client: Optional[str] = None,
     _token: Dict[str, Any] = Depends(_require_scopes(["market:read"])),
 ) -> Dict[str, Any]:
-    return await _tool_skills_list(
-        {"name": name, "tag": tag, "compat_client": compat_client}
-    )
+    return await _tool_skills_list({"name": name, "tag": tag, "compat_client": compat_client})
 
 
 @app.get("/skills/v1/packages/{name}/{version}")
@@ -456,9 +452,7 @@ async def skill_download(
         if actual != pkg.sha256:
             raise HTTPException(status_code=500, detail="Artifact checksum mismatch")
 
-    return FileResponse(
-        path=local_path, filename=local_path.name, media_type="application/gzip"
-    )
+    return FileResponse(path=local_path, filename=local_path.name, media_type="application/gzip")
 
 
 @app.post("/skills/v1/install-plan")
@@ -470,26 +464,20 @@ async def install_plan(
         raise HTTPException(status_code=400, detail="At least one skill is required")
 
     resolved: List[SkillPackageEntry] = []
-    for spec in sorted(
-        request.skills, key=lambda item: (item.name, item.version or "")
-    ):
+    for spec in sorted(request.skills, key=lambda item: (item.name, item.version or "")):
         if spec.version:
             item = _find_skill(spec.name, spec.version)
         else:
             versions = _skill_versions(spec.name)
             if not versions:
-                raise HTTPException(
-                    status_code=404, detail=f"Skill {spec.name} not found"
-                )
+                raise HTTPException(status_code=404, detail=f"Skill {spec.name} not found")
             item = _select_latest(versions)
         resolved.append(item)
 
     steps: List[Dict[str, Any]] = []
     step_order = 1
     for pkg in resolved:
-        download_path = (
-            f"{MARKET_BASE_URL}/skills/v1/packages/{pkg.name}/{pkg.version}/download"
-        )
+        download_path = f"{MARKET_BASE_URL}/skills/v1/packages/{pkg.name}/{pkg.version}/download"
         install_target = f"{request.install_root.rstrip('/')}/{pkg.name}"
 
         steps.extend(

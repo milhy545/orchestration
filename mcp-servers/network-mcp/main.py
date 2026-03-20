@@ -107,11 +107,7 @@ def _validate_public_host(hostname: str) -> None:
     if not hostname:
         raise HTTPException(status_code=400, detail="Invalid hostname")
     lowered = hostname.lower()
-    if (
-        lowered in {"localhost"}
-        or lowered.endswith(".localhost")
-        or lowered.endswith(".local")
-    ):
+    if lowered in {"localhost"} or lowered.endswith(".localhost") or lowered.endswith(".local"):
         raise HTTPException(status_code=403, detail="Localhost is not allowed")
 
     try:
@@ -167,9 +163,7 @@ async def http_request_tool(request: HttpRequest) -> HttpResponse:
     try:
         validate_public_url(str(request.url))
 
-        async with httpx.AsyncClient(
-            follow_redirects=request.follow_redirects
-        ) as client:
+        async with httpx.AsyncClient(follow_redirects=request.follow_redirects) as client:
             # Prepare request data
             kwargs = {
                 "method": request.method.upper(),
@@ -276,9 +270,7 @@ async def forward_webhook(config: WebhookConfig, payload: Dict[str, Any]):
             if config.secret:
                 headers["X-Webhook-Secret"] = config.secret
 
-            response = await client.post(
-                str(config.url), json=payload, headers=headers, timeout=30
-            )
+            response = await client.post(str(config.url), json=payload, headers=headers, timeout=30)
 
             logger.info(
                 f"Forwarded webhook {config.webhook_id} to {config.url}, status: {response.status_code}"
@@ -370,21 +362,15 @@ async def api_test_tool(config: ApiTestConfig) -> Dict[str, Any]:
 
             try:
                 if not endpoint:
-                    raise HTTPException(
-                        status_code=400, detail="Endpoint cannot be empty"
-                    )
+                    raise HTTPException(status_code=400, detail="Endpoint cannot be empty")
                 if "://" in endpoint or endpoint.startswith("//"):
-                    raise HTTPException(
-                        status_code=400, detail="Endpoint must be a relative path"
-                    )
+                    raise HTTPException(status_code=400, detail="Endpoint must be a relative path")
 
                 # Construct full URL safely
                 full_url = urljoin(base_url.rstrip("/") + "/", endpoint.lstrip("/"))
                 full_parsed = urlparse(full_url)
                 if full_parsed.hostname != base_parsed.hostname:
-                    raise HTTPException(
-                        status_code=400, detail="Endpoint host mismatch"
-                    )
+                    raise HTTPException(status_code=400, detail="Endpoint host mismatch")
                 validate_public_url(full_url)
 
                 # Make request
@@ -433,9 +419,7 @@ async def api_test_tool(config: ApiTestConfig) -> Dict[str, Any]:
         "successful_endpoints": successful,
         "failed_endpoints": len(config.endpoints) - successful,
         "total_time": total_time,
-        "average_response_time": (
-            total_time / len(config.endpoints) if config.endpoints else 0
-        ),
+        "average_response_time": (total_time / len(config.endpoints) if config.endpoints else 0),
         "results": results,
         "timestamp": datetime.now().isoformat(),
     }

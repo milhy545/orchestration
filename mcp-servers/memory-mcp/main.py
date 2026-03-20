@@ -44,9 +44,7 @@ def get_memory_connection():
     try:
         return psycopg2.connect(DATABASE_URL, connect_timeout=10)
     except psycopg2.Error as e:
-        raise HTTPException(
-            status_code=500, detail=f"Database connection failed: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Database connection failed: {str(e)}")
 
 
 def ensure_table_exists():
@@ -86,9 +84,7 @@ class MemoryEntry(BaseModel):
     @validator("content")
     def validate_content_size(cls, v):
         if len(v) > MAX_CONTENT_SIZE:
-            raise ValueError(
-                f"Content too large. Maximum size: {MAX_CONTENT_SIZE} bytes"
-            )
+            raise ValueError(f"Content too large. Maximum size: {MAX_CONTENT_SIZE} bytes")
         return v
 
 
@@ -214,9 +210,7 @@ async def list_memories(
                 )
             return memories
     except Exception as e:
-        raise HTTPException(
-            status_code=500, detail=f"Failed to list memories: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Failed to list memories: {str(e)}")
     finally:
         try:
             conn.close()
@@ -266,9 +260,7 @@ async def search_memories(
                 )
             return memories
     except Exception as e:
-        raise HTTPException(
-            status_code=500, detail=f"Failed to search memories: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Failed to search memories: {str(e)}")
     finally:
         try:
             conn.close()
@@ -291,9 +283,7 @@ async def delete_memory(memory_id: int):
         raise
     except Exception as e:
         conn.rollback()
-        raise HTTPException(
-            status_code=500, detail=f"Failed to delete memory: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Failed to delete memory: {str(e)}")
     finally:
         try:
             conn.close()

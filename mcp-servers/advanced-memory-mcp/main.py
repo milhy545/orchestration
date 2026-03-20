@@ -1,7 +1,7 @@
 import json
+import logging
 import os
 import uuid
-import logging
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
@@ -27,7 +27,7 @@ DATABASE_URL = os.getenv(
     "MCP_DATABASE_URL",
     "postgresql://mcp_admin:change_me_in_production@postgresql:5432/mcp_unified",
 )
-QDRANT_URL = os.getenv("QDRANT_URL", "http://qdrant-vector:6333").rstrip('/')
+QDRANT_URL = os.getenv("QDRANT_URL", "http://qdrant-vector:6333").rstrip("/")
 
 # Load API Key from environment or Vault file
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
@@ -35,7 +35,7 @@ GEMINI_API_KEY_FILE = os.getenv("GEMINI_API_KEY_FILE", "")
 
 if not GEMINI_API_KEY and GEMINI_API_KEY_FILE and os.path.exists(GEMINI_API_KEY_FILE):
     try:
-        with open(GEMINI_API_KEY_FILE, 'r') as f:
+        with open(GEMINI_API_KEY_FILE, "r") as f:
             GEMINI_API_KEY = f.read().strip()
             logger.info(f"Loaded Gemini API key from {GEMINI_API_KEY_FILE}")
     except Exception as e:
@@ -56,12 +56,7 @@ async def encode_text(text: str) -> List[float]:
         return [0.0] * EMBEDDING_DIM
 
     url = f"https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent?key={GEMINI_API_KEY}"
-    payload = {
-        "model": "models/text-embedding-004",
-        "content": {
-            "parts": [{"text": text}]
-        }
-    }
+    payload = {"model": "models/text-embedding-004", "content": {"parts": [{"text": text}]}}
 
     try:
         response = await http_client.post(url, json=payload, timeout=15.0)
@@ -95,13 +90,10 @@ async def ensure_qdrant_collection():
         res = await http_client.get(f"{QDRANT_URL}/collections/{COLLECTION_NAME}")
         if res.status_code == 404:
             logger.info(f"Creating Qdrant collection: {COLLECTION_NAME}")
-            create_payload = {
-                "vectors": {
-                    "size": EMBEDDING_DIM,
-                    "distance": "Cosine"
-                }
-            }
-            await http_client.put(f"{QDRANT_URL}/collections/{COLLECTION_NAME}", json=create_payload)
+            create_payload = {"vectors": {"size": EMBEDDING_DIM, "distance": "Cosine"}}
+            await http_client.put(
+                f"{QDRANT_URL}/collections/{COLLECTION_NAME}", json=create_payload
+            )
     except Exception as e:
         logger.error(f"Failed to ensure Qdrant collection: {e}")
 
@@ -259,12 +251,14 @@ async def handle_store_memory(args: Dict[str, Any]) -> Dict[str, Any]:
                     "content": content,
                     "category": category,
                     "metadata": metadata,
-                }
+                },
             }
         ]
     }
 
-    res = await http_client.put(f"{QDRANT_URL}/collections/{COLLECTION_NAME}/points?wait=true", json=point_payload)
+    res = await http_client.put(
+        f"{QDRANT_URL}/collections/{COLLECTION_NAME}/points?wait=true", json=point_payload
+    )
     res.raise_for_status()
 
     # Store metadata in PostgreSQL
@@ -333,10 +327,12 @@ async def handle_semantic_similarity(args: Dict[str, Any]) -> List[Dict[str, Any
         "vector": query_vector,
         "limit": limit,
         "score_threshold": threshold,
-        "with_payload": True
+        "with_payload": True,
     }
 
-    res = await http_client.post(f"{QDRANT_URL}/collections/{COLLECTION_NAME}/points/search", json=search_payload)
+    res = await http_client.post(
+        f"{QDRANT_URL}/collections/{COLLECTION_NAME}/points/search", json=search_payload
+    )
     res.raise_for_status()
     results = res.json().get("result", [])
 
@@ -361,18 +357,14 @@ async def handle_vector_search(args: Dict[str, Any]) -> List[Dict[str, Any]]:
 
     query_vector = await encode_text(query)
 
-    search_payload = {
-        "vector": query_vector,
-        "limit": limit,
-        "with_payload": True
-    }
+    search_payload = {"vector": query_vector, "limit": limit, "with_payload": True}
 
     if category:
-        search_payload["filter"] = {
-            "must": [{"key": "category", "match": {"value": category}}]
-        }
+        search_payload["filter"] = {"must": [{"key": "category", "match": {"value": category}}]}
 
-    res = await http_client.post(f"{QDRANT_URL}/collections/{COLLECTION_NAME}/points/search", json=search_payload)
+    res = await http_client.post(
+        f"{QDRANT_URL}/collections/{COLLECTION_NAME}/points/search", json=search_payload
+    )
     res.raise_for_status()
     results = res.json().get("result", [])
 
@@ -390,5 +382,6 @@ async def handle_vector_search(args: Dict[str, Any]) -> List[Dict[str, Any]]:
 
 if __name__ == "__main__":
     import uvicorn
+
     port = int(os.getenv("MCP_SERVER_PORT", "8000"))
     uvicorn.run(app, host="0.0.0.0", port=port)

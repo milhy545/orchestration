@@ -30,11 +30,7 @@ def _resolve_database_file() -> str:
     CI/unit tests often run without a /data mount, so we fall back to a local
     ./data/database.db to keep the service functional out of the box.
     """
-    db_file = (
-        os.getenv("DATABASE_FILE")
-        or os.getenv("DATABASE_PATH")
-        or DEFAULT_DATABASE_FILE
-    )
+    db_file = os.getenv("DATABASE_FILE") or os.getenv("DATABASE_PATH") or DEFAULT_DATABASE_FILE
     if db_file.startswith("/data/") and not os.path.isdir("/data"):
         db_file = os.path.join(os.getcwd(), "data", "database.db")
 
@@ -241,9 +237,7 @@ def build_select_query(
         order_clauses = []
         for order in request.order_by:
             if order.column not in allowed_columns:
-                raise HTTPException(
-                    status_code=400, detail=f"Unknown order column: {order.column}"
-                )
+                raise HTTPException(status_code=400, detail=f"Unknown order column: {order.column}")
             order_clauses.append(f'"{order.column}" {order.direction.upper()}')
         if order_clauses:
             sql += " ORDER BY " + ", ".join(order_clauses)
@@ -437,9 +431,7 @@ async def get_sample_data(
             )  # lgtm[py/sql-injection]
 
             columns = (
-                [description[0] for description in cursor.description]
-                if cursor.description
-                else []
+                [description[0] for description in cursor.description] if cursor.description else []
             )
             rows = [list(row) for row in cursor.fetchall()]
 

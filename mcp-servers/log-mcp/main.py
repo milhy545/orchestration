@@ -58,8 +58,7 @@ def validate_log_path(user_path: str) -> Path:
 
         # Check if path is within allowed directories
         allowed = any(
-            path.is_relative_to(Path(allowed_dir).resolve())
-            for allowed_dir in ALLOWED_LOG_DIRS
+            path.is_relative_to(Path(allowed_dir).resolve()) for allowed_dir in ALLOWED_LOG_DIRS
         )
         if not allowed:
             raise HTTPException(
@@ -88,8 +87,7 @@ def _ensure_allowed_log_path(path_obj: Path) -> Path:
     """Re-validate resolved path against allowed log roots before IO."""
     resolved = path_obj.resolve()
     allowed = any(
-        resolved.is_relative_to(Path(allowed_dir).resolve())
-        for allowed_dir in ALLOWED_LOG_DIRS
+        resolved.is_relative_to(Path(allowed_dir).resolve()) for allowed_dir in ALLOWED_LOG_DIRS
     )
     if not allowed:
         raise HTTPException(
@@ -130,9 +128,7 @@ def validate_command(command_str: str) -> List[str]:
                     break
 
             if not flag_valid:
-                raise HTTPException(
-                    status_code=403, detail=f"Argument {arg} not allowed for {cmd}"
-                )
+                raise HTTPException(status_code=403, detail=f"Argument {arg} not allowed for {cmd}")
 
     return parts
 
@@ -168,9 +164,7 @@ class LogAnalysisRequest(BaseModel):
     analysis_type: str = Field(..., description="pattern, stats, errors, timeline")
     pattern: Optional[str] = None
     log_format: Optional[str] = "auto"  # auto, apache, nginx, syslog, json
-    time_range: Optional[Dict[str, str]] = (
-        None  # {"start": "2024-01-01", "end": "2024-01-02"}
-    )
+    time_range: Optional[Dict[str, str]] = None  # {"start": "2024-01-01", "end": "2024-01-02"}
     filters: Optional[Dict[str, str]] = {}  # {"level": "ERROR", "source": "app"}
     limit: Optional[int] = 1000
 
@@ -233,9 +227,7 @@ async def log_analysis_tool(request: LogAnalysisRequest) -> Dict[str, Any]:
 
         if request.log_source == "file_path":
             # Validate path to prevent path traversal
-            log_path = _ensure_allowed_log_path(
-                _safe_path(validate_log_path(request.source_value))
-            )
+            log_path = _ensure_allowed_log_path(_safe_path(validate_log_path(request.source_value)))
 
             # Handle compressed files
             if log_path.suffix == ".gz":
@@ -281,9 +273,7 @@ async def log_analysis_tool(request: LogAnalysisRequest) -> Dict[str, Any]:
                 timestamps = re.findall(LOG_PATTERNS["timestamp"], line)
                 if timestamps:
                     try:
-                        line_time = datetime.strptime(
-                            timestamps[0], "%Y-%m-%d %H:%M:%S"
-                        )
+                        line_time = datetime.strptime(timestamps[0], "%Y-%m-%d %H:%M:%S")
                         start_time = datetime.fromisoformat(
                             request.time_range.get("start", "1900-01-01")
                         )
@@ -316,9 +306,7 @@ async def log_analysis_tool(request: LogAnalysisRequest) -> Dict[str, Any]:
 
         # Perform analysis based on type
         if request.analysis_type == "pattern":
-            return await _analyze_patterns(
-                filtered_lines, request.pattern, request.log_format
-            )
+            return await _analyze_patterns(filtered_lines, request.pattern, request.log_format)
         elif request.analysis_type == "stats":
             return await _analyze_stats(filtered_lines)
         elif request.analysis_type == "errors":
@@ -335,9 +323,7 @@ async def log_analysis_tool(request: LogAnalysisRequest) -> Dict[str, Any]:
         raise HTTPException(status_code=500, detail="Log analysis failed")
 
 
-async def _analyze_patterns(
-    lines: List[str], pattern: str, log_format: str
-) -> Dict[str, Any]:
+async def _analyze_patterns(lines: List[str], pattern: str, log_format: str) -> Dict[str, Any]:
     """Analyze log lines for patterns"""
     matches = []
 
@@ -440,9 +426,7 @@ async def _analyze_errors(lines: List[str]) -> Dict[str, Any]:
 
     for i, line in enumerate(lines):
         line_upper = line.upper()
-        if any(
-            level in line_upper for level in ["ERROR", "FATAL", "CRITICAL", "EXCEPTION"]
-        ):
+        if any(level in line_upper for level in ["ERROR", "FATAL", "CRITICAL", "EXCEPTION"]):
             errors.append(
                 {
                     "line_number": i + 1,
@@ -452,9 +436,7 @@ async def _analyze_errors(lines: List[str]) -> Dict[str, Any]:
             )
 
             # Extract error pattern (remove specific details like IDs, timestamps)
-            clean_pattern = re.sub(
-                r"\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}", "[TIMESTAMP]", line
-            )
+            clean_pattern = re.sub(r"\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}", "[TIMESTAMP]", line)
             clean_pattern = re.sub(r"\b\d+\b", "[NUMBER]", clean_pattern)
             clean_pattern = re.sub(
                 r"\b[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}\b",
@@ -554,9 +536,7 @@ async def log_search_tool(request: LogSearchRequest) -> Dict[str, Any]:
         for source in request.sources:
             try:
                 # Validate path to prevent path traversal
-                source_path = _ensure_allowed_log_path(
-                    _safe_path(validate_log_path(source))
-                )
+                source_path = _ensure_allowed_log_path(_safe_path(validate_log_path(source)))
 
                 # Read file content
                 if source_path.suffix == ".gz":
@@ -604,20 +584,12 @@ async def log_search_tool(request: LogSearchRequest) -> Dict[str, Any]:
                                 }
                             )
                 except Exception as e:
-                    raise HTTPException(
-                        status_code=400, detail=f"Invalid regex: {str(e)}"
-                    )
+                    raise HTTPException(status_code=400, detail=f"Invalid regex: {str(e)}")
 
             elif request.search_type == "text":
-                query = (
-                    request.query.lower()
-                    if not request.case_sensitive
-                    else request.query
-                )
+                query = request.query.lower() if not request.case_sensitive else request.query
                 for i, line in enumerate(lines):
-                    line_to_search = (
-                        line.lower() if not request.case_sensitive else line
-                    )
+                    line_to_search = line.lower() if not request.case_sensitive else line
                     if query in line_to_search:
                         context_start = max(0, i - request.context_lines)
                         context_end = min(len(lines), i + request.context_lines + 1)
@@ -631,9 +603,7 @@ async def log_search_tool(request: LogSearchRequest) -> Dict[str, Any]:
 
             # Apply result limit per source
             if len(source_matches) > request.max_results // len(request.sources):
-                source_matches = source_matches[
-                    : request.max_results // len(request.sources)
-                ]
+                source_matches = source_matches[: request.max_results // len(request.sources)]
 
             if source_matches:
                 results.append(

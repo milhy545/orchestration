@@ -84,9 +84,7 @@ async def transcribe_url(request: URLTranscribeRequest):
     start_time = time.time()
 
     try:
-        logger.info(
-            f"Transcribing audio from URL: {request.url}, language: {request.language}"
-        )
+        logger.info(f"Transcribing audio from URL: {request.url}, language: {request.language}")
 
         # Mock processing delay
         await asyncio.sleep(0.2)
@@ -105,9 +103,7 @@ async def transcribe_url(request: URLTranscribeRequest):
 
     except Exception as e:
         logger.error(f"Error transcribing URL: {str(e)}")
-        raise HTTPException(
-            status_code=500, detail=f"URL transcription failed: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"URL transcription failed: {str(e)}")
 
 
 if __name__ == "__main__":

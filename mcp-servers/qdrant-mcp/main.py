@@ -167,9 +167,7 @@ async def collection_tool(request: CollectionRequest) -> Dict[str, Any]:
 
             await qdrant_client.create_collection(
                 collection_name=request.collection_name,
-                vectors_config=VectorParams(
-                    size=request.vector_size, distance=distance_func
-                ),
+                vectors_config=VectorParams(size=request.vector_size, distance=distance_func),
             )
 
             return {
@@ -239,9 +237,7 @@ async def collection_tool(request: CollectionRequest) -> Dict[str, Any]:
             }
 
         else:
-            raise HTTPException(
-                status_code=400, detail=f"Unknown operation: {request.operation}"
-            )
+            raise HTTPException(status_code=400, detail=f"Unknown operation: {request.operation}")
 
     except Exception as e:
         logger.error(f"Collection operation failed: {str(e)}")
@@ -262,9 +258,7 @@ async def vector_tool(request: VectorRequest) -> Dict[str, Any]:
     try:
         if request.operation == "insert":
             if not request.points:
-                raise HTTPException(
-                    status_code=400, detail="Points required for insert"
-                )
+                raise HTTPException(status_code=400, detail="Points required for insert")
 
             points = []
             for point_data in request.points:
@@ -315,9 +309,7 @@ async def vector_tool(request: VectorRequest) -> Dict[str, Any]:
 
         elif request.operation == "delete":
             if not request.point_id:
-                raise HTTPException(
-                    status_code=400, detail="Point ID required for delete"
-                )
+                raise HTTPException(status_code=400, detail="Point ID required for delete")
 
             result = await qdrant_client.delete(
                 collection_name=request.collection_name,
@@ -368,9 +360,7 @@ async def vector_tool(request: VectorRequest) -> Dict[str, Any]:
             }
 
         else:
-            raise HTTPException(
-                status_code=400, detail=f"Unknown operation: {request.operation}"
-            )
+            raise HTTPException(status_code=400, detail=f"Unknown operation: {request.operation}")
 
     except Exception as e:
         logger.error(f"Vector operation failed: {str(e)}")
@@ -394,9 +384,7 @@ async def search_tool(request: SearchRequest) -> Dict[str, Any]:
         if request.filter:
             conditions = []
             for field, value in request.filter.items():
-                conditions.append(
-                    FieldCondition(key=field, match=MatchValue(value=value))
-                )
+                conditions.append(FieldCondition(key=field, match=MatchValue(value=value)))
             if conditions:
                 search_filter = Filter(must=conditions)
 
