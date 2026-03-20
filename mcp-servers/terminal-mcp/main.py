@@ -172,16 +172,11 @@ async def execute_command(request: CommandRequest):
             cmd_parts.extend(request.args)
 
         # Execute command with security measures
-        # Using list of arguments instead of shell=True to prevent command injection
+        # Use argument list + shell=False to prevent command injection.
         # lgtm[py/path-injection] - cwd validated to allowed directories
-        # Pro sjednoceni a podporu zapisu (>) pouzivame shell=True
-        full_command = request.command
-        if request.args:
-            full_command += " " + " ".join(request.args)
-
         result = subprocess.run(
-            full_command,
-            shell=True,
+            cmd_parts,
+            shell=False,
             cwd=cwd,
             capture_output=True,
             text=True,
