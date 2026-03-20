@@ -361,7 +361,6 @@ async def schema_tool(request: SchemaRequest) -> Dict[str, Any]:
 
     try:
         async with db_pool.acquire() as connection:
-
             if request.operation == "describe":
                 if validated_table:
                     # Describe specific table (uses parameterized queries - SAFE)
@@ -459,7 +458,6 @@ async def connection_tool(request: ConnectionRequest) -> Dict[str, Any]:
 
     try:
         async with db_pool.acquire() as connection:
-
             if request.operation == "status":
                 # Get database connection status
                 query = "SELECT version(), current_database(), current_user, inet_server_addr(), inet_server_port()"
