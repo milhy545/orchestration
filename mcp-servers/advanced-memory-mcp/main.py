@@ -71,8 +71,7 @@ async def encode_text(text: str) -> List[float]:
 async def ensure_pg_table():
     """Create the advanced_memories table if it doesn't exist."""
     async with db_pool.acquire() as conn:
-        await conn.execute(
-            """
+        await conn.execute("""
             CREATE TABLE IF NOT EXISTS advanced_memories (
                 id SERIAL PRIMARY KEY,
                 content TEXT NOT NULL,
@@ -81,8 +80,7 @@ async def ensure_pg_table():
                 embedding_id TEXT NOT NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
-        """
-        )
+        """)
 
 
 async def ensure_qdrant_collection():
