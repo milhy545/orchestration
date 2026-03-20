@@ -54,7 +54,7 @@ async def encode_text(text: str) -> List[float]:
     if not GEMINI_API_KEY:
         logger.warning("GEMINI_API_KEY not set, returning dummy embedding")
         return [0.0] * EMBEDDING_DIM
-        
+
     url = f"https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent?key={GEMINI_API_KEY}"
     payload = {
         "model": "models/text-embedding-004",
@@ -62,7 +62,7 @@ async def encode_text(text: str) -> List[float]:
             "parts": [{"text": text}]
         }
     }
-    
+
     try:
         response = await http_client.post(url, json=payload, timeout=15.0)
         response.raise_for_status()
@@ -263,7 +263,7 @@ async def handle_store_memory(args: Dict[str, Any]) -> Dict[str, Any]:
             }
         ]
     }
-    
+
     res = await http_client.put(f"{QDRANT_URL}/collections/{COLLECTION_NAME}/points?wait=true", json=point_payload)
     res.raise_for_status()
 
@@ -328,14 +328,14 @@ async def handle_semantic_similarity(args: Dict[str, Any]) -> List[Dict[str, Any
     threshold = args.get("threshold", 0.7)
 
     query_vector = await encode_text(query)
-    
+
     search_payload = {
         "vector": query_vector,
         "limit": limit,
         "score_threshold": threshold,
         "with_payload": True
     }
-    
+
     res = await http_client.post(f"{QDRANT_URL}/collections/{COLLECTION_NAME}/points/search", json=search_payload)
     res.raise_for_status()
     results = res.json().get("result", [])
@@ -366,7 +366,7 @@ async def handle_vector_search(args: Dict[str, Any]) -> List[Dict[str, Any]]:
         "limit": limit,
         "with_payload": True
     }
-    
+
     if category:
         search_payload["filter"] = {
             "must": [{"key": "category", "match": {"value": category}}]
