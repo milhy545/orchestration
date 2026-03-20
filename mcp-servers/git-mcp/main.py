@@ -49,7 +49,7 @@ def validate_repository_path(path: str) -> str:
     # Resolve to absolute path and normalize
     try:
         resolved_path = Path(path).resolve()  # lgtm[py/path-injection]
-    except Exception:
+    except Exception as e:
         raise HTTPException(status_code=400, detail=f"Invalid path: {str(e)}")
 
     # Check if path is within allowed repositories
@@ -139,7 +139,7 @@ async def health():
             "git_version": result.stdout.strip(),
             "timestamp": datetime.now().isoformat(),
         }
-    except Exception:
+    except Exception as e:
         raise HTTPException(status_code=503, detail=f"Git unavailable: {str(e)}")
 
 
@@ -169,7 +169,7 @@ async def git_status(path: str):
         raise HTTPException(status_code=408, detail="Git command timed out")
     except subprocess.CalledProcessError as e:
         raise HTTPException(status_code=500, detail=f"Git command failed: {e.stderr}")
-    except Exception:
+    except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to get git status: {str(e)}")
 
 
@@ -215,7 +215,7 @@ async def git_log(
         raise HTTPException(status_code=408, detail="Git command timed out")
     except subprocess.CalledProcessError as e:
         raise HTTPException(status_code=500, detail=f"Git command failed: {e.stderr}")
-    except Exception:
+    except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to get git log: {str(e)}")
 
 
@@ -252,7 +252,7 @@ async def git_diff(path: str):
         raise HTTPException(status_code=408, detail="Git command timed out")
     except subprocess.CalledProcessError as e:
         raise HTTPException(status_code=500, detail=f"Git command failed: {e.stderr}")
-    except Exception:
+    except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to get git diff: {str(e)}")
 
 
@@ -328,7 +328,7 @@ async def git_commit(path: str, request: GitCommitRequest):
     except subprocess.CalledProcessError as e:
         stderr = (e.stderr or "").strip()
         raise HTTPException(status_code=500, detail=f"Git command failed: {stderr}")
-    except Exception:
+    except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to create git commit: {str(e)}")
 
 
@@ -424,5 +424,5 @@ async def git_push(path: str, request: GitPushRequest):
     except subprocess.CalledProcessError as e:
         stderr = (e.stderr or "").strip()
         raise HTTPException(status_code=500, detail=f"Git command failed: {stderr}")
-    except Exception:
+    except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to push git branch: {str(e)}")
