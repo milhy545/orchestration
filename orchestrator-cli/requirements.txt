@@ -1,4 +1,4 @@
-fastapi==0.104.1
+fastapi==0.136.1
 uvicorn[standard]==0.42.0
 httpx==0.25.2
 python-dotenv==1.2.0
