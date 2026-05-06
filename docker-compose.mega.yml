@@ -174,11 +174,15 @@ services:
     - MCP_DATABASE_URL=${MCP_DATABASE_URL:-}
     - REDIS_URL=${REDIS_URL:-redis://redis:6379}
     - MARKETPLACE_JWT_TOKEN=${MARKETPLACE_JWT_TOKEN:-}
+    - CHAT_RECALL_ARCHIVE_ROOT=/home/chat-transcripts
     networks:
     - mcp-network
     ports:
     - 7000:7000
     restart: unless-stopped
+    volumes:
+    - /home/chat-transcripts:/home/chat-transcripts:ro
+    - /home/orchestration/data/chat-recall:/home/orchestration/data/chat-recall
   memory-mcp:
     build: /home/orchestration/mcp-servers/memory-mcp
     container_name: mcp-memory

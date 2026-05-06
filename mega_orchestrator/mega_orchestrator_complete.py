@@ -34,6 +34,7 @@ from mega_orchestrator.modes.sage_router import SAGEMode, SAGEModeRouter
 
 # Import our enhanced components
 from mega_orchestrator.providers.registry import ModelProviderRegistry, initialize_provider_registry
+from mega_orchestrator.utils.chat_recall import ChatRecall
 from mega_orchestrator.utils.conversation_memory import ConversationMemory
 from mega_orchestrator.utils.file_storage import FileHandlingMode, FileStorage
 
@@ -82,6 +83,7 @@ class MegaOrchestrator:
         self.provider_registry = None
         self.conversation_memory = ConversationMemory()
         self.file_storage = FileStorage()
+        self.chat_recall = ChatRecall()
         self.sage_router = SAGEModeRouter()
 
         # Infrastructure
@@ -393,6 +395,7 @@ class MegaOrchestrator:
             if service_name in {"advanced_memory"}:
                 continue
             available_tools.extend(config.tools or [])
+        available_tools.extend(["search_chat_history", "audit_chat_recall"])
         return build_mcp_tools(available_tools)
 
     def _get_mcp_resources(self) -> List[Dict[str, Any]]:
@@ -675,6 +678,19 @@ class MegaOrchestrator:
         # Process file content if present
         arguments = await self._process_file_arguments(arguments)
 
+        internal_result = await self._handle_internal_tool(tool, arguments, context_id)
+        if internal_result is not None:
+            await self.conversation_memory.store_response(context_id, internal_result)
+            internal_result["_meta"] = {
+                "context_id": context_id,
+                "mode": mode.value,
+                "service": "internal",
+                "timestamp": time.time(),
+                "orchestrator": "mega",
+                "version": self.version,
+            }
+            return internal_result
+
         # Get service with fallback logic
         service_name = self._get_service_for_tool(tool, mode)
         if not service_name:
@@ -724,6 +740,8 @@ class MegaOrchestrator:
             return "advanced_memory"
         if tool in {"store_memory", "search_memories"}:
             return "memory"
+        if tool in {"search_chat_history", "audit_chat_recall"}:
+            return "internal"
 
         # Primary: tool + mode match
         for service_name, config in self.services.items():
@@ -736,6 +754,92 @@ class MegaOrchestrator:
                 return service_name
 
         return None
+
+    async def _handle_internal_tool(
+        self, tool: str, arguments: Dict[str, Any], context_id: str
+    ) -> Optional[Dict[str, Any]]:
+        """Handle orchestrator-native tools that combine local state and MCP services."""
+        if tool == "audit_chat_recall":
+            audit = self.chat_recall.audit()
+            audit["warning"] = (
+                "Advanced-Memory is a semantic pointer layer; exact transcript existence "
+                "must be checked against the HAS archive."
+            )
+            return audit
+
+        if tool != "search_chat_history":
+            return None
+
+        query = str(arguments.get("query", "")).strip()
+        if not query:
+            return {"error": "query is required"}
+
+        mode = str(arguments.get("mode", "hybrid")).strip().lower() or "hybrid"
+        if mode not in {"hybrid", "exact", "semantic"}:
+            return {"error": "mode must be one of: hybrid, exact, semantic"}
+
+        limit = int(arguments.get("limit", 10) or 10)
+        limit = max(1, min(limit, 100))
+        result: Dict[str, Any] = {
+            "query": query,
+            "mode": mode,
+            "exact_hits": [],
+            "semantic_hits": None,
+            "warnings": [
+                "Advanced-Memory miss does not prove absence; "
+                "use exact_hits for literal phrase evidence."
+            ],
+        }
+
+        if mode in {"hybrid", "exact"}:
+            exact = self.chat_recall.search(
+                query,
+                limit=limit,
+                agent=arguments.get("agent"),
+                date_from=arguments.get("date_from"),
+                date_to=arguments.get("date_to"),
+            )
+            if "error" in exact:
+                result["exact_error"] = exact["error"]
+            else:
+                result["exact_hits"] = exact.get("hits", [])
+                result["exact_hit_count"] = exact.get("hit_count", 0)
+                result["archive_root"] = exact.get("archive_root")
+
+        if mode in {"hybrid", "semantic"}:
+            result["semantic_hits"] = await self._search_semantic_chat_history(
+                query, limit=limit, context_id=context_id
+            )
+
+        result["hit_count"] = len(result["exact_hits"])
+        return result
+
+    async def _search_semantic_chat_history(
+        self, query: str, *, limit: int, context_id: str
+    ) -> Dict[str, Any]:
+        """Search semantic pointers, preferring Advanced Memory with Memory MCP fallback."""
+        if "advanced_memory" in self.services:
+            semantic = await self._call_mcp_service_with_retry(
+                self.services["advanced_memory"],
+                "semantic_search",
+                {"query": query, "limit": limit},
+                context_id,
+            )
+            if "error" not in semantic:
+                semantic["_source"] = "advanced_memory"
+                return semantic
+
+        if "memory" in self.services:
+            memory = await self._call_mcp_service_with_retry(
+                self.services["memory"],
+                "search_memories",
+                {"query": query, "limit": limit},
+                context_id,
+            )
+            memory["_source"] = "memory"
+            return memory
+
+        return {"error": "No semantic memory service is configured"}
 
     async def _process_file_arguments(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
         """Process file-related arguments with enhanced file handling"""
