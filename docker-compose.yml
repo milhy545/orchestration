@@ -14,9 +14,11 @@ services:
       - REDIS_URL=${REDIS_URL:-redis://redis:6379}
       - MARKETPLACE_JWT_TOKEN=${MARKETPLACE_JWT_TOKEN:-}
       - CHAT_RECALL_ARCHIVE_ROOT=/home/chat-transcripts
+      - WELCOME_REGISTRY_ROOT=/home/orchestration/data/welcome
     volumes:
       - /home/chat-transcripts:/home/chat-transcripts:ro
       - ${DATA_ROOT:-./data}/chat-recall:/home/orchestration/data/chat-recall
+      - ${DATA_ROOT:-./data}/welcome:/home/orchestration/data/welcome
     depends_on:
       - postgresql
       - redis

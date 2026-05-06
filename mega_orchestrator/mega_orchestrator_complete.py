@@ -37,6 +37,7 @@ from mega_orchestrator.providers.registry import ModelProviderRegistry, initiali
 from mega_orchestrator.utils.chat_recall import ChatRecall
 from mega_orchestrator.utils.conversation_memory import ConversationMemory
 from mega_orchestrator.utils.file_storage import FileHandlingMode, FileStorage
+from mega_orchestrator.utils.welcome_service import WelcomeService
 
 # Version and build info
 VERSION = "1.0.0"
@@ -84,6 +85,7 @@ class MegaOrchestrator:
         self.conversation_memory = ConversationMemory()
         self.file_storage = FileStorage()
         self.chat_recall = ChatRecall()
+        self.welcome_service = WelcomeService()
         self.sage_router = SAGEModeRouter()
 
         # Infrastructure
@@ -296,6 +298,7 @@ class MegaOrchestrator:
         # Core MCP routes
         self.app.router.add_post("/mcp", self._handle_mcp_request)
         self.app.router.add_post("/mcp/rpc", self._handle_mcp_request)
+        self.app.router.add_post("/mcp/welcome", self._handle_welcome_request)
         self.app.router.add_post("/mcp/{service}", self._handle_direct_service_request)
 
         # Information routes
@@ -388,6 +391,22 @@ class MegaOrchestrator:
             logging.error(f"Error handling MCP request: {e}")
             return web.json_response({"error": str(e)}, status=500)
 
+    async def _handle_welcome_request(self, request):
+        """Dedicated bootstrap endpoint for agents that do not speak JSON-RPC MCP yet."""
+        try:
+            data = await request.json()
+            arguments = data.get("arguments", data)
+            result = await self._handle_internal_tool(
+                "agent_welcome",
+                arguments,
+                data.get("context_id", "welcome"),
+            )
+            status = 400 if isinstance(result, dict) and "error" in result else 200
+            return web.json_response(result, status=status)
+        except Exception as e:
+            logging.error(f"Error handling welcome request: {e}")
+            return web.json_response({"error": str(e)}, status=500)
+
     def _get_mcp_tool_specs(self) -> List[Dict[str, Any]]:
         """Return MCP-compatible tool definitions for the currently exposed working subset."""
         available_tools: List[str] = []
@@ -395,7 +414,7 @@ class MegaOrchestrator:
             if service_name in {"advanced_memory"}:
                 continue
             available_tools.extend(config.tools or [])
-        available_tools.extend(["search_chat_history", "audit_chat_recall"])
+        available_tools.extend(["search_chat_history", "audit_chat_recall", "agent_welcome"])
         return build_mcp_tools(available_tools)
 
     def _get_mcp_resources(self) -> List[Dict[str, Any]]:
@@ -740,7 +759,7 @@ class MegaOrchestrator:
             return "advanced_memory"
         if tool in {"store_memory", "search_memories"}:
             return "memory"
-        if tool in {"search_chat_history", "audit_chat_recall"}:
+        if tool in {"search_chat_history", "audit_chat_recall", "agent_welcome"}:
             return "internal"
 
         # Primary: tool + mode match
@@ -766,6 +785,19 @@ class MegaOrchestrator:
                 "must be checked against the HAS archive."
             )
             return audit
+
+        if tool == "agent_welcome":
+            semantic_context = await self._search_semantic_chat_history(
+                "FORAI memory bootstrap standard agent rules hardware context",
+                limit=5,
+                context_id=context_id,
+            )
+            return self.welcome_service.welcome(
+                agent_name=str(arguments.get("agent_name", "")).strip(),
+                agent_version=arguments.get("agent_version"),
+                current_hw_data=arguments.get("current_hw_data") or {},
+                semantic_context=semantic_context,
+            )
 
         if tool != "search_chat_history":
             return None

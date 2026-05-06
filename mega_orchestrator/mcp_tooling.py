@@ -281,6 +281,18 @@ MCP_TOOL_DEFINITIONS: Dict[str, Dict[str, Any]] = {
         "description": "Audit HAS chat transcript archive visibility for exact recall.",
         "inputSchema": {"type": "object", "properties": {}},
     },
+    "agent_welcome": {
+        "description": "Bootstrap an agent with memory standards, hardware registry sync, and context.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "agent_name": {"type": "string"},
+                "agent_version": {"type": "string"},
+                "current_hw_data": {"type": "object"},
+            },
+            "required": ["agent_name"],
+        },
+    },
     "research_query": {
         "description": "Run a web research query through the research MCP.",
         "inputSchema": {
