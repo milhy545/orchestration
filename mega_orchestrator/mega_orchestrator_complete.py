@@ -1068,14 +1068,12 @@ class MegaOrchestrator:
             if tool == "git_status":
                 return {
                     "method": "GET",
-                    # lgtm[py/full-ssrf] - base_url is fixed service config; path is encoded.
-                    "url": f"{base_url}/git/{encoded_path}/status",
+                    "url": f"{base_url}/git/{encoded_path}/status",  # lgtm[py/full-ssrf]
                 }
             if tool == "git_log":
                 return {
                     "method": "GET",
-                    # lgtm[py/full-ssrf] - base_url is fixed service config; path is encoded.
-                    "url": f"{base_url}/git/{encoded_path}/log",
+                    "url": f"{base_url}/git/{encoded_path}/log",  # lgtm[py/full-ssrf]
                     "params": {
                         "limit": arguments.get("limit", 5),
                     },
@@ -1083,14 +1081,12 @@ class MegaOrchestrator:
             if tool == "git_diff":
                 return {
                     "method": "GET",
-                    # lgtm[py/full-ssrf] - base_url is fixed service config; path is encoded.
-                    "url": f"{base_url}/git/{encoded_path}/diff",
+                    "url": f"{base_url}/git/{encoded_path}/diff",  # lgtm[py/full-ssrf]
                 }
             if tool == "git_commit":
                 return {
                     "method": "POST",
-                    # lgtm[py/full-ssrf] - base_url is fixed service config; path is encoded.
-                    "url": f"{base_url}/git/{encoded_path}/commit",
+                    "url": f"{base_url}/git/{encoded_path}/commit",  # lgtm[py/full-ssrf]
                     "payload": {
                         "message": arguments.get("message", "Commit via mega-orchestrator"),
                         "author_name": arguments.get("author_name", "Mega Orchestrator"),
@@ -1102,8 +1098,7 @@ class MegaOrchestrator:
             if tool == "git_push":
                 return {
                     "method": "POST",
-                    # lgtm[py/full-ssrf] - base_url is fixed service config; path is encoded.
-                    "url": f"{base_url}/git/{encoded_path}/push",
+                    "url": f"{base_url}/git/{encoded_path}/push",  # lgtm[py/full-ssrf]
                     "payload": {
                         "set_upstream": arguments.get("set_upstream", False),
                         "force": arguments.get("force", False),
