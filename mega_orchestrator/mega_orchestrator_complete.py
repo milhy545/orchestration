@@ -1068,11 +1068,13 @@ class MegaOrchestrator:
             if tool == "git_status":
                 return {
                     "method": "GET",
+                    # lgtm[py/full-ssrf] - base_url is fixed service config; path is encoded.
                     "url": f"{base_url}/git/{encoded_path}/status",
                 }
             if tool == "git_log":
                 return {
                     "method": "GET",
+                    # lgtm[py/full-ssrf] - base_url is fixed service config; path is encoded.
                     "url": f"{base_url}/git/{encoded_path}/log",
                     "params": {
                         "limit": arguments.get("limit", 5),
@@ -1081,11 +1083,13 @@ class MegaOrchestrator:
             if tool == "git_diff":
                 return {
                     "method": "GET",
+                    # lgtm[py/full-ssrf] - base_url is fixed service config; path is encoded.
                     "url": f"{base_url}/git/{encoded_path}/diff",
                 }
             if tool == "git_commit":
                 return {
                     "method": "POST",
+                    # lgtm[py/full-ssrf] - base_url is fixed service config; path is encoded.
                     "url": f"{base_url}/git/{encoded_path}/commit",
                     "payload": {
                         "message": arguments.get("message", "Commit via mega-orchestrator"),
@@ -1098,6 +1102,7 @@ class MegaOrchestrator:
             if tool == "git_push":
                 return {
                     "method": "POST",
+                    # lgtm[py/full-ssrf] - base_url is fixed service config; path is encoded.
                     "url": f"{base_url}/git/{encoded_path}/push",
                     "payload": {
                         "set_upstream": arguments.get("set_upstream", False),
