@@ -26,6 +26,7 @@ jobs:
             set -e
             echo "🚀 Spouštím automatický deployment na HAS..."
             cd /home/orchestration || exit 1
+            git status --short > /home/orchestration/deploy-dirty-status-before-reset.txt || true
             
             # Stáhneme nejnovější změny z masteru
             git fetch origin master

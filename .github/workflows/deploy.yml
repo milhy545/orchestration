@@ -1,4 +1,4 @@
-name: Deploy to HAS
+name: Manual Deploy to HAS
 
 on:
   workflow_dispatch:
