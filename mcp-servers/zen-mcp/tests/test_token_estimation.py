@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, patch, MagicMock
 import sys
 import os
 
@@ -7,6 +7,7 @@ import os
 sys.modules["google"] = Mock()
 sys.modules["google.genai"] = Mock()
 sys.modules["openai"] = Mock()
+sys.modules["httpx"] = Mock()
 
 # Add the zen-mcp directory to sys.path to allow imports
 zen_mcp_path = os.path.join(os.getcwd(), "mcp-servers", "zen-mcp")
@@ -14,6 +15,7 @@ if zen_mcp_path not in sys.path:
     sys.path.append(zen_mcp_path)
 
 from utils.model_context import ModelContext
+from providers.openai_compatible import OpenAICompatibleProvider
 
 class TestTokenEstimation(unittest.TestCase):
     def setUp(self):
@@ -52,21 +54,44 @@ class TestTokenEstimation(unittest.TestCase):
         # Setup registry to return no provider
         mock_get_provider.return_value = None
 
-        # When provider is accessed in estimate_tokens via self.provider property,
-        # it should raise a ValueError if no provider found.
-        # Let's check how self.provider is implemented.
-
         text = "Hello world"
-
-        # In current implementation of ModelContext.provider:
-        # if not self._provider:
-        #     self._provider = ModelProviderRegistry.get_provider_for_model(self.model_name)
-        #     if not self._provider:
-        #         raise ValueError(...)
-
-        # So estimate_tokens should catch this ValueError and fallback.
         tokens = self.ctx.estimate_tokens(text)
         self.assertEqual(tokens, 3)
+
+    def test_openai_compatible_provider_count_tokens_with_tiktoken(self):
+        """Test that OpenAICompatibleProvider correctly uses tiktoken and caches results."""
+        # We must set up tiktoken BEFORE creating the provider if it uses it in __init__
+        # but it doesn't. However, it's safer.
+        mock_encoding = Mock()
+        mock_encoding.encode.return_value = [1, 2, 3] # 3 tokens
+
+        mock_tiktoken = Mock()
+        mock_tiktoken.get_encoding.return_value = mock_encoding
+        mock_tiktoken.encoding_for_model.return_value = mock_encoding
+        sys.modules["tiktoken"] = mock_tiktoken
+
+        class ConcreteProvider(OpenAICompatibleProvider):
+            def get_capabilities(self, model_name): return Mock()
+            def get_provider_type(self): return Mock()
+            def validate_model_name(self, model_name): return True
+
+        provider = ConcreteProvider(api_key="test")
+
+        text = "test text"
+
+        # First call - should call tiktoken
+        count1 = provider.count_tokens(text, "gpt-4")
+        self.assertEqual(count1, 3)
+        # It might call encoding_for_model OR get_encoding
+        self.assertTrue(mock_tiktoken.encoding_for_model.called or mock_tiktoken.get_encoding.called)
+
+        # Second call - should use cache
+        mock_tiktoken.get_encoding.reset_mock()
+        mock_tiktoken.encoding_for_model.reset_mock()
+        count2 = provider.count_tokens(text, "gpt-4")
+        self.assertEqual(count2, 3)
+        mock_tiktoken.get_encoding.assert_not_called()
+        mock_tiktoken.encoding_for_model.assert_not_called()
 
 if __name__ == "__main__":
     unittest.main()
