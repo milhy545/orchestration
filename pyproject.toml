@@ -34,3 +34,6 @@ disable = [
 
 [tool.pylint.format]
 max-line-length = 100
+
+[tool.vercel]
+entrypoint = "mcp-servers.advanced-memory-mcp.main:app"
