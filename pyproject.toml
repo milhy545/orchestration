@@ -34,3 +34,6 @@ disable = [
 
 [tool.pylint.format]
 max-line-length = 100
+
+[tool.vercel]
+entrypoint = "vercel_app:app"
