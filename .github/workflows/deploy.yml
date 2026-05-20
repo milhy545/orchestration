@@ -1,7 +1,9 @@
-name: Manual Deploy to HAS
+name: Deploy to HAS
 
 on:
-  workflow_dispatch:
+  push:
+    branches:
+      - master
 
 permissions:
   contents: read

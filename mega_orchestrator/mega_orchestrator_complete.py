@@ -18,7 +18,6 @@ import hmac
 import json
 import logging
 import os
-import re
 import time
 from dataclasses import asdict, dataclass
 from datetime import datetime
@@ -34,15 +33,9 @@ from mega_orchestrator.mcp_tooling import build_mcp_tools
 from mega_orchestrator.modes.sage_router import SAGEMode, SAGEModeRouter
 
 # Import our enhanced components
-from mega_orchestrator.providers.registry import (
-    ModelProviderRegistry,
-    initialize_provider_registry,
-)
-from mega_orchestrator.utils.chat_recall import ChatRecall
+from mega_orchestrator.providers.registry import ModelProviderRegistry, initialize_provider_registry
 from mega_orchestrator.utils.conversation_memory import ConversationMemory
 from mega_orchestrator.utils.file_storage import FileHandlingMode, FileStorage
-from mega_orchestrator.utils.hw_detect import detect_hardware
-from mega_orchestrator.utils.welcome_service import WelcomeService
 
 # Version and build info
 VERSION = "1.0.0"
@@ -89,8 +82,6 @@ class MegaOrchestrator:
         self.provider_registry = None
         self.conversation_memory = ConversationMemory()
         self.file_storage = FileStorage()
-        self.chat_recall = ChatRecall()
-        self.welcome_service = WelcomeService()
         self.sage_router = SAGEModeRouter()
 
         # Infrastructure
@@ -115,13 +106,7 @@ class MegaOrchestrator:
                 name="Filesystem MCP",
                 host="mcp-filesystem",
                 port=8000,
-                tools=[
-                    "file_read",
-                    "file_write",
-                    "file_list",
-                    "file_search",
-                    "file_analyze",
-                ],
+                tools=["file_read", "file_write", "file_list", "file_search", "file_analyze"],
                 sage_modes=[SAGEMode.FILESYSTEM, SAGEMode.CODE, SAGEMode.DOCS],
                 priority=1,
             ),
@@ -173,12 +158,7 @@ class MegaOrchestrator:
                 name="Research MCP",
                 host="mcp-research",
                 port=8000,
-                tools=[
-                    "research_query",
-                    "perplexity_search",
-                    "web_search",
-                    "search_web",
-                ],
+                tools=["research_query", "perplexity_search", "web_search", "search_web"],
                 sage_modes=[SAGEMode.ANALYZE, SAGEMode.DOCS],
                 priority=1,
             ),
@@ -206,11 +186,7 @@ class MegaOrchestrator:
                 name="Advanced Memory v2",
                 host="mcp-gmail",
                 port=8000,
-                tools=[
-                    "conversation_thread",
-                    "file_deduplication",
-                    "context_continuation",
-                ],
+                tools=["conversation_thread", "file_deduplication", "context_continuation"],
                 sage_modes=[SAGEMode.MEMORY, SAGEMode.CHAT],
                 priority=3,
             ),
@@ -272,9 +248,7 @@ class MegaOrchestrator:
             # Health check all services
             await self._initial_health_check()
 
-            logging.info(
-                f"✅ Mega Orchestrator initialized successfully on port {self.port}"
-            )
+            logging.info(f"✅ Mega Orchestrator initialized successfully on port {self.port}")
 
         except Exception as e:
             logging.error(f"❌ Failed to initialize Mega Orchestrator: {e}")
@@ -320,7 +294,6 @@ class MegaOrchestrator:
         # Core MCP routes
         self.app.router.add_post("/mcp", self._handle_mcp_request)
         self.app.router.add_post("/mcp/rpc", self._handle_mcp_request)
-        self.app.router.add_post("/mcp/welcome", self._handle_welcome_request)
         self.app.router.add_post("/mcp/{service}", self._handle_direct_service_request)
 
         # Information routes
@@ -339,9 +312,7 @@ class MegaOrchestrator:
 
         # Debug routes
         self.app.router.add_get("/debug/cache", self._handle_debug_cache)
-        self.app.router.add_get(
-            "/debug/contexts/{session_id}", self._handle_debug_contexts
-        )
+        self.app.router.add_get("/debug/contexts/{session_id}", self._handle_debug_contexts)
 
         logging.info("✅ Web application routes initialized")
 
@@ -364,9 +335,7 @@ class MegaOrchestrator:
         )
         total_count = len(self.services)
 
-        logging.info(
-            f"🔍 Initial health check: {healthy_count}/{total_count} services healthy"
-        )
+        logging.info(f"🔍 Initial health check: {healthy_count}/{total_count} services healthy")
 
         if healthy_count < total_count // 2:
             logging.warning("⚠️ Less than 50% of services are healthy!")
@@ -417,22 +386,6 @@ class MegaOrchestrator:
             logging.error(f"Error handling MCP request: {e}")
             return web.json_response({"error": str(e)}, status=500)
 
-    async def _handle_welcome_request(self, request):
-        """Dedicated bootstrap endpoint for agents that do not speak JSON-RPC MCP yet."""
-        try:
-            data = await request.json()
-            arguments = data.get("arguments", data)
-            result = await self._handle_internal_tool(
-                "agent_welcome",
-                arguments,
-                data.get("context_id", "welcome"),
-            )
-            status = 400 if isinstance(result, dict) and "error" in result else 200
-            return web.json_response(result, status=status)
-        except Exception as e:
-            logging.error(f"Error handling welcome request: {e}")
-            return web.json_response({"error": str(e)}, status=500)
-
     def _get_mcp_tool_specs(self) -> List[Dict[str, Any]]:
         """Return MCP-compatible tool definitions for the currently exposed working subset."""
         available_tools: List[str] = []
@@ -440,9 +393,6 @@ class MegaOrchestrator:
             if service_name in {"advanced_memory"}:
                 continue
             available_tools.extend(config.tools or [])
-        available_tools.extend(
-            ["search_chat_history", "audit_chat_recall", "agent_welcome"]
-        )
         return build_mcp_tools(available_tools)
 
     def _get_mcp_resources(self) -> List[Dict[str, Any]]:
@@ -534,14 +484,10 @@ class MegaOrchestrator:
             return self._jsonrpc_result(request_id, {"ok": True})
 
         if method == "tools/list":
-            return self._jsonrpc_result(
-                request_id, {"tools": self._get_mcp_tool_specs()}
-            )
+            return self._jsonrpc_result(request_id, {"tools": self._get_mcp_tool_specs()})
 
         if method == "resources/list":
-            return self._jsonrpc_result(
-                request_id, {"resources": self._get_mcp_resources()}
-            )
+            return self._jsonrpc_result(request_id, {"resources": self._get_mcp_resources()})
 
         if method == "resources/templates/list":
             return self._jsonrpc_result(
@@ -552,14 +498,10 @@ class MegaOrchestrator:
         if method == "resources/read":
             uri = params.get("uri")
             if not uri:
-                return self._jsonrpc_error(
-                    request_id, -32602, "Resource URI is required"
-                )
+                return self._jsonrpc_error(request_id, -32602, "Resource URI is required")
             resource = await self._read_mcp_resource(uri)
             if resource is None:
-                return self._jsonrpc_error(
-                    request_id, -32602, f"Resource not found: {uri}"
-                )
+                return self._jsonrpc_error(request_id, -32602, f"Resource not found: {uri}")
             return self._jsonrpc_result(request_id, {"contents": [resource]})
 
         if method == "tools/call":
@@ -569,16 +511,12 @@ class MegaOrchestrator:
 
             allowed_tools = {tool["name"] for tool in self._get_mcp_tool_specs()}
             if tool_name not in allowed_tools:
-                return self._jsonrpc_error(
-                    request_id, -32601, f"Tool not found: {tool_name}"
-                )
+                return self._jsonrpc_error(request_id, -32601, f"Tool not found: {tool_name}")
 
             result = await self._route_enhanced_request(
                 tool=tool_name,
                 arguments=params.get("arguments", {}) or {},
-                mode=self.sage_router.detect_mode(
-                    tool_name, params.get("arguments", {}) or {}
-                ),
+                mode=self.sage_router.detect_mode(tool_name, params.get("arguments", {}) or {}),
                 session_id=params.get("session_id"),
                 context_id=params.get("context_id"),
             )
@@ -625,9 +563,7 @@ class MegaOrchestrator:
                 }
         elif uri.startswith("mega://contexts/"):
             session_id = uri.split("/", 3)[-1]
-            contexts = await self.conversation_memory.get_conversation_thread(
-                session_id, limit=20
-            )
+            contexts = await self.conversation_memory.get_conversation_thread(session_id, limit=20)
             payload = {
                 "session_id": session_id,
                 "context_count": len(contexts),
@@ -692,17 +628,13 @@ class MegaOrchestrator:
         service_health = await self._check_all_services_health()
         health_data["services"] = service_health
 
-        healthy_services = sum(
-            1 for s in service_health.values() if s.get("status") == "healthy"
-        )
+        healthy_services = sum(1 for s in service_health.values() if s.get("status") == "healthy")
         total_services = len(service_health)
         health_data["service_summary"] = {
             "healthy": healthy_services,
             "total": total_services,
             "percentage": (
-                round((healthy_services / total_services) * 100, 1)
-                if total_services > 0
-                else 0
+                round((healthy_services / total_services) * 100, 1) if total_services > 0 else 0
             ),
         }
 
@@ -710,9 +642,7 @@ class MegaOrchestrator:
             health_data["status"] = "degraded"
 
         health_data["components"] = {
-            "provider_registry": len(
-                self.provider_registry.get_available_providers_with_keys()
-            )
+            "provider_registry": len(self.provider_registry.get_available_providers_with_keys())
             > 0,
             "conversation_memory": True,
             "file_storage": True,
@@ -745,19 +675,6 @@ class MegaOrchestrator:
         # Process file content if present
         arguments = await self._process_file_arguments(arguments)
 
-        internal_result = await self._handle_internal_tool(tool, arguments, context_id)
-        if internal_result is not None:
-            await self.conversation_memory.store_response(context_id, internal_result)
-            internal_result["_meta"] = {
-                "context_id": context_id,
-                "mode": mode.value,
-                "service": "internal",
-                "timestamp": time.time(),
-                "orchestrator": "mega",
-                "version": self.version,
-            }
-            return internal_result
-
         # Get service with fallback logic
         service_name = self._get_service_for_tool(tool, mode)
         if not service_name:
@@ -766,16 +683,12 @@ class MegaOrchestrator:
         service = self.services[service_name]
 
         # Attempt primary service call
-        result = await self._call_mcp_service_with_retry(
-            service, tool, arguments, context_id
-        )
+        result = await self._call_mcp_service_with_retry(service, tool, arguments, context_id)
 
         # If primary failed, try fallback services
         if "error" in result and service.priority == 1:
             fallback_services = [
-                s
-                for s in self.services.values()
-                if tool in (s.tools or []) and s.priority > 1
+                s for s in self.services.values() if tool in (s.tools or []) and s.priority > 1
             ]
 
             for fallback_service in sorted(fallback_services, key=lambda x: x.priority):
@@ -811,8 +724,6 @@ class MegaOrchestrator:
             return "advanced_memory"
         if tool in {"store_memory", "search_memories"}:
             return "memory"
-        if tool in {"search_chat_history", "audit_chat_recall", "agent_welcome"}:
-            return "internal"
 
         # Primary: tool + mode match
         for service_name, config in self.services.items():
@@ -826,119 +737,7 @@ class MegaOrchestrator:
 
         return None
 
-    async def _handle_internal_tool(
-        self, tool: str, arguments: Dict[str, Any], context_id: str
-    ) -> Optional[Dict[str, Any]]:
-        """Handle orchestrator-native tools that combine local state and MCP services."""
-        if tool == "audit_chat_recall":
-            audit = self.chat_recall.audit()
-            audit["warning"] = (
-                "Advanced-Memory is a semantic pointer layer; exact transcript existence "
-                "must be checked against the HAS archive."
-            )
-            return audit
-
-        if tool == "agent_welcome":
-            semantic_context = await self._search_semantic_chat_history(
-                "FORAI memory bootstrap standard agent rules hardware context",
-                limit=5,
-                context_id=context_id,
-            )
-            # Auto-detect hardware when the caller does not supply it.
-            # This means any agent can call agent_welcome with just agent_name
-            # and still receive an up-to-date hardware snapshot in the welcome pack.
-            hw_data = arguments.get("current_hw_data") or {}
-            if not hw_data:
-                try:
-                    hw_data = detect_hardware()
-                except Exception as _hw_err:
-                    logging.warning(
-                        f"hw_detect failed, continuing without HW data: {_hw_err}"
-                    )
-            return self.welcome_service.welcome(
-                agent_name=str(arguments.get("agent_name", "")).strip(),
-                agent_version=arguments.get("agent_version"),
-                current_hw_data=hw_data,
-                semantic_context=semantic_context,
-            )
-
-        if tool != "search_chat_history":
-            return None
-
-        query = str(arguments.get("query", "")).strip()
-        if not query:
-            return {"error": "query is required"}
-
-        mode = str(arguments.get("mode", "hybrid")).strip().lower() or "hybrid"
-        if mode not in {"hybrid", "exact", "semantic"}:
-            return {"error": "mode must be one of: hybrid, exact, semantic"}
-
-        limit = int(arguments.get("limit", 10) or 10)
-        limit = max(1, min(limit, 100))
-        result: Dict[str, Any] = {
-            "query": query,
-            "mode": mode,
-            "exact_hits": [],
-            "semantic_hits": None,
-            "warnings": [
-                "Advanced-Memory miss does not prove absence; "
-                "use exact_hits for literal phrase evidence."
-            ],
-        }
-
-        if mode in {"hybrid", "exact"}:
-            exact = self.chat_recall.search(
-                query,
-                limit=limit,
-                agent=arguments.get("agent"),
-                date_from=arguments.get("date_from"),
-                date_to=arguments.get("date_to"),
-            )
-            if "error" in exact:
-                result["exact_error"] = exact["error"]
-            else:
-                result["exact_hits"] = exact.get("hits", [])
-                result["exact_hit_count"] = exact.get("hit_count", 0)
-                result["archive_root"] = exact.get("archive_root")
-
-        if mode in {"hybrid", "semantic"}:
-            result["semantic_hits"] = await self._search_semantic_chat_history(
-                query, limit=limit, context_id=context_id
-            )
-
-        result["hit_count"] = len(result["exact_hits"])
-        return result
-
-    async def _search_semantic_chat_history(
-        self, query: str, *, limit: int, context_id: str
-    ) -> Dict[str, Any]:
-        """Search semantic pointers, preferring Advanced Memory with Memory MCP fallback."""
-        if "advanced_memory" in self.services:
-            semantic = await self._call_mcp_service_with_retry(
-                self.services["advanced_memory"],
-                "semantic_search",
-                {"query": query, "limit": limit},
-                context_id,
-            )
-            if "error" not in semantic:
-                semantic["_source"] = "advanced_memory"
-                return semantic
-
-        if "memory" in self.services:
-            memory = await self._call_mcp_service_with_retry(
-                self.services["memory"],
-                "search_memories",
-                {"query": query, "limit": limit},
-                context_id,
-            )
-            memory["_source"] = "memory"
-            return memory
-
-        return {"error": "No semantic memory service is configured"}
-
-    async def _process_file_arguments(
-        self, arguments: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    async def _process_file_arguments(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
         """Process file-related arguments with enhanced file handling"""
         processed_args = arguments.copy()
 
@@ -981,38 +780,15 @@ class MegaOrchestrator:
             )
         return token
 
-    # Only alphanumeric, dots, hyphens, underscores, and forward slashes are permitted
-    # inside path segments forwarded to internal MCP services.  This prevents any
-    # user-controlled path component from escaping the intended URL structure.
-    _SAFE_PATH_RE = re.compile(r"^[\w./ -]+$")
-
-    @staticmethod
-    def _sanitise_mcp_path(raw: str) -> str:
-        """Normalise and validate a filesystem path before embedding it in an MCP URL.
-
-        Raises ValueError for paths that contain characters capable of altering the
-        URL structure (e.g. ``..``, ``@``, ``?``, ``#``).
-        """
-        normalised = os.path.normpath(str(raw))
-        if not MegaOrchestrator._SAFE_PATH_RE.match(normalised):
-            raise ValueError(
-                f"Path contains disallowed characters and was rejected: {raw!r}"
-            )
-        return normalised
-
     def _build_service_request(
-        self,
-        service: MCPServiceConfig,
-        tool: str,
-        arguments: Dict[str, Any],
-        context_id: str,
+        self, service: MCPServiceConfig, tool: str, arguments: Dict[str, Any], context_id: str
     ) -> Dict[str, Any]:
         """Build per-service request shape for heterogeneous MCP backends."""
         base_url = f"http://{service.host}:{service.port}"
 
         if service.name == "Filesystem MCP":
             path = arguments.get("directory", arguments.get("path", ""))
-            encoded_path = quote(self._sanitise_mcp_path(str(path)), safe="")
+            encoded_path = quote(str(path), safe="")
             if tool == "file_list":
                 return {
                     "method": "GET",
@@ -1036,8 +812,7 @@ class MegaOrchestrator:
                     "url": f"{base_url}/file/write",
                     "payload": {
                         "path": arguments.get(
-                            "path",
-                            arguments.get("file_path", "/tmp/mega_orchestrator.txt"),
+                            "path", arguments.get("file_path", "/tmp/mega_orchestrator.txt")
                         ),
                         "content": arguments.get("content", ""),
                         "overwrite": arguments.get("overwrite", False),
@@ -1050,9 +825,7 @@ class MegaOrchestrator:
                     "pattern": arguments.get("pattern", "*"),
                     "limit": arguments.get("limit", 100),
                     "content_query": arguments.get("content_query"),
-                    "include_hidden": "true"
-                    if arguments.get("include_hidden", False)
-                    else "false",
+                    "include_hidden": "true" if arguments.get("include_hidden", False) else "false",
                 }
                 params = {k: v for k, v in params.items() if v is not None}
                 return {
@@ -1107,9 +880,7 @@ class MegaOrchestrator:
                     "method": "GET",
                     "url": f"{base_url}/memory/list",
                     "params": {
-                        "limit": arguments.get(
-                            "limit", 10 if tool == "get_context" else 100
-                        ),
+                        "limit": arguments.get("limit", 10 if tool == "get_context" else 100),
                         "offset": arguments.get("offset", 0),
                     },
                 }
@@ -1124,12 +895,7 @@ class MegaOrchestrator:
             if query is None:
                 query = arguments.get("q", "")
             model = arguments.get("model", "sonar-pro")
-            if tool in {
-                "web_search",
-                "search_web",
-                "research_query",
-                "perplexity_search",
-            }:
+            if tool in {"web_search", "search_web", "research_query", "perplexity_search"}:
                 return {
                     "method": "POST",
                     "url": f"{base_url}/research/search",
@@ -1145,9 +911,7 @@ class MegaOrchestrator:
             )
             if repo_path is None:
                 repo_path = "/workspace/mega-test-repo"
-            # _sanitise_mcp_path validates the path before it is embedded in the URL,
-            # ensuring no user-supplied data can redirect the request to an external host.
-            encoded_path = quote(self._sanitise_mcp_path(str(repo_path)), safe="")
+            encoded_path = quote(str(repo_path), safe="")
             if tool == "git_status":
                 return {
                     "method": "GET",
@@ -1171,12 +935,8 @@ class MegaOrchestrator:
                     "method": "POST",
                     "url": f"{base_url}/git/{encoded_path}/commit",
                     "payload": {
-                        "message": arguments.get(
-                            "message", "Commit via mega-orchestrator"
-                        ),
-                        "author_name": arguments.get(
-                            "author_name", "Mega Orchestrator"
-                        ),
+                        "message": arguments.get("message", "Commit via mega-orchestrator"),
+                        "author_name": arguments.get("author_name", "Mega Orchestrator"),
                         "author_email": arguments.get(
                             "author_email", "mega-orchestrator@localhost"
                         ),
@@ -1218,11 +978,7 @@ class MegaOrchestrator:
             if tool == "create_terminal":
                 cwd_param = arguments.get("cwd", arguments.get("path"))
                 params = {"path": cwd_param} if cwd_param else {}
-                return {
-                    "method": "GET",
-                    "url": f"{base_url}/directory",
-                    "params": params,
-                }
+                return {"method": "GET", "url": f"{base_url}/directory", "params": params}
 
         if service.name == "Database MCP":
             if tool == "db_connect":
@@ -1255,9 +1011,7 @@ class MegaOrchestrator:
                     },
                 }
             if tool == "db_backup":
-                table_name = arguments.get(
-                    "table_name", arguments.get("table", "codex_probe")
-                )
+                table_name = arguments.get("table_name", arguments.get("table", "codex_probe"))
                 return {
                     "method": "GET",
                     "url": f"{base_url}/db/sample/{quote(str(table_name), safe='')}",
@@ -1312,19 +1066,13 @@ class MegaOrchestrator:
         }
 
     async def _call_mcp_service_with_retry(
-        self,
-        service: MCPServiceConfig,
-        tool: str,
-        arguments: Dict[str, Any],
-        context_id: str,
+        self, service: MCPServiceConfig, tool: str, arguments: Dict[str, Any], context_id: str
     ) -> Dict[str, Any]:
         """Call MCP service with retry logic and enhanced error handling"""
 
         for attempt in range(service.retry_count):
             try:
-                request_config = self._build_service_request(
-                    service, tool, arguments, context_id
-                )
+                request_config = self._build_service_request(service, tool, arguments, context_id)
                 url = request_config["url"]
                 timeout = aiohttp.ClientTimeout(total=service.timeout)
 
@@ -1349,10 +1097,7 @@ class MegaOrchestrator:
                                 and "error" in result
                                 and "result" not in result
                             ):
-                                return {
-                                    "error": result["error"],
-                                    "service": service.name,
-                                }
+                                return {"error": result["error"], "service": service.name}
                             if (
                                 isinstance(result, dict)
                                 and "result" in result
@@ -1362,15 +1107,15 @@ class MegaOrchestrator:
                             return result
                         else:
                             error_text = await response.text()
-                            error_msg = f"Service {service.name} returned {response.status}: {error_text}"
+                            error_msg = (
+                                f"Service {service.name} returned {response.status}: {error_text}"
+                            )
 
                             if attempt < service.retry_count - 1:
                                 logging.warning(
                                     f"{error_msg} (attempt {attempt + 1}/{service.retry_count})"
                                 )
-                                await asyncio.sleep(
-                                    0.5 * (attempt + 1)
-                                )  # Exponential backoff
+                                await asyncio.sleep(0.5 * (attempt + 1))  # Exponential backoff
                                 continue
                             else:
                                 return {"error": error_msg, "service": service.name}
@@ -1378,9 +1123,7 @@ class MegaOrchestrator:
             except asyncio.TimeoutError:
                 error_msg = f"Service {service.name} timeout after {service.timeout}s"
                 if attempt < service.retry_count - 1:
-                    logging.warning(
-                        f"{error_msg} (attempt {attempt + 1}/{service.retry_count})"
-                    )
+                    logging.warning(f"{error_msg} (attempt {attempt + 1}/{service.retry_count})")
                     await asyncio.sleep(1.0 * (attempt + 1))
                     continue
                 else:
@@ -1389,17 +1132,13 @@ class MegaOrchestrator:
             except Exception as e:
                 error_msg = f"Service {service.name} error: {str(e)}"
                 if attempt < service.retry_count - 1:
-                    logging.warning(
-                        f"{error_msg} (attempt {attempt + 1}/{service.retry_count})"
-                    )
+                    logging.warning(f"{error_msg} (attempt {attempt + 1}/{service.retry_count})")
                     await asyncio.sleep(0.5 * (attempt + 1))
                     continue
                 else:
                     return {"error": error_msg, "service": service.name}
 
-        return {
-            "error": f"Service {service.name} failed after {service.retry_count} attempts"
-        }
+        return {"error": f"Service {service.name} failed after {service.retry_count} attempts"}
 
     # ============================================================================
     # WEB ROUTE HANDLERS
@@ -1410,9 +1149,7 @@ class MegaOrchestrator:
         service_name = request.match_info["service"]
 
         if service_name not in self.services:
-            return web.json_response(
-                {"error": f"Service {service_name} not found"}, status=404
-            )
+            return web.json_response({"error": f"Service {service_name} not found"}, status=404)
 
         try:
             data = await request.json()
@@ -1463,18 +1200,14 @@ class MegaOrchestrator:
         service_health = await self._check_all_services_health()
         health_data["services"] = service_health
 
-        healthy_services = sum(
-            1 for s in service_health.values() if s.get("status") == "healthy"
-        )
+        healthy_services = sum(1 for s in service_health.values() if s.get("status") == "healthy")
         total_services = len(service_health)
 
         health_data["service_summary"] = {
             "healthy": healthy_services,
             "total": total_services,
             "percentage": (
-                round((healthy_services / total_services) * 100, 1)
-                if total_services > 0
-                else 0
+                round((healthy_services / total_services) * 100, 1) if total_services > 0 else 0
             ),
         }
 
@@ -1483,9 +1216,7 @@ class MegaOrchestrator:
 
         # Add component status
         health_data["components"] = {
-            "provider_registry": len(
-                self.provider_registry.get_available_providers_with_keys()
-            )
+            "provider_registry": len(self.provider_registry.get_available_providers_with_keys())
             > 0,
             "conversation_memory": True,  # Always available if DB is up
             "file_storage": True,
@@ -1509,9 +1240,7 @@ class MegaOrchestrator:
                             health_results[name] = {
                                 "status": "healthy",
                                 "port": service.port,
-                                "response_time": response.headers.get(
-                                    "response-time", "unknown"
-                                ),
+                                "response_time": response.headers.get("response-time", "unknown"),
                             }
                         else:
                             health_results[name] = {
@@ -1638,9 +1367,7 @@ class MegaOrchestrator:
                 "tool_patterns": config.tool_patterns,
             }
 
-        return web.json_response(
-            {"modes": modes_info, "stats": self.sage_router.get_mode_stats()}
-        )
+        return web.json_response({"modes": modes_info, "stats": self.sage_router.get_mode_stats()})
 
     async def _handle_memory_stats(self, request):
         """Return conversation memory statistics"""
@@ -1658,9 +1385,7 @@ class MegaOrchestrator:
                 "file_cache": len(self.file_storage.cache),
                 "service_count": len(self.services),
                 "provider_count": (
-                    len(self.provider_registry.providers)
-                    if self.provider_registry
-                    else 0
+                    len(self.provider_registry.providers) if self.provider_registry else 0
                 ),
             }
         )
@@ -1669,9 +1394,7 @@ class MegaOrchestrator:
         """Return conversation contexts for session"""
         session_id = request.match_info["session_id"]
 
-        contexts = await self.conversation_memory.get_conversation_thread(
-            session_id, limit=20
-        )
+        contexts = await self.conversation_memory.get_conversation_thread(session_id, limit=20)
 
         return web.json_response(
             {
@@ -1711,9 +1434,7 @@ class MegaOrchestrator:
                 ]
 
                 if unhealthy_services:
-                    logging.warning(
-                        f"Unhealthy services detected: {unhealthy_services}"
-                    )
+                    logging.warning(f"Unhealthy services detected: {unhealthy_services}")
 
             except Exception as e:
                 logging.error(f"Error in health monitoring: {e}")
@@ -1747,8 +1468,7 @@ class MegaOrchestrator:
 async def main():
     """Main entry point"""
     logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     )
 
     # Check if running in backup mode
