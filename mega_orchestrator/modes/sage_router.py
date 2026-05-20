@@ -10,10 +10,11 @@ SAGE Modes:
 - MEMORY: Práce s pamětí a kontextem
 - CODE: Programování a refactoring
 - DOCS: Dokumentace a vysvětlování
+- TERMINAL: Příkazová řádka a systémové operace
+- FILESYSTEM: Práce se soubory a složkami
 """
 
 import json
-import logging
 import re
 from dataclasses import dataclass
 from enum import Enum
