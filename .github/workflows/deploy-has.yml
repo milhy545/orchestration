@@ -16,16 +16,17 @@ jobs:
     
     steps:
       - name: Deploy via SSH
-        uses: appleboy/ssh-action@v1.2.5
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1.2.5
         with:
           host: ${{ secrets.HAS_SSH_HOST }}
           username: ${{ secrets.HAS_SSH_USER }}
           key: ${{ secrets.HAS_SSH_PRIVATE_KEY }}
-          # Můžeme přidat port, pokud používáš port 2222, ale standardní je 22. Pokud používáš 2222, můžeme to upravit.
-          port: 22 
+          port: 2222
           script: |
+            set -e
             echo "🚀 Spouštím automatický deployment na HAS..."
             cd /home/orchestration || exit 1
+            git status --short > /home/orchestration/deploy-dirty-status-before-reset.txt || true
             
             # Stáhneme nejnovější změny z masteru
             git fetch origin master
