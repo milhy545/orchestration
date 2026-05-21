@@ -107,3 +107,4 @@ site/
 scripts/mega-import-history.py
 data/history-imports/
 .venv/
+.env*.local
