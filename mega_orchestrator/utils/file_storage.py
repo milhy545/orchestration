@@ -11,7 +11,6 @@ Features:
 - File deduplication and caching
 """
 
-import os
 import hashlib
 import logging
 import mimetypes
