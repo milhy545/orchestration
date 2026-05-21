@@ -21,8 +21,8 @@ class TestPrecommitTool:
     def test_tool_metadata(self, tool):
         """Test tool metadata"""
         assert tool.get_name() == "precommit"
-        assert "PRECOMMIT VALIDATION" in tool.get_description()
-        assert "pre-commit" in tool.get_description()
+        assert "PRECOMMIT - Validate git changes before commit" in tool.get_description()
+        assert "bugs, security issues" in tool.get_description()
 
         # Check schema
         schema = tool.get_input_schema()
