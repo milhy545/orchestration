@@ -1,6 +1,9 @@
 import email
+import logging
 from datetime import datetime, timedelta
 from typing import Optional
+
+logger = logging.getLogger(__name__)
 
 def format_email_summary(msg_data: tuple) -> dict:
     """Format an email message into a summary dict with basic information."""
@@ -65,10 +68,10 @@ def format_email_summary(msg_data: tuple) -> dict:
                 continue
         else: # If loop completes without break
              # Keep original if all formats fail
-             pass
-    except Exception:
+             logger.debug(f"All date formats failed for date string: {date_str}")
+    except Exception as e:
         # Keep original if any other parsing error occurs
-        pass
+        logger.debug(f"Unexpected error parsing date '{date_str}': {e}")
 
     return {
         "id": email_id,

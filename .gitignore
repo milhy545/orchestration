@@ -106,3 +106,5 @@ site/
 # Private history import tools and data
 scripts/mega-import-history.py
 data/history-imports/
+.venv/
+.env*.local

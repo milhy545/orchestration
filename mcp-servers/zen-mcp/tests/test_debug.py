@@ -1,83 +1,88 @@
 """
-Tests for the debug tool using new WorkflowTool architecture.
+Tests for the debug tool using new architecture.
 """
 
+import pytest
 from tools.debug import DebugIssueRequest, DebugIssueTool
 from tools.models import ToolModelCategory
 
 
 class TestDebugTool:
-    """Test suite for DebugIssueTool using new WorkflowTool architecture."""
+    """Test suite for DebugIssueTool using new architecture."""
+
+    def setup_method(self):
+        """Set up test fixtures"""
+        self.tool = DebugIssueTool()
 
     def test_tool_metadata(self):
         """Test basic tool metadata and configuration."""
-        tool = DebugIssueTool()
-
-        assert tool.get_name() == "debug"
-        assert "DEBUG & ROOT CAUSE ANALYSIS" in tool.get_description()
-        assert tool.get_default_temperature() == 0.2  # TEMPERATURE_ANALYTICAL
-        assert tool.get_model_category() == ToolModelCategory.EXTENDED_REASONING
-        assert tool.requires_model() is True
+        assert self.tool.get_name() == "debug"
+        assert "DEBUG - Root cause analysis" in self.tool.get_description()
+        assert self.tool.get_default_temperature() == 0.2  # TEMPERATURE_ANALYTICAL
+        assert self.tool.get_model_category() == ToolModelCategory.EXTENDED_REASONING
+        assert self.tool.requires_model() is True
 
     def test_request_validation(self):
         """Test Pydantic request model validation."""
-        # Valid investigation step request
-        step_request = DebugIssueRequest(
-            step="Investigating null pointer exception in UserService",
-            step_number=1,
-            total_steps=3,
-            next_step_required=True,
-            findings="Found potential null reference in user authentication flow",
-            files_checked=["/src/UserService.java"],
-            relevant_files=["/src/UserService.java"],
-            relevant_context=["authenticate", "validateUser"],
-            confidence="medium",
-            hypothesis="Null pointer occurs when user object is not properly validated",
+        # Valid debug request
+        request = DebugIssueRequest(
+            prompt="Null pointer exception in UserService",
+            error_context="java.lang.NullPointerException at UserService.java:45",
+            files=["/src/UserService.java"],
+            runtime_info="Java 17, Spring Boot 3.0",
+            previous_attempts="Tried restarting the service",
         )
 
-        assert step_request.step_number == 1
-        assert step_request.confidence == "medium"
-        assert len(step_request.relevant_context) == 2
+        assert request.prompt == "Null pointer exception in UserService"
+        assert request.error_context == "java.lang.NullPointerException at UserService.java:45"
+        assert request.files == ["/src/UserService.java"]
+
+    def test_required_fields(self):
+        """Test that required fields are enforced."""
+        from pydantic import ValidationError
+        
+        # Missing prompt should raise validation error
+        with pytest.raises(ValidationError):
+            DebugIssueRequest(error_context="some error")
 
     def test_input_schema_generation(self):
         """Test that input schema is generated correctly."""
-        tool = DebugIssueTool()
-        schema = tool.get_input_schema()
+        schema = self.tool.get_input_schema()
 
-        # Verify required investigation fields are present
-        assert "step" in schema["properties"]
-        assert "step_number" in schema["properties"]
-        assert "total_steps" in schema["properties"]
-        assert "next_step_required" in schema["properties"]
-        assert "findings" in schema["properties"]
-        assert "relevant_context" in schema["properties"]
+        # Verify required fields are present
+        assert "prompt" in schema["properties"]
+        assert "error_context" in schema["properties"]
+        assert "files" in schema["properties"]
+        assert "runtime_info" in schema["properties"]
+        assert "previous_attempts" in schema["properties"]
 
         # Verify field types
-        assert schema["properties"]["step"]["type"] == "string"
-        assert schema["properties"]["step_number"]["type"] == "integer"
-        assert schema["properties"]["next_step_required"]["type"] == "boolean"
-        assert schema["properties"]["relevant_context"]["type"] == "array"
+        assert schema["properties"]["prompt"]["type"] == "string"
+        assert schema["properties"]["files"]["type"] == "array"
 
     def test_model_category_for_debugging(self):
         """Test that debug tool correctly identifies as extended reasoning category."""
-        tool = DebugIssueTool()
-        assert tool.get_model_category() == ToolModelCategory.EXTENDED_REASONING
+        assert self.tool.get_model_category() == ToolModelCategory.EXTENDED_REASONING
 
-    def test_relevant_context_handling(self):
-        """Test that relevant_context is handled correctly."""
+    @pytest.mark.asyncio
+    async def test_prompt_preparation(self):
+        """Test that prompt preparation works correctly."""
         request = DebugIssueRequest(
-            step="Test investigation",
-            step_number=1,
-            total_steps=2,
-            next_step_required=True,
-            findings="Test findings",
-            relevant_context=["method1", "method2"],
+            prompt="Test issue",
+            error_context="Test context",
+            files=["/abs/path/file.py"]
         )
-
-        # Should have relevant_context directly
-        assert request.relevant_context == ["method1", "method2"]
-
-        # Test step data preparation
-        tool = DebugIssueTool()
-        step_data = tool.prepare_step_data(request)
-        assert step_data["relevant_context"] == ["method1", "method2"]
+        
+        # Mock necessary methods to avoid actual file system/token checks
+        from unittest.mock import patch
+        with patch.object(self.tool, "get_system_prompt", return_value="System prompt"):
+            with patch.object(self.tool, "handle_prompt_file", return_value=(None, None)):
+                with patch.object(self.tool, "_prepare_file_content_for_prompt", return_value=("File content", ["/abs/path/file.py"], None)):
+                    with patch.object(self.tool, "_validate_token_limit"):
+                        with patch.object(self.tool, "get_websearch_instruction", return_value=""):
+                            prompt = await self.tool.prepare_prompt(request)
+                            
+                            assert "Test issue" in prompt
+                            assert "Test context" in prompt
+                            assert "File content" in prompt
+                            assert "System prompt" in prompt
