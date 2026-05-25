@@ -2,7 +2,9 @@
 import sqlite3
 import psycopg2
 from psycopg2.extras import execute_values
+import json
 import os
+
 try:
     from dotenv import load_dotenv
     load_dotenv()
