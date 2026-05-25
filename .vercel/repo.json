@@ -1,0 +1,11 @@
+{
+  "remoteName": "origin",
+  "projects": [
+    {
+      "id": "prj_Dr4SGTP71y54LpUdifh7arzj0dTy",
+      "name": "orchestration",
+      "directory": ".",
+      "orgId": "team_UpxvWFn0D2Nz6xQgQRkQojVV"
+    }
+  ]
+}
