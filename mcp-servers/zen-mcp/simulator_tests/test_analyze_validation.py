@@ -100,41 +100,23 @@ class UserService:
         self.cache = redis_client  # Direct dependency on global
 
     async def get_user(self, user_id: int) -> Optional[Dict]:
-        # Fetch a single user, using the batch-optimized method.
-        users = await self.get_users([user_id])
-        return users[0] if users else None
+        # Cache key generation - could be centralized
+        cache_key = f"user:{user_id}"
 
-    async def get_users(self, user_ids: List[int]) -> List[Dict]:
-        # Batch fetch users to avoid N+1 query patterns.
-        if not user_ids:
-            return []
+        # Check cache first
+        cached = self.cache.get(cache_key)
+        if cached:
+            return json.loads(cached)
 
-        results = []
-        missing_ids = []
+        # Database query - no error handling
+        result = await self.db.execute(
+            "SELECT * FROM users WHERE id = %s", (user_id,)
+        )
+        user_data = result.fetchone()        if user_data:
+            # Cache for 1 hour - magic number
+            self.cache.setex(cache_key, 3600, json.dumps(user_data, ensure_ascii=False))
 
-        # Check cache first for all users
-        for user_id in user_ids:
-            cache_key = f"user:{user_id}"
-            cached = self.cache.get(cache_key)
-            if cached:
-                results.append(json.loads(cached))
-            else:
-                missing_ids.append(user_id)
-
-        if missing_ids:
-            # Optimized batch query for missing users
-            placeholders = ", ".join(["%s"] * len(missing_ids))
-            query = f"SELECT * FROM users WHERE id IN ({placeholders})"
-            result = await self.db.execute(query, tuple(missing_ids))
-            db_users = result.fetchall()
-
-            for user_data in db_users:
-                # Cache results for 1 hour
-                cache_key = f"user:{user_data['id']}"
-                self.cache.setex(cache_key, 3600, json.dumps(user_data, ensure_ascii=False))
-                results.append(user_data)
-
-        return results
+        return user_data
 
     async def create_user(self, user_data: Dict) -> Dict:
         # Input validation missing
@@ -158,11 +140,6 @@ async def get_user_endpoint(user_id: int, db: AsyncSession = Depends(get_db)):
         raise HTTPException(status_code=404, detail="User not found")
 
     return user
-
-@app.get("/batch/users")
-async def get_users_batch_endpoint(user_ids: List[int], db: AsyncSession = Depends(get_db)):
-    service = UserService(db)
-    return await service.get_users(user_ids)
 
 @app.post("/users")
 async def create_user_endpoint(user_data: dict, db: AsyncSession = Depends(get_db)):
