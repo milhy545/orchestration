@@ -4,7 +4,7 @@ import psycopg2
 from psycopg2.extras import execute_values
 import json
 import os
-from datetime import datetime
+
 try:
     from dotenv import load_dotenv
     load_dotenv()

@@ -49,34 +49,13 @@ async def search_emails_async(mail: imaplib.IMAP4_SSL, limit: int, search_criter
         message_ids_to_fetch = message_ids[:limit]
         log.info(f"Found {len(message_ids)} matching emails, fetching summaries for {len(message_ids_to_fetch)} (limit: {limit}).")
 
-        if message_ids_to_fetch:
-            # Optimize: Fetch summaries in bulk instead of one-by-one to avoid N+1 performance issue
-            id_set = b",".join(message_ids_to_fetch)
-            log.debug(f"Fetching summaries for email IDs: {id_set.decode()}")
-            status, msg_data = await loop.run_in_executor(None, lambda: mail.fetch(id_set, '(RFC822)'))
-
+        for num in message_ids_to_fetch:
+            log.debug(f"Fetching summary for email ID: {num.decode()}")
+            status, msg_data = await loop.run_in_executor(None, lambda n=num: mail.fetch(n, '(RFC822)'))
             if status == 'OK':
-                # Map fetched data by email ID for easy lookup and to preserve original order
-                fetched_emails = {}
-                for part in msg_data:
-                    if isinstance(part, tuple):
-                        try:
-                            # format_email_summary expects a list/tuple of parts for a single email
-                            summary = format_email_summary([part])
-                            if summary['id'] != 'N/A':
-                                fetched_emails[summary['id']] = summary
-                        except Exception as e:
-                            log.error(f"Error parsing email summary part: {e}")
-
-                # Maintain original order (reverse chronological) and handle potential missing IDs
-                for num in message_ids_to_fetch:
-                    id_str = num.decode()
-                    if id_str in fetched_emails:
-                        email_list.append(fetched_emails[id_str])
-                    else:
-                        log.warning(f"Email ID {id_str} not found in bulk fetch response")
+                email_list.append(format_email_summary(msg_data))
             else:
-                log.error(f"Failed to bulk fetch summaries: Status {status}")
+                log.warning(f"Failed to fetch summary for email ID {num.decode()}: Status {status}")
 
 
         return email_list

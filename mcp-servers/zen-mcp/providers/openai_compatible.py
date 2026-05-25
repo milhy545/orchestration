@@ -16,8 +16,6 @@ from .base import (
     ProviderType,
 )
 
-logger = logging.getLogger(__name__)
-
 
 class OpenAICompatibleProvider(ModelProvider):
     """Base class for any provider using an OpenAI-compatible API.
@@ -48,8 +46,6 @@ class OpenAICompatibleProvider(ModelProvider):
         # Configure timeouts - especially important for custom/local endpoints
         self.timeout_config = self._configure_timeouts(**kwargs)
 
-        self._token_counters = {}  # Cache for token counting
-
         # Validate base URL for security
         if self.base_url:
             self._validate_base_url()
@@ -76,12 +72,12 @@ class OpenAICompatibleProvider(ModelProvider):
             # Parse and normalize to lowercase for case-insensitive comparison
             models = {m.strip().lower() for m in models_str.split(",") if m.strip()}
             if models:
-                logger.info(f"Configured allowed models for {self.FRIENDLY_NAME}: {sorted(models)}")
+                logging.info(f"Configured allowed models for {self.FRIENDLY_NAME}: {sorted(models)}")
                 return models
 
         # Log info if no allow-list configured for proxy providers
         if self.get_provider_type() not in [ProviderType.GOOGLE, ProviderType.OPENAI]:
-            logger.info(
+            logging.info(
                 f"Model allow-list not configured for {self.FRIENDLY_NAME} - all models permitted. "
                 f"To restrict access, set {env_var} with comma-separated model names."
             )
@@ -113,13 +109,13 @@ class OpenAICompatibleProvider(ModelProvider):
             default_read = 1800.0  # 30 minutes for local models (extended thinking)
             default_write = 1800.0  # 30 minutes for local models
             default_pool = 1800.0  # 30 minutes for local models
-            logger.info(f"Using extended timeouts for local endpoint: {self.base_url}")
+            logging.info(f"Using extended timeouts for local endpoint: {self.base_url}")
         elif self.base_url:
             default_connect = 45.0  # 45 seconds for custom remote endpoints
             default_read = 900.0  # 15 minutes for custom remote endpoints
             default_write = 900.0  # 15 minutes for custom remote endpoints
             default_pool = 900.0  # 15 minutes for custom remote endpoints
-            logger.info(f"Using extended timeouts for custom endpoint: {self.base_url}")
+            logging.info(f"Using extended timeouts for custom endpoint: {self.base_url}")
 
         # Allow override via kwargs or environment variables in future, for now...
         connect_timeout = kwargs.get("connect_timeout", float(os.getenv("CUSTOM_CONNECT_TIMEOUT", default_connect)))
@@ -129,7 +125,7 @@ class OpenAICompatibleProvider(ModelProvider):
 
         timeout = httpx.Timeout(connect=connect_timeout, read=read_timeout, write=write_timeout, pool=pool_timeout)
 
-        logger.debug(
+        logging.debug(
             f"Configured timeouts - Connect: {connect_timeout}s, Read: {read_timeout}s, "
             f"Write: {write_timeout}s, Pool: {pool_timeout}s"
         )
@@ -220,7 +216,7 @@ class OpenAICompatibleProvider(ModelProvider):
             # Add configured timeout settings
             if hasattr(self, "timeout_config") and self.timeout_config:
                 client_kwargs["timeout"] = self.timeout_config
-                logger.debug(f"OpenAI client initialized with custom timeout: {self.timeout_config}")
+                logging.debug(f"OpenAI client initialized with custom timeout: {self.timeout_config}")
 
             self._client = OpenAI(**client_kwargs)
 
@@ -287,7 +283,7 @@ class OpenAICompatibleProvider(ModelProvider):
                         {"type": "image_url", "image_url": {"url": f"data:{mime_type};base64,{image_data}"}}
                     )
                 except Exception as e:
-                    logger.warning(f"Failed to process image {image_path}: {e}")
+                    logging.warning(f"Failed to process image {image_path}: {e}")
                     # Continue with other images
 
             messages.append({"role": "user", "content": user_content})
@@ -343,7 +339,7 @@ class OpenAICompatibleProvider(ModelProvider):
                 and ("service_tier" in error_str or "flex" in error_str or "invalid" in error_str)
             ):
                 # Log the flex tier failure
-                logger.warning(f"Flex Processing tier failed for {model_name}, retrying with standard tier: {str(e)}")
+                logging.warning(f"Flex Processing tier failed for {model_name}, retrying with standard tier: {str(e)}")
 
                 # Remove service_tier and retry
                 completion_params_retry = completion_params.copy()
@@ -375,22 +371,21 @@ class OpenAICompatibleProvider(ModelProvider):
                     error_msg = (
                         f"{self.FRIENDLY_NAME} API error for model {model_name} (after flex fallback): {str(retry_e)}"
                     )
-                    logger.error(error_msg)
+                    logging.error(error_msg)
                     raise RuntimeError(error_msg) from retry_e
 
             # For non-flex errors or non-OpenAI providers, raise as before
             error_msg = f"{self.FRIENDLY_NAME} API error for model {model_name}: {str(e)}"
-            logger.error(error_msg)
+            logging.error(error_msg)
             raise RuntimeError(error_msg) from e
 
     def count_tokens(self, text: str, model_name: str) -> int:
         """Count tokens for the given text.
 
         Uses a layered approach:
-        1. Check cache first
-        2. Try provider-specific token counting endpoint
-        3. Try tiktoken for known model families
-        4. Fall back to character-based estimation
+        1. Try provider-specific token counting endpoint
+        2. Try tiktoken for known model families
+        3. Fall back to character-based estimation
 
         Args:
             text: Text to count tokens for
@@ -399,22 +394,12 @@ class OpenAICompatibleProvider(ModelProvider):
         Returns:
             Estimated token count
         """
-        if not text:
-            return 0
-
-        # Check cache first
-        cache_key = f"{model_name}:{hash(text)}"
-        if cache_key in self._token_counters:
-            return self._token_counters[cache_key]
-
         # 1. Check if provider has a remote token counting endpoint
         if hasattr(self, "count_tokens_remote"):
             try:
-                token_count = self.count_tokens_remote(text, model_name)
-                self._token_counters[cache_key] = token_count
-                return token_count
+                return self.count_tokens_remote(text, model_name)
             except Exception as e:
-                logger.debug(f"Remote token counting failed for {model_name}: {e}")
+                logging.debug(f"Remote token counting failed: {e}")
 
         # 2. Try tiktoken for known models
         try:
@@ -430,15 +415,13 @@ class OpenAICompatibleProvider(ModelProvider):
                 else:
                     encoding = tiktoken.get_encoding("cl100k_base")  # Default
 
-            token_count = len(encoding.encode(text))
-            self._token_counters[cache_key] = token_count
-            return token_count
+            return len(encoding.encode(text))
 
         except (ImportError, Exception) as e:
-            logger.debug(f"Tiktoken not available or failed for {model_name}: {e}")
+            logging.debug(f"Tiktoken not available or failed: {e}")
 
         # 3. Fall back to character-based estimation
-        logger.warning(
+        logging.warning(
             f"No specific tokenizer available for '{model_name}'. "
             "Using character-based estimation (~4 chars per token)."
         )
@@ -459,7 +442,7 @@ class OpenAICompatibleProvider(ModelProvider):
 
             # Check if we're using generic capabilities
             if hasattr(capabilities, "_is_generic"):
-                logger.debug(
+                logging.debug(
                     f"Using generic parameter validation for {model_name}. Actual model constraints may differ."
                 )
 
@@ -469,7 +452,7 @@ class OpenAICompatibleProvider(ModelProvider):
         except Exception as e:
             # For proxy providers, we might not have accurate capabilities
             # Log warning but don't fail
-            logger.warning(f"Parameter validation limited for {model_name}: {e}")
+            logging.warning(f"Parameter validation limited for {model_name}: {e}")
 
     def _extract_usage(self, response) -> dict[str, int]:
         """Extract token usage from OpenAI response.

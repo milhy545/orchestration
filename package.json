@@ -2,10 +2,5 @@
   "name": "orchestration",
   "version": "1.0.0",
   "description": "MCP Orchestration System",
-  "private": true,
-  "dependencies": {
-    "next": "^16.2.6",
-    "react": "^19.2.6",
-    "react-dom": "^19.2.6"
-  }
+  "private": true
 }
