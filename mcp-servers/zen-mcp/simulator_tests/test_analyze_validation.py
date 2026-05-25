@@ -8,7 +8,7 @@ analysis with expert validation following the same patterns as debug/codereview 
 """
 
 import json
-from typing import Optional
+from typing import Dict, List, Optional
 
 from .conversation_base_test import ConversationBaseTest
 
@@ -95,28 +95,47 @@ AsyncSessionLocal = sessionmaker(engine, class_=AsyncSession, expire_on_commit=F
 redis_client = redis.Redis.from_url(REDIS_URL)
 
 class UserService:
-    def __init__(self, db: AsyncSession):
+    def __init__(self, db: AsyncSession, cache: redis.Redis):
         self.db = db
-        self.cache = redis_client  # Direct dependency on global
+        self.cache = cache
+
+    async def get_users(self, user_ids: List[int]) -> List[Dict]:
+        # Fetch multiple users in batch to avoid N+1 queries
+        if not user_ids:
+            return []
+
+        # Get from cache
+        cache_results = {}
+        missing_ids = []
+
+        for uid in user_ids:
+            cache_key = f"user:{uid}"
+            cached = self.cache.get(cache_key)
+            if cached:
+                cache_results[uid] = json.loads(cached)
+            else:
+                missing_ids.append(uid)
+
+        if missing_ids:
+            # Fetch missing from DB
+            placeholders = ", ".join(["%s"] * len(missing_ids))
+            query = f"SELECT * FROM users WHERE id IN ({placeholders})"
+            result = await self.db.execute(query, tuple(missing_ids))
+            db_users = result.fetchall()
+
+            for user_data in db_users:
+                uid = user_data['id']
+                # Cache the newly fetched users
+                cache_key = f"user:{uid}"
+                self.cache.setex(cache_key, 3600, json.dumps(user_data, ensure_ascii=False))
+                cache_results[uid] = user_data
+
+        # Return results in the original requested order
+        return [cache_results[uid] for uid in user_ids if uid in cache_results]
 
     async def get_user(self, user_id: int) -> Optional[Dict]:
-        # Cache key generation - could be centralized
-        cache_key = f"user:{user_id}"
-
-        # Check cache first
-        cached = self.cache.get(cache_key)
-        if cached:
-            return json.loads(cached)
-
-        # Database query - no error handling
-        result = await self.db.execute(
-            "SELECT * FROM users WHERE id = %s", (user_id,)
-        )
-        user_data = result.fetchone()        if user_data:
-            # Cache for 1 hour - magic number
-            self.cache.setex(cache_key, 3600, json.dumps(user_data, ensure_ascii=False))
-
-        return user_data
+        users = await self.get_users([user_id])
+        return users[0] if users else None
 
     async def create_user(self, user_data: Dict) -> Dict:
         # Input validation missing
@@ -133,7 +152,7 @@ class UserService:
 
 @app.get("/users/{user_id}")
 async def get_user_endpoint(user_id: int, db: AsyncSession = Depends(get_db)):
-    service = UserService(db)
+    service = UserService(db, redis_client)
     user = await service.get_user(user_id)
 
     if not user:
@@ -141,9 +160,19 @@ async def get_user_endpoint(user_id: int, db: AsyncSession = Depends(get_db)):
 
     return user
 
+@app.get("/batch/users")
+async def get_users_batch_endpoint(user_ids: str, db: AsyncSession = Depends(get_db)):
+    try:
+        ids = [int(uid) for uid in user_ids.split(",")]
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid user IDs")
+
+    service = UserService(db, redis_client)
+    return await service.get_users(ids)
+
 @app.post("/users")
 async def create_user_endpoint(user_data: dict, db: AsyncSession = Depends(get_db)):
-    service = UserService(db)
+    service = UserService(db, redis_client)
     return await service.create_user(user_data)
 
 async def get_db():
