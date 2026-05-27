@@ -13,7 +13,7 @@ httpx==0.28.1  # For TestClient async support
 requests==2.33.0
 
 # Mocking and fixtures
-faker==40.11.0
+faker==40.19.1
 factory-boy==3.3.3
 
 # Code quality
