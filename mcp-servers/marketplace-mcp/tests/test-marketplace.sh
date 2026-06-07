@@ -6,7 +6,8 @@ set -uo pipefail
 MARKET_URL="${MARKET_URL:-http://192.168.0.58:7034}"
 JWT_SECRET="${JWT_SECRET:-change_me_market_jwt}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
+REPO_ROOT="$(dirname "$(dirname "$(dirname "$SCRIPT_DIR")")")"
+SCRIPTS_DIR="$REPO_ROOT/scripts/marketplace"
 
 PASS=0
 FAIL=0
@@ -33,13 +34,13 @@ print(jwt.encode(payload, JWT_SECRET, algorithm='HS256'))
 
 test_section "1. Skill Scanner"
 
-if [ -x "$PROJECT_DIR/scripts/skill-scanner.py" ]; then
+if [ -x "$SCRIPTS_DIR/skill-scanner.py" ]; then
     test_pass "Scanner script exists and is executable"
 else
     test_fail "Scanner script missing or not executable"
 fi
 
-cd "$PROJECT_DIR"
+cd "$SCRIPTS_DIR"
 SCANNER_OUTPUT=$(python3 scripts/skill-scanner.py 2>&1)
 if echo "$SCANNER_OUTPUT" | grep -q "Total unique skills:"; then
     test_pass "Scanner runs and produces output"
@@ -86,7 +87,7 @@ fi
 
 test_section "3. Agent Sync"
 
-if [ -x "$PROJECT_DIR/scripts/agent-sync.py" ]; then
+if [ -x "$SCRIPTS_DIR/agent-sync.py" ]; then
     test_pass "Agent sync script exists"
 else
     test_fail "Agent sync script missing"
@@ -103,7 +104,7 @@ done
 
 test_section "4. HAS Sync"
 
-if [ -x "$PROJECT_DIR/scripts/sync-catalog-to-has.sh" ]; then
+if [ -x "$SCRIPTS_DIR/sync-catalog-to-has.sh" ]; then
     test_pass "HAS sync script exists"
 else
     test_fail "HAS sync script missing"

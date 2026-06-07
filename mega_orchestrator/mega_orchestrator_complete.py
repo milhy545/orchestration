@@ -185,19 +185,7 @@ class MegaOrchestrator:
                 sage_modes=[SAGEMode.MEMORY, SAGEMode.CHAT],
                 priority=1,
             ),
-            "research": MCPServiceConfig(
-                name="Research MCP",
-                host="mcp-research",
-                port=8000,
-                tools=[
-                    "research_query",
-                    "perplexity_search",
-                    "web_search",
-                    "search_web",
-                ],
-                sage_modes=[SAGEMode.ANALYZE, SAGEMode.DOCS],
-                priority=1,
-            ),
+
             "advanced_memory": MCPServiceConfig(
                 name="Advanced Memory MCP",
                 host="mcp-advanced-memory",
@@ -1157,20 +1145,6 @@ class MegaOrchestrator:
             if query is None:
                 query = arguments.get("q", "")
             model = arguments.get("model", "sonar-pro")
-            if tool in {
-                "web_search",
-                "search_web",
-                "research_query",
-                "perplexity_search",
-            }:
-                return {
-                    "method": "POST",
-                    "url": f"{base_url}/research/search",
-                    "params": {
-                        "query": query,
-                        "model": model,
-                    },
-                }
 
         if service.name == "Git MCP":
             repo_path = arguments.get(
