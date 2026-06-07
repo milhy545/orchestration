@@ -205,6 +205,14 @@ class MegaOrchestrator:
                 ],
                 priority=2,
             ),
+            "forai": MCPServiceConfig(
+                name="FORAI MCP",
+                host="mcp-forai",
+                port=8000,
+                tools=["forai_analyze", "forai_process"],
+                sage_modes=[SAGEMode.CODE, SAGEMode.DOCS],
+                priority=2,
+            ),
             "marketplace": MCPServiceConfig(
                 name="Marketplace MCP",
                 host="mcp-marketplace",

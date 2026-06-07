@@ -595,6 +595,24 @@ services:
   # 7016: FORAI MCP - Code Analysis with FORAI Headers
   # ============================================================================
   # ============================================================================
+  # 7016: FORAI MCP - Python Code Analysis with FORAI Headers
+  forai-mcp:
+    build:
+      context: ./mcp-servers/forai-mcp
+      dockerfile: Dockerfile
+    container_name: mcp-forai
+    ports:
+      - "7016:8000"
+    volumes:
+      - ${DATA_ROOT:-./data}/workspaces:/workspace
+      - ${PROJECT_ROOT:-.}:/home/orchestration
+      - ${PROJECT_ROOT:-.}:/workspace:ro
+    environment:
+      - MCP_SERVER_PORT=8000
+    restart: unless-stopped
+    networks:
+      - mcp-network
+
   # 7020: Code Graph MCP - Python Code Graph Analyzer
   # ============================================================================
   code-graph-mcp:
