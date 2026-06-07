@@ -383,6 +383,27 @@ MCP_TOOL_DEFINITIONS: Dict[str, Dict[str, Any]] = {
             "required": ["archive_url", "sha256"],
         },
     },
+    "forai_analyze": {
+        "description": "Analyze Python file(s) and return FORAI metadata (imports, classes, functions, exports).",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "path": {"type": "string", "description": "File or directory path to analyze"},
+            },
+            "required": ["path"],
+        },
+    },
+    "forai_process": {
+        "description": "Process Python files and inject FORAI machine-readable headers.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "path": {"type": "string", "description": "File or directory path to process"},
+                "recursive": {"type": "boolean", "description": "Process subdirectories recursively", "default": True},
+            },
+            "required": ["path"],
+        },
+    },
 }
 
 
