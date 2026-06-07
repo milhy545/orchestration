@@ -42,7 +42,9 @@ AGENT_SKILL_DIRS = {
 }
 
 # Marketplace catalog path
-CATALOG_PATH = Path(__file__).parent.parent / "catalog"
+# Catalog path - defaults to marketplace-mcp/catalog in repo
+REPO_ROOT = Path(__file__).parent.parent.parent
+CATALOG_PATH = REPO_ROOT / "mcp-servers" / "marketplace-mcp" / "catalog"
 SKILLS_INDEX = CATALOG_PATH / "skills-index.json"
 
 

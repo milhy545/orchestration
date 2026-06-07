@@ -40,15 +40,14 @@ else
     test_fail "Scanner script missing or not executable"
 fi
 
-cd "$SCRIPTS_DIR"
-SCANNER_OUTPUT=$(python3 scripts/skill-scanner.py 2>&1)
+SCANNER_OUTPUT=$(python3 "$SCRIPTS_DIR/skill-scanner.py" 2>&1)
 if echo "$SCANNER_OUTPUT" | grep -q "Total unique skills:"; then
     test_pass "Scanner runs and produces output"
 else
     test_fail "Scanner failed to run"
 fi
 
-if python3 -c "import json; json.load(open('catalog/skills-index.json'))" 2>/dev/null; then
+if python3 -c "import json; json.load(open('$REPO_ROOT/mcp-servers/marketplace-mcp/catalog/skills-index.json'))" 2>/dev/null; then
     test_pass "Catalog JSON is valid"
 else
     test_fail "Catalog JSON is invalid"
