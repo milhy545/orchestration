@@ -93,20 +93,6 @@ class MegaOrchestrator:
         self.file_storage = FileStorage()
         self.chat_recall = ChatRecall()
         self.welcome_service = WelcomeService()
-
-    def reload_welcome_service(self):
-        """Reload the welcome_service module."""
-        global welcome_service_module
-        try:
-            welcome_service_module = importlib.reload(welcome_service_module)
-            self.welcome_service_module = welcome_service_module
-            self.welcome_service = welcome_service_module.WelcomeService()
-            logging.info(f"WelcomeService reloaded, id: {id(self.welcome_service)}")
-            return {"success": True, "service_id": id(self.welcome_service)}
-        except Exception as e:
-            logging.error(f"Failed to reload WelcomeService: {e}")
-            return {"success": False, "error": str(e)}
-
         self.sage_router = SAGEModeRouter()
 
         # Infrastructure
@@ -123,6 +109,19 @@ class MegaOrchestrator:
             "memory_contexts": 0,
             "file_operations": 0,
         }
+
+    def reload_welcome_service(self):
+        """Reload the welcome_service module."""
+        global welcome_service_module
+        try:
+            welcome_service_module = importlib.reload(welcome_service_module)
+            self.welcome_service_module = welcome_service_module
+            self.welcome_service = welcome_service_module.WelcomeService()
+            logging.info(f"WelcomeService reloaded, id: {id(self.welcome_service)}")
+            return {"success": True, "service_id": id(self.welcome_service)}
+        except Exception as e:
+            logging.error(f"Failed to reload WelcomeService: {e}")
+            return {"success": False, "error": str(e)}
 
     def _init_mcp_services(self) -> Dict[str, MCPServiceConfig]:
         """Initialize MCP services with new port mapping"""

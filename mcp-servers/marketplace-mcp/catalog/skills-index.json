@@ -9,8 +9,8 @@
       "path": "/home/milhy777/.pi/agent/skills/browseros-mcp",
       "content_hash": "4ee63062515bb7da",
       "tags": [
-        "mcp",
-        "pi"
+        "pi",
+        "mcp"
       ],
       "source": "local",
       "compat": {
@@ -48,8 +48,8 @@
       "path": "/home/milhy777/.pi/agent/skills/update-all",
       "content_hash": "898f68aa3a2885fd",
       "tags": [
-        "maintenance",
-        "pi"
+        "pi",
+        "maintenance"
       ],
       "source": "local",
       "compat": {
@@ -410,8 +410,8 @@
       "path": "/home/milhy777/.codex/skills/mcp-builder",
       "content_hash": "b1010e90adcb8fd6",
       "tags": [
-        "mcp",
-        "codex"
+        "codex",
+        "mcp"
       ],
       "source": "local",
       "compat": {
@@ -1646,8 +1646,8 @@
       "path": "/home/milhy777/.gemini/skills/update-all",
       "content_hash": "1268957631816482",
       "tags": [
-        "maintenance",
-        "gemini"
+        "gemini",
+        "maintenance"
       ],
       "source": "local",
       "compat": {
@@ -1754,7 +1754,7 @@
     }
   ],
   "metadata": {
-    "generated_at": "2026-06-07T20:18:29.198083+00:00",
+    "generated_at": "2026-06-07T20:32:05.896159+00:00",
     "total_skills": 92,
     "agents_scanned": [
       "pi",
