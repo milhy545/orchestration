@@ -205,36 +205,6 @@ class MegaOrchestrator:
                 ],
                 priority=2,
             ),
-            "advanced_memory_v2": MCPServiceConfig(
-                name="Advanced Memory v2",
-                host="mcp-gmail",
-                port=8000,
-                tools=[
-                    "conversation_thread",
-                    "file_deduplication",
-                    "context_continuation",
-                ],
-                sage_modes=[SAGEMode.MEMORY, SAGEMode.CHAT],
-                priority=3,
-            ),
-            "transcriber": MCPServiceConfig(
-                name="Transcriber MCP",
-                host="mcp-transcriber",
-                port=8000,
-                tools=["transcribe_webm", "transcribe_url", "audio_convert"],
-                sage_modes=[SAGEMode.ANALYZE],
-                priority=2,
-                timeout=60,  # Longer timeout for transcription
-            ),
-            "video_processing": MCPServiceConfig(
-                name="Video Processing MCP",
-                host="mcp-forai",
-                port=8000,
-                tools=["process_video", "extract_frames", "video_analysis"],
-                sage_modes=[SAGEMode.ANALYZE],
-                priority=2,
-                timeout=120,
-            ),
             "marketplace": MCPServiceConfig(
                 name="Marketplace MCP",
                 host="mcp-marketplace",

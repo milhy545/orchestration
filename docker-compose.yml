@@ -205,21 +205,6 @@ services:
 
   # 7011: Research MCP - AI Research
   # 7015: Gmail MCP - Email Operations (search, send, forward, labels)
-  gmail-mcp:
-    build: ${PROJECT_ROOT:-.}/mcp-servers/gmail-mcp
-    container_name: mcp-gmail
-    ports:
-      - "7015:8000"
-    environment:
-      - EMAIL_ADDRESS=${GMAIL_ADDRESS:-}
-      - EMAIL_PASSWORD=${GMAIL_APP_PASSWORD:-}
-      - IMAP_SERVER=${IMAP_SERVER:-imap.gmail.com}
-      - SMTP_SERVER=${SMTP_SERVER:-smtp.gmail.com}
-      - SMTP_PORT=${SMTP_PORT:-587}
-    restart: unless-stopped
-    networks:
-      - mcp-network
-
   # 7012: Advanced Memory MCP - AI Memory (vector search, semantic similarity)
   advanced-memory-mcp:
     build:
@@ -242,31 +227,6 @@ services:
       - mcp-network
 
   # 7013: Transcriber MCP - Audio Processing
-  transcriber-mcp:
-    build: ${PROJECT_ROOT:-.}/mcp-servers/webm-transcriber
-    container_name: mcp-transcriber
-    ports:
-      - "7013:8000"
-    volumes:
-      - ${DATA_ROOT:-./data}/workspaces:/workspace
-      - ${PROJECT_ROOT:-.}:/home/orchestration
-      - ${DATA_ROOT:-./data}/transcripts:/transcripts
-    environment:
-      - MCP_DATABASE_URL=${MCP_DATABASE_URL:-postgresql://mcp_admin:change_me_in_production@postgresql:5432/mcp_unified}
-      - REDIS_URL=redis://redis:6379
-    depends_on:
-      - postgresql
-      - redis
-    profiles: ["disabled"]
-    restart: "no"
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-    networks:
-      - mcp-network
-
   # 7014-7016: Placeholders for future AI services
   vision-mcp:
     build: ${PROJECT_ROOT:-.}/mcp-servers/system-mcp
@@ -634,23 +594,6 @@ services:
   # ============================================================================
   # 7016: FORAI MCP - Code Analysis with FORAI Headers
   # ============================================================================
-  forai-mcp:
-    build:
-      context: ./mcp-servers/forai-mcp
-      dockerfile: Dockerfile
-    container_name: mcp-forai
-    ports:
-      - "7016:8000"
-    volumes:
-      - ${DATA_ROOT:-./data}/workspaces:/workspace
-      - ${PROJECT_ROOT:-.}:/home/orchestration
-      - ${PROJECT_ROOT:-.}:/workspace:ro
-    environment:
-      - MCP_SERVER_PORT=8000
-    restart: unless-stopped
-    networks:
-      - mcp-network
-
   # ============================================================================
   # 7020: Code Graph MCP - Python Code Graph Analyzer
   # ============================================================================
