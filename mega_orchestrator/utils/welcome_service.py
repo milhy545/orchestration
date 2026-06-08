@@ -141,6 +141,12 @@ class WelcomeService:
             "has_hardware": has_hw_update,  # Explicit HAS hardware
             "agent_hardware": agent_hw_update,  # Agent-specific hardware
             "semantic_context": semantic_context,
+            "marketplace": {
+                "enabled": True,
+                "endpoint": "Mega-Orchestrator (port 7000)",
+                "tools": ["skills_list", "skills_resolve", "registry_search", "registry_get_server", "catalog_validate"],
+                "description": "Unified skill marketplace with 92+ skills from all agents",
+            },
         }
         return {
             "welcome_markdown": self._render_markdown(pack_json),
@@ -237,21 +243,34 @@ class WelcomeService:
         agent = pack["agent"]
         memory = pack["memory"]
         hardware = pack["hardware"]
-        return "\n".join(
-            [
-                f"# Welcome, {agent['name']}",
+        marketplace = pack.get("marketplace", {})
+        
+        lines = [
+            f"# Welcome, {agent['name']}",
+            "",
+            f"- Agent version: {agent.get('version') or 'unknown'}",
+            f"- Source of truth: `{memory['source_of_truth']}`",
+            f"- Global agent rules: `{memory['global_agents']}`",
+            f"- Memory standards: `{memory['standards']}`",
+            f"- Full transcript archive: `{memory['full_archive']}`",
+            f"- Exact recall MCP tool: `{memory['exact_recall_tool']}`",
+            f"- Semantic layer: {memory['semantic_layer']}",
+            "- Do not store raw transcripts in semantic memory; store HAS pointers only.",
+            f"- HW registry updated: {hardware['updated']}",
+        ]
+        
+        if marketplace.get("enabled"):
+            lines.extend([
                 "",
-                f"- Agent version: {agent.get('version') or 'unknown'}",
-                f"- Source of truth: `{memory['source_of_truth']}`",
-                f"- Global agent rules: `{memory['global_agents']}`",
-                f"- Memory standards: `{memory['standards']}`",
-                f"- Full transcript archive: `{memory['full_archive']}`",
-                f"- Exact recall MCP tool: `{memory['exact_recall_tool']}`",
-                f"- Semantic layer: {memory['semantic_layer']}",
-                "- Do not store raw transcripts in semantic memory; store HAS pointers only.",
-                f"- HW registry updated: {hardware['updated']}",
-            ]
-        )
+                "## Skills Marketplace",
+                f"- Access via: {marketplace['endpoint']}",
+                f"- Available tools: {', '.join(marketplace['tools'])}",
+                f"- {marketplace['description']}",
+                "- Use `skills_list` to browse available skills",
+                "- Use `skills_resolve` to get skill details",
+            ])
+        
+        return "\n".join(lines)
 
     def _load_json(self, path: Path, default: Dict[str, Any]) -> Dict[str, Any]:
         if not path.is_file():
