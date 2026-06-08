@@ -5,7 +5,7 @@ set -euo pipefail
 # This script should be run from Milhy-PC
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(dirname "$SCRIPT_DIR")"
+REPO_ROOT="$(dirname "$(dirname "$SCRIPT_DIR")")"
 CATALOG_DIR="$REPO_ROOT/mcp-servers/marketplace-mcp/catalog"
 
 HAS_HOST="HAS"

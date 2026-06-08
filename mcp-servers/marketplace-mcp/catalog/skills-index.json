@@ -1,6 +1,235 @@
 {
   "skills": [
     {
+      "name": "migrate-to-pi",
+      "version": "1.0.0",
+      "description": "Migrate instruction files (CLAUDE.md, AGENTS.md, .cursorrules), custom skills, and MCP configs from other agent environments into Pi-compatible global and local settings.",
+      "archive_url": "skills/migrate-to-pi-1.0.0.tar.gz",
+      "agent": "pi",
+      "path": "/home/milhy777/.pi/agent/skills/migrate-to-pi",
+      "content_hash": "dea8ef63e046a4e3",
+      "tags": [
+        "pi"
+      ],
+      "source": "local",
+      "compat": {
+        "clients": [
+          "pi"
+        ],
+        "min_version": "0.0.0"
+      }
+    },
+    {
+      "name": "changelog-generator",
+      "version": "1.0.0",
+      "description": "Automatically create user-facing changelogs from git commits. Analyzes commit history, categorizes changes, and transforms technical commits into clear, customer-friendly release notes.",
+      "archive_url": "skills/changelog-generator-1.0.0.tar.gz",
+      "agent": "pi",
+      "path": "/home/milhy777/.pi/agent/skills/changelog-generator",
+      "content_hash": "e33a070e042a4e0e",
+      "tags": [
+        "pi"
+      ],
+      "source": "local",
+      "compat": {
+        "clients": [
+          "pi"
+        ],
+        "min_version": "0.0.0"
+      }
+    },
+    {
+      "name": "connect",
+      "version": "1.0.0",
+      "description": "Connect to any app and take real actions across Gmail, Slack, GitHub, Notion, and 1000+ services. Send emails, create issues, post messages, update databases.",
+      "archive_url": "skills/connect-1.0.0.tar.gz",
+      "agent": "pi",
+      "path": "/home/milhy777/.pi/agent/skills/connect",
+      "content_hash": "07251091856320eb",
+      "tags": [
+        "pi"
+      ],
+      "source": "local",
+      "compat": {
+        "clients": [
+          "pi"
+        ],
+        "min_version": "0.0.0"
+      }
+    },
+    {
+      "name": "security-threat-model",
+      "version": "1.0.0",
+      "description": "Standardized threat modeling and risk assessment framework. Uses STRIDE methodology to systematically identify vulnerabilities, determine mitigation priorities, and secure system design.",
+      "archive_url": "skills/security-threat-model-1.0.0.tar.gz",
+      "agent": "pi",
+      "path": "/home/milhy777/.pi/agent/skills/security-threat-model",
+      "content_hash": "eb7a4d2ad1b87bc8",
+      "tags": [
+        "pi"
+      ],
+      "source": "local",
+      "compat": {
+        "clients": [
+          "pi"
+        ],
+        "min_version": "0.0.0"
+      }
+    },
+    {
+      "name": "vercel-deploy",
+      "version": "1.0.0",
+      "description": "Deploy applications and websites to Vercel. Use for deployment actions like \"deploy my app\", \"deploy and give me the link\", \"push this live\", or \"create a preview deployment\".",
+      "archive_url": "skills/vercel-deploy-1.0.0.tar.gz",
+      "agent": "pi",
+      "path": "/home/milhy777/.pi/agent/skills/vercel-deploy",
+      "content_hash": "b0182422371ff896",
+      "tags": [
+        "pi"
+      ],
+      "source": "local",
+      "compat": {
+        "clients": [
+          "pi"
+        ],
+        "min_version": "0.0.0"
+      }
+    },
+    {
+      "name": "notion-spec-to-implementation",
+      "version": "1.0.0",
+      "description": "Turn Notion specs into implementation plans, tasks, and progress tracking. Use when implementing PRDs/feature specs and creating Notion plans + tasks from them.",
+      "archive_url": "skills/notion-spec-to-implementation-1.0.0.tar.gz",
+      "agent": "pi",
+      "path": "/home/milhy777/.pi/agent/skills/notion-spec-to-implementation",
+      "content_hash": "f950dc46e883140f",
+      "tags": [
+        "pi"
+      ],
+      "source": "local",
+      "compat": {
+        "clients": [
+          "pi"
+        ],
+        "min_version": "0.0.0"
+      }
+    },
+    {
+      "name": "openai-docs",
+      "version": "1.0.0",
+      "description": "Access up-to-date official OpenAI documentation with citations. Use for building with OpenAI products/APIs, choosing models, prompt upgrade guidance, and model migration help.",
+      "archive_url": "skills/openai-docs-1.0.0.tar.gz",
+      "agent": "pi",
+      "path": "/home/milhy777/.pi/agent/skills/openai-docs",
+      "content_hash": "efec04d469169ca2",
+      "tags": [
+        "pi"
+      ],
+      "source": "local",
+      "compat": {
+        "clients": [
+          "pi"
+        ],
+        "min_version": "0.0.0"
+      }
+    },
+    {
+      "name": "mcp-builder",
+      "version": "1.0.0",
+      "description": "Guide for creating high-quality MCP (Model Context Protocol) servers that enable LLMs to interact with external services through well-designed tools. Build MCP servers in Python (FastMCP) or Node/TypeScript (MCP SDK).",
+      "archive_url": "skills/mcp-builder-1.0.0.tar.gz",
+      "agent": "pi",
+      "path": "/home/milhy777/.pi/agent/skills/mcp-builder",
+      "content_hash": "19e8ac8c7f156bcc",
+      "tags": [
+        "pi",
+        "mcp"
+      ],
+      "source": "local",
+      "compat": {
+        "clients": [
+          "pi"
+        ],
+        "min_version": "0.0.0"
+      }
+    },
+    {
+      "name": "gh-fix-ci",
+      "version": "1.0.0",
+      "description": "Analyze, diagnose, and repair broken GitHub Actions workflow runs and configuration files (.github/workflows/*). Resolves runners, permissions, environment variables, and job matrices.",
+      "archive_url": "skills/gh-fix-ci-1.0.0.tar.gz",
+      "agent": "pi",
+      "path": "/home/milhy777/.pi/agent/skills/gh-fix-ci",
+      "content_hash": "34efaac9f51d195d",
+      "tags": [
+        "pi"
+      ],
+      "source": "local",
+      "compat": {
+        "clients": [
+          "pi"
+        ],
+        "min_version": "0.0.0"
+      }
+    },
+    {
+      "name": "notion-research-documentation",
+      "version": "1.0.0",
+      "description": "Research across Notion and synthesize into structured documentation. Use when gathering info from multiple Notion sources to produce briefs, comparisons, or reports with citations.",
+      "archive_url": "skills/notion-research-documentation-1.0.0.tar.gz",
+      "agent": "pi",
+      "path": "/home/milhy777/.pi/agent/skills/notion-research-documentation",
+      "content_hash": "354e6e67ac13a027",
+      "tags": [
+        "pi"
+      ],
+      "source": "local",
+      "compat": {
+        "clients": [
+          "pi"
+        ],
+        "min_version": "0.0.0"
+      }
+    },
+    {
+      "name": "meeting-notes-and-actions",
+      "version": "1.0.0",
+      "description": "Turn meeting transcripts or rough notes into crisp summaries with decisions, risks, and owner-tagged action items. Use for Zoom/Meet/Teams transcripts, call notes, or long meeting chats.",
+      "archive_url": "skills/meeting-notes-and-actions-1.0.0.tar.gz",
+      "agent": "pi",
+      "path": "/home/milhy777/.pi/agent/skills/meeting-notes-and-actions",
+      "content_hash": "aa63dc4299b785ae",
+      "tags": [
+        "pi"
+      ],
+      "source": "local",
+      "compat": {
+        "clients": [
+          "pi"
+        ],
+        "min_version": "0.0.0"
+      }
+    },
+    {
+      "name": "doc",
+      "version": "1.0.0",
+      "description": "Read, create, or edit .docx documents with formatting and layout fidelity. Uses python-docx plus bundled render_docx.py for visual checks.",
+      "archive_url": "skills/doc-1.0.0.tar.gz",
+      "agent": "pi",
+      "path": "/home/milhy777/.pi/agent/skills/doc",
+      "content_hash": "78cab94297269f6b",
+      "tags": [
+        "pi"
+      ],
+      "source": "local",
+      "compat": {
+        "clients": [
+          "pi"
+        ],
+        "min_version": "0.0.0"
+      }
+    },
+    {
       "name": "browseros-mcp",
       "version": "1.0.0",
       "description": "Control BrowserOS (browser automation, 40+ external services — Gmail, Slack, GitHub, Linear, Notion, etc.) via its built-in MCP server at http://127.0.0.1:9000/mcp. Use when the user asks to open tabs, navigate pages, click elements, extract page content, take screenshots, search history/bookmarks, interact with external services, or automate browser workflows.",
@@ -21,6 +250,253 @@
       }
     },
     {
+      "name": "render-deploy",
+      "version": "1.0.0",
+      "description": "Deploy applications to Render by analyzing codebases, generating render.yaml Blueprints, and providing Dashboard deeplinks. Use when deploying, hosting, or setting up projects on Render's cloud platform.",
+      "archive_url": "skills/render-deploy-1.0.0.tar.gz",
+      "agent": "pi",
+      "path": "/home/milhy777/.pi/agent/skills/render-deploy",
+      "content_hash": "57fe93cd032faf67",
+      "tags": [
+        "pi"
+      ],
+      "source": "local",
+      "compat": {
+        "clients": [
+          "pi"
+        ],
+        "min_version": "0.0.0"
+      }
+    },
+    {
+      "name": "slides",
+      "version": "1.0.0",
+      "description": "Create and edit presentation slide decks (.pptx) with PptxGenJS, bundled layout helpers, and render/validation utilities. Use for building new PowerPoint decks, recreating slides from screenshots/PDFs, modifying content while preserving editable output, adding charts/diagrams/visuals.",
+      "archive_url": "skills/slides-1.0.0.tar.gz",
+      "agent": "pi",
+      "path": "/home/milhy777/.pi/agent/skills/slides",
+      "content_hash": "dbe5033d83e7f221",
+      "tags": [
+        "pi"
+      ],
+      "source": "local",
+      "compat": {
+        "clients": [
+          "pi"
+        ],
+        "min_version": "0.0.0"
+      }
+    },
+    {
+      "name": "skill-creator",
+      "version": "1.0.0",
+      "description": "Guide for creating effective Pi skills. Use when you want to create a new skill (or update an existing skill) that extends Pi's capabilities with specialized knowledge, workflows, or tool integrations.",
+      "archive_url": "skills/skill-creator-1.0.0.tar.gz",
+      "agent": "pi",
+      "path": "/home/milhy777/.pi/agent/skills/skill-creator",
+      "content_hash": "10a06dfcea398455",
+      "tags": [
+        "pi"
+      ],
+      "source": "local",
+      "compat": {
+        "clients": [
+          "pi"
+        ],
+        "min_version": "0.0.0"
+      }
+    },
+    {
+      "name": "pdf",
+      "version": "1.0.0",
+      "description": "Read, create, or review PDF files where rendering and layout matter. Uses Poppler for rendering, and reportlab/pdfplumber/pypdf for generation and extraction.",
+      "archive_url": "skills/pdf-1.0.0.tar.gz",
+      "agent": "pi",
+      "path": "/home/milhy777/.pi/agent/skills/pdf",
+      "content_hash": "b3453fac54a0df77",
+      "tags": [
+        "pi"
+      ],
+      "source": "local",
+      "compat": {
+        "clients": [
+          "pi"
+        ],
+        "min_version": "0.0.0"
+      }
+    },
+    {
+      "name": "find-skills",
+      "version": "1.0.0",
+      "description": "Discover and install agent skills from the skills.sh ecosystem. Use when you need to find a skill for a specific task, explore available skills, or extend Pi capabilities with community skills.",
+      "archive_url": "skills/find-skills-1.0.0.tar.gz",
+      "agent": "pi",
+      "path": "/home/milhy777/.pi/agent/skills/find-skills",
+      "content_hash": "36982c6199882825",
+      "tags": [
+        "pi"
+      ],
+      "source": "local",
+      "compat": {
+        "clients": [
+          "pi"
+        ],
+        "min_version": "0.0.0"
+      }
+    },
+    {
+      "name": "webapp-testing",
+      "version": "1.0.0",
+      "description": "Toolkit for interacting with and testing local web applications using Playwright. Verifies frontend functionality, debugs UI behavior, captures browser screenshots, and views browser console logs.",
+      "archive_url": "skills/webapp-testing-1.0.0.tar.gz",
+      "agent": "pi",
+      "path": "/home/milhy777/.pi/agent/skills/webapp-testing",
+      "content_hash": "8779fd3efb334be6",
+      "tags": [
+        "pi"
+      ],
+      "source": "local",
+      "compat": {
+        "clients": [
+          "pi"
+        ],
+        "min_version": "0.0.0"
+      }
+    },
+    {
+      "name": "playwright",
+      "version": "1.0.0",
+      "description": "Automate a real browser from the terminal for navigation, form filling, snapshots, screenshots, data extraction, and UI-flow debugging via Playwright CLI or bundled wrapper script.",
+      "archive_url": "skills/playwright-1.0.0.tar.gz",
+      "agent": "pi",
+      "path": "/home/milhy777/.pi/agent/skills/playwright",
+      "content_hash": "98d4949ced0b230a",
+      "tags": [
+        "pi"
+      ],
+      "source": "local",
+      "compat": {
+        "clients": [
+          "pi"
+        ],
+        "min_version": "0.0.0"
+      }
+    },
+    {
+      "name": "screenshot",
+      "version": "1.0.0",
+      "description": "Capture desktop or system screenshots (full screen, specific app/window, or pixel region) via OS-level capture when tool-specific capture is unavailable.",
+      "archive_url": "skills/screenshot-1.0.0.tar.gz",
+      "agent": "pi",
+      "path": "/home/milhy777/.pi/agent/skills/screenshot",
+      "content_hash": "f8b72666cd2418dc",
+      "tags": [
+        "pi"
+      ],
+      "source": "local",
+      "compat": {
+        "clients": [
+          "pi"
+        ],
+        "min_version": "0.0.0"
+      }
+    },
+    {
+      "name": "jupyter-notebook",
+      "version": "1.0.0",
+      "description": "Create, execute, and analyze Jupyter notebooks (.ipynb) programmatically or via terminal command execution. Useful for data science pipelines, visualizations, and interactive scratchpads.",
+      "archive_url": "skills/jupyter-notebook-1.0.0.tar.gz",
+      "agent": "pi",
+      "path": "/home/milhy777/.pi/agent/skills/jupyter-notebook",
+      "content_hash": "e5df8393918ac31d",
+      "tags": [
+        "pi"
+      ],
+      "source": "local",
+      "compat": {
+        "clients": [
+          "pi"
+        ],
+        "min_version": "0.0.0"
+      }
+    },
+    {
+      "name": "internal-comms",
+      "version": "1.0.0",
+      "description": "Write all kinds of internal communications using company-preferred formats. Status reports, leadership updates, 3P updates, company newsletters, FAQs, incident reports, project updates.",
+      "archive_url": "skills/internal-comms-1.0.0.tar.gz",
+      "agent": "pi",
+      "path": "/home/milhy777/.pi/agent/skills/internal-comms",
+      "content_hash": "7c9d2a572816aa28",
+      "tags": [
+        "pi"
+      ],
+      "source": "local",
+      "compat": {
+        "clients": [
+          "pi"
+        ],
+        "min_version": "0.0.0"
+      }
+    },
+    {
+      "name": "yeet",
+      "version": "1.0.0",
+      "description": "Fast, aggressive workspace cleanup and development deployment. Forcefully rebuilds node_modules, kills dangling background processes, and clears heavy cache files.",
+      "archive_url": "skills/yeet-1.0.0.tar.gz",
+      "agent": "pi",
+      "path": "/home/milhy777/.pi/agent/skills/yeet",
+      "content_hash": "e63e3a476ee58a52",
+      "tags": [
+        "pi"
+      ],
+      "source": "local",
+      "compat": {
+        "clients": [
+          "pi"
+        ],
+        "min_version": "0.0.0"
+      }
+    },
+    {
+      "name": "meeting-insights-analyzer",
+      "version": "1.0.0",
+      "description": "Analyze meeting transcripts and recordings to uncover behavioral patterns, communication insights, and actionable feedback. Identifies conflict avoidance, filler words, conversation dominance, missed listening opportunities.",
+      "archive_url": "skills/meeting-insights-analyzer-1.0.0.tar.gz",
+      "agent": "pi",
+      "path": "/home/milhy777/.pi/agent/skills/meeting-insights-analyzer",
+      "content_hash": "f4de0d970965c521",
+      "tags": [
+        "pi"
+      ],
+      "source": "local",
+      "compat": {
+        "clients": [
+          "pi"
+        ],
+        "min_version": "0.0.0"
+      }
+    },
+    {
+      "name": "theme-factory",
+      "version": "1.0.0",
+      "description": "Toolkit for styling documents, slides, and web components with cohesive visual themes. Includes 10 pre-set design themes with colors and typography.",
+      "archive_url": "skills/theme-factory-1.0.0.tar.gz",
+      "agent": "pi",
+      "path": "/home/milhy777/.pi/agent/skills/theme-factory",
+      "content_hash": "2351e42820be6331",
+      "tags": [
+        "pi"
+      ],
+      "source": "local",
+      "compat": {
+        "clients": [
+          "pi"
+        ],
+        "min_version": "0.0.0"
+      }
+    },
+    {
       "name": "conductor",
       "version": "1.0.0",
       "description": "Context-Driven Development framework for Pi. Specify, plan, and implement software features with persistent project context. Use when starting new projects, creating features/bugs, or implementing structured development workflows.",
@@ -28,6 +504,44 @@
       "agent": "pi",
       "path": "/home/milhy777/.pi/agent/skills/conductor",
       "content_hash": "a0afc7dcfe96c279",
+      "tags": [
+        "pi"
+      ],
+      "source": "local",
+      "compat": {
+        "clients": [
+          "pi"
+        ],
+        "min_version": "0.0.0"
+      }
+    },
+    {
+      "name": "canvas-design",
+      "version": "1.0.0",
+      "description": "Create beautiful static visual layouts, charts, posters, and PDF art using design principles. Guides on composition, color palettes, and using tools like matplotlib, reportlab, or canvas.",
+      "archive_url": "skills/canvas-design-1.0.0.tar.gz",
+      "agent": "pi",
+      "path": "/home/milhy777/.pi/agent/skills/canvas-design",
+      "content_hash": "67d3221e70a57c63",
+      "tags": [
+        "pi"
+      ],
+      "source": "local",
+      "compat": {
+        "clients": [
+          "pi"
+        ],
+        "min_version": "0.0.0"
+      }
+    },
+    {
+      "name": "security-ownership-map",
+      "version": "1.0.0",
+      "description": "Governance and security ownership mapping. Establishes a registry of system modules, data-sensitivity classes, compliance bounds, and designated security owners.",
+      "archive_url": "skills/security-ownership-map-1.0.0.tar.gz",
+      "agent": "pi",
+      "path": "/home/milhy777/.pi/agent/skills/security-ownership-map",
+      "content_hash": "60c2b40a74c8ab07",
       "tags": [
         "pi"
       ],
@@ -60,6 +574,272 @@
       }
     },
     {
+      "name": "email-draft-polish",
+      "version": "1.0.0",
+      "description": "Draft, rewrite, or condense emails with target tone, length, and audience. Use for cold outreach, replies, status updates, or escalations where clarity and brevity matter.",
+      "archive_url": "skills/email-draft-polish-1.0.0.tar.gz",
+      "agent": "pi",
+      "path": "/home/milhy777/.pi/agent/skills/email-draft-polish",
+      "content_hash": "b4440d22e92dcadf",
+      "tags": [
+        "pi"
+      ],
+      "source": "local",
+      "compat": {
+        "clients": [
+          "pi"
+        ],
+        "min_version": "0.0.0"
+      }
+    },
+    {
+      "name": "notion-knowledge-capture",
+      "version": "1.0.0",
+      "description": "Capture conversations and decisions into structured Notion pages. Use when turning chats/notes into wiki entries, how-tos, decisions, or FAQs with proper linking.",
+      "archive_url": "skills/notion-knowledge-capture-1.0.0.tar.gz",
+      "agent": "pi",
+      "path": "/home/milhy777/.pi/agent/skills/notion-knowledge-capture",
+      "content_hash": "e8e9585d2457f78d",
+      "tags": [
+        "pi"
+      ],
+      "source": "local",
+      "compat": {
+        "clients": [
+          "pi"
+        ],
+        "min_version": "0.0.0"
+      }
+    },
+    {
+      "name": "my-skills",
+      "version": "1.0.0",
+      "description": "Browse, select, and manage local Pi skills from one interface. Includes import/export flows for user-defined skills. Use when you want to list own skills, choose a skill from a selector, backup skills, migrate skills to another machine, or import skill packs.",
+      "archive_url": "skills/my-skills-1.0.0.tar.gz",
+      "agent": "pi",
+      "path": "/home/milhy777/.pi/agent/skills/my-skills",
+      "content_hash": "94b86dca23740f96",
+      "tags": [
+        "pi"
+      ],
+      "source": "local",
+      "compat": {
+        "clients": [
+          "pi"
+        ],
+        "min_version": "0.0.0"
+      }
+    },
+    {
+      "name": "playwright-interactive",
+      "version": "1.0.0",
+      "description": "Run Playwright tests and interact with browsers in real-time, capturing snapshots and logs to easily debug dynamic frontend failures.",
+      "archive_url": "skills/playwright-interactive-1.0.0.tar.gz",
+      "agent": "pi",
+      "path": "/home/milhy777/.pi/agent/skills/playwright-interactive",
+      "content_hash": "4fcf4337ddef118d",
+      "tags": [
+        "pi"
+      ],
+      "source": "local",
+      "compat": {
+        "clients": [
+          "pi"
+        ],
+        "min_version": "0.0.0"
+      }
+    },
+    {
+      "name": "competitive-ads-extractor",
+      "version": "1.0.0",
+      "description": "Automates the search, extraction, and cataloging of active competitor advertising campaigns across Google, Meta, and LinkedIn Ad Libraries using browser-based scrapers.",
+      "archive_url": "skills/competitive-ads-extractor-1.0.0.tar.gz",
+      "agent": "pi",
+      "path": "/home/milhy777/.pi/agent/skills/competitive-ads-extractor",
+      "content_hash": "14f925774fd69566",
+      "tags": [
+        "pi"
+      ],
+      "source": "local",
+      "compat": {
+        "clients": [
+          "pi"
+        ],
+        "min_version": "0.0.0"
+      }
+    },
+    {
+      "name": "notion-meeting-intelligence",
+      "version": "1.0.0",
+      "description": "Prepare meeting materials with Notion context and research. Use when gathering context, drafting agendas/pre-reads, and tailoring materials to attendees.",
+      "archive_url": "skills/notion-meeting-intelligence-1.0.0.tar.gz",
+      "agent": "pi",
+      "path": "/home/milhy777/.pi/agent/skills/notion-meeting-intelligence",
+      "content_hash": "2bd7459306f9e1cb",
+      "tags": [
+        "pi"
+      ],
+      "source": "local",
+      "compat": {
+        "clients": [
+          "pi"
+        ],
+        "min_version": "0.0.0"
+      }
+    },
+    {
+      "name": "sora",
+      "version": "1.0.0",
+      "description": "Tool for text-to-video generations, managing prompting templates, storyboard workflows, and cataloging video synthesis API runs.",
+      "archive_url": "skills/sora-1.0.0.tar.gz",
+      "agent": "pi",
+      "path": "/home/milhy777/.pi/agent/skills/sora",
+      "content_hash": "6703451a9b8f8f4e",
+      "tags": [
+        "pi"
+      ],
+      "source": "local",
+      "compat": {
+        "clients": [
+          "pi"
+        ],
+        "min_version": "0.0.0"
+      }
+    },
+    {
+      "name": "skill-installer",
+      "version": "1.0.0",
+      "description": "Install Pi skills from curated lists, GitHub repos, or local paths. Use when you want to list installable skills, install a curated skill, or install a skill from another repo (including private repos).",
+      "archive_url": "skills/skill-installer-1.0.0.tar.gz",
+      "agent": "pi",
+      "path": "/home/milhy777/.pi/agent/skills/skill-installer",
+      "content_hash": "5a90b5c4ceef462d",
+      "tags": [
+        "pi"
+      ],
+      "source": "local",
+      "compat": {
+        "clients": [
+          "pi"
+        ],
+        "min_version": "0.0.0"
+      }
+    },
+    {
+      "name": "package-master",
+      "version": "1.0.0",
+      "description": "Advanced package management suite. Automatically manages, audits, and upgrades dependencies across Node.js (npm/yarn/pnpm), Python (uv/pip), Rust (cargo), and Homebrew.",
+      "archive_url": "skills/package-master-1.0.0.tar.gz",
+      "agent": "pi",
+      "path": "/home/milhy777/.pi/agent/skills/package-master",
+      "content_hash": "b93745fc60c4cc93",
+      "tags": [
+        "pi"
+      ],
+      "source": "local",
+      "compat": {
+        "clients": [
+          "pi"
+        ],
+        "min_version": "0.0.0"
+      }
+    },
+    {
+      "name": "content-research-writer",
+      "version": "1.0.0",
+      "description": "Write high-quality content by conducting research, adding citations, improving hooks, iterating on outlines, and providing real-time feedback on each section. Transforms writing from solo effort to collaborative partnership.",
+      "archive_url": "skills/content-research-writer-1.0.0.tar.gz",
+      "agent": "pi",
+      "path": "/home/milhy777/.pi/agent/skills/content-research-writer",
+      "content_hash": "a5725376076cd37e",
+      "tags": [
+        "pi"
+      ],
+      "source": "local",
+      "compat": {
+        "clients": [
+          "pi"
+        ],
+        "min_version": "0.0.0"
+      }
+    },
+    {
+      "name": "brand-guidelines",
+      "version": "1.0.0",
+      "description": "Apply brand colors and typography to any artifact. Use when brand colors/style guidelines, visual formatting, or company design standards apply to documents, slides, code output, or web content.",
+      "archive_url": "skills/brand-guidelines-1.0.0.tar.gz",
+      "agent": "pi",
+      "path": "/home/milhy777/.pi/agent/skills/brand-guidelines",
+      "content_hash": "66edf0e9a34c9171",
+      "tags": [
+        "pi"
+      ],
+      "source": "local",
+      "compat": {
+        "clients": [
+          "pi"
+        ],
+        "min_version": "0.0.0"
+      }
+    },
+    {
+      "name": "security-best-practices",
+      "version": "1.0.0",
+      "description": "Core checklist and automation instructions for security best practices. Covers OWASP Top 10 mitigations, secret management, secure dependency auditing, and local vulnerability scanning.",
+      "archive_url": "skills/security-best-practices-1.0.0.tar.gz",
+      "agent": "pi",
+      "path": "/home/milhy777/.pi/agent/skills/security-best-practices",
+      "content_hash": "dede11d9ac910e45",
+      "tags": [
+        "pi"
+      ],
+      "source": "local",
+      "compat": {
+        "clients": [
+          "pi"
+        ],
+        "min_version": "0.0.0"
+      }
+    },
+    {
+      "name": "invoice-organizer",
+      "version": "1.0.0",
+      "description": "Scan, parse, and catalog invoices from PDFs, text logs, or emails into structured CSV data sheets. Automates extraction of vendors, tax IDs, due dates, and line item totals.",
+      "archive_url": "skills/invoice-organizer-1.0.0.tar.gz",
+      "agent": "pi",
+      "path": "/home/milhy777/.pi/agent/skills/invoice-organizer",
+      "content_hash": "8b8a8422ceb8eb06",
+      "tags": [
+        "pi"
+      ],
+      "source": "local",
+      "compat": {
+        "clients": [
+          "pi"
+        ],
+        "min_version": "0.0.0"
+      }
+    },
+    {
+      "name": "skill-share",
+      "version": "1.0.0",
+      "description": "Create new Pi skills and share them with the community via Pi packages (npm/git). Use when you want to package your skills for distribution, publish to npm, or share via GitHub.",
+      "archive_url": "skills/skill-share-1.0.0.tar.gz",
+      "agent": "pi",
+      "path": "/home/milhy777/.pi/agent/skills/skill-share",
+      "content_hash": "8eb0aeb77ebc6cd1",
+      "tags": [
+        "pi"
+      ],
+      "source": "local",
+      "compat": {
+        "clients": [
+          "pi"
+        ],
+        "min_version": "0.0.0"
+      }
+    },
+    {
       "name": "browseros-backup",
       "version": "1.0.0",
       "description": "Backup and restore BrowserOS extension settings, including local extension storage and IndexedDB data for extension bflpfmnmnokmjhmgnolecpppdbdophmk. Use when the user asks to backup, restore, inspect, or locate BrowserOS settings backups.",
@@ -67,6 +847,25 @@
       "agent": "pi",
       "path": "/home/milhy777/.pi/agent/skills/browseros-backup",
       "content_hash": "c4a4727374f24cd7",
+      "tags": [
+        "pi"
+      ],
+      "source": "local",
+      "compat": {
+        "clients": [
+          "pi"
+        ],
+        "min_version": "0.0.0"
+      }
+    },
+    {
+      "name": "template-skill",
+      "version": "1.0.0",
+      "description": "Template for creating new Pi skills. Use as a starting point when building a new skill - copy this directory and customize.",
+      "archive_url": "skills/template-skill-1.0.0.tar.gz",
+      "agent": "pi",
+      "path": "/home/milhy777/.pi/agent/skills/template-skill",
+      "content_hash": "b767b1027943747d",
       "tags": [
         "pi"
       ],
@@ -1754,8 +2553,8 @@
     }
   ],
   "metadata": {
-    "generated_at": "2026-06-07T20:32:05.896159+00:00",
-    "total_skills": 92,
+    "generated_at": "2026-06-08T08:33:08.142582+00:00",
+    "total_skills": 134,
     "agents_scanned": [
       "pi",
       "codex",
