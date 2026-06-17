@@ -43,7 +43,12 @@ def test_find_claude_credentials_config_file():
     config_data = {"api_key": "file-key", "other": "data"}
     config_json = json.dumps(config_data)
 
-    with patch('os.getenv', return_value=None),          patch.dict('sys.modules', {'keyring': None}),          patch('pathlib.Path.exists', return_value=True),          patch('builtins.open', mock_open(read_data=config_json)):
+    with (
+        patch('os.getenv', return_value=None),
+        patch.dict('sys.modules', {'keyring': None}),
+        patch('pathlib.Path.exists', return_value=True),
+        patch('builtins.open', mock_open(read_data=config_json)),
+    ):
 
         result = find_claude_credentials()
         assert result == config_data
