@@ -58,7 +58,6 @@ __all__ = [
     "CrossToolComprehensiveTest",
     "LineNumberValidationTest",
     "LogsValidationTest",
-    # "RedisValidationTest",
     "TestModelThinkingConfig",
     "O3ModelSelectionTest",
     "O3ProExpensiveTest",
