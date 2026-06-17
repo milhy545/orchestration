@@ -594,7 +594,7 @@ fi"""
         self.test_files = {}
         self.test_dir = None
 
-        # Configure logging
+        # Configure logging first
         log_level = logging.DEBUG if verbose else logging.INFO
         logging.basicConfig(level=log_level, format="%(asctime)s - %(levelname)s - %(message)s")
         self.logger = logging.getLogger(self.__class__.__name__)
