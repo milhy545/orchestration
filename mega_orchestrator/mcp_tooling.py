@@ -256,6 +256,43 @@ MCP_TOOL_DEFINITIONS: Dict[str, Dict[str, Any]] = {
             },
         },
     },
+    "search_chat_history": {
+        "description": (
+            "Search archived chat transcripts with exact recall and optional semantic memory hits."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "query": {"type": "string"},
+                "mode": {
+                    "type": "string",
+                    "enum": ["hybrid", "exact", "semantic"],
+                    "default": "hybrid",
+                },
+                "limit": {"type": "integer", "default": 10},
+                "agent": {"type": "string"},
+                "date_from": {"type": "string", "description": "Inclusive YYYY-MM-DD filter."},
+                "date_to": {"type": "string", "description": "Inclusive YYYY-MM-DD filter."},
+            },
+            "required": ["query"],
+        },
+    },
+    "audit_chat_recall": {
+        "description": "Audit HAS chat transcript archive visibility for exact recall.",
+        "inputSchema": {"type": "object", "properties": {}},
+    },
+    "agent_welcome": {
+        "description": "Bootstrap an agent with memory standards, hardware registry sync, and context.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "agent_name": {"type": "string"},
+                "agent_version": {"type": "string"},
+                "current_hw_data": {"type": "object"},
+            },
+            "required": ["agent_name"],
+        },
+    },
     "research_query": {
         "description": "Run a web research query through the research MCP.",
         "inputSchema": {
@@ -344,6 +381,27 @@ MCP_TOOL_DEFINITIONS: Dict[str, Dict[str, Any]] = {
                 "sha256": {"type": "string"},
             },
             "required": ["archive_url", "sha256"],
+        },
+    },
+    "forai_analyze": {
+        "description": "Analyze Python file(s) and return FORAI metadata (imports, classes, functions, exports).",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "path": {"type": "string", "description": "File or directory path to analyze"},
+            },
+            "required": ["path"],
+        },
+    },
+    "forai_process": {
+        "description": "Process Python files and inject FORAI machine-readable headers.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "path": {"type": "string", "description": "File or directory path to process"},
+                "recursive": {"type": "boolean", "description": "Process subdirectories recursively", "default": True},
+            },
+            "required": ["path"],
         },
     },
 }
