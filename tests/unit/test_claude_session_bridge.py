@@ -89,7 +89,7 @@ def test_run_has_agent_with_auth_success():
 
         asyncio.run(run_has_agent_with_auth())
 
-        assert mock_env['ANTHROPIC_API_KEY'] == 'test-key'
+        assert os.environ.get('ANTHROPIC_API_KEY') == 'test-key'
         mock_agent_class.assert_called_once()
         mock_agent.check_resource_usage.assert_called_once()
         mock_agent.call_mcp_tool.assert_called_once()
