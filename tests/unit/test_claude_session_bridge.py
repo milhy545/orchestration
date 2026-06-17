@@ -181,7 +181,11 @@ def test_find_claude_credentials_keyring_exception():
     mock_keyring = MagicMock()
     mock_keyring.get_password.side_effect = Exception("Keyring error")
 
-    with patch('os.getenv', return_value=None),          patch.dict('sys.modules', {'keyring': mock_keyring}),          patch('pathlib.Path.exists', return_value=False):
+    with (
+        patch('os.getenv', return_value=None),
+        patch.dict('sys.modules', {'keyring': mock_keyring}),
+        patch('pathlib.Path.exists', return_value=False),
+    ):
         result = find_claude_credentials()
         assert result is None
 
