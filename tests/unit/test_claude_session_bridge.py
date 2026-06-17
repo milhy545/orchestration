@@ -190,7 +190,11 @@ def test_find_claude_credentials_permission_error():
 
 def test_find_claude_credentials_env_empty():
     """Test that it continues if environment variable is an empty string"""
-    with patch('os.getenv', return_value=""),          patch.dict('sys.modules', {'keyring': None}),          patch('pathlib.Path.exists', return_value=False):
+    with (
+        patch('os.getenv', return_value=None),
+        patch.dict('sys.modules', {'keyring': None}),
+        patch('pathlib.Path.exists', return_value=False),
+    ):
 
         result = find_claude_credentials()
         assert result is None
