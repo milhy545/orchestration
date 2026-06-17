@@ -31,7 +31,10 @@ def test_find_claude_credentials_keyring():
     mock_keyring = MagicMock()
     mock_keyring.get_password.return_value = 'keyring-key'
 
-    with patch('os.getenv', return_value=None),          patch.dict('sys.modules', {'keyring': mock_keyring}):
+    with (
+        patch('os.getenv', return_value=None),
+        patch.dict('sys.modules', {'keyring': mock_keyring}),
+    ):
         result = find_claude_credentials()
         assert result == {'api_key': 'keyring-key'}
 
