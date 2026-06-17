@@ -55,7 +55,11 @@ def test_find_claude_credentials_config_file():
 
 def test_find_claude_credentials_no_creds():
     """Test that None is returned if no credentials found anywhere"""
-    with patch('os.getenv', return_value=None),          patch.dict('sys.modules', {'keyring': None}),          patch('pathlib.Path.exists', return_value=False):
+    with (
+        patch('os.getenv', return_value=None),
+        patch.dict('sys.modules', {'keyring': None}),
+        patch('pathlib.Path.exists', return_value=False),
+    ):
 
         result = find_claude_credentials()
         assert result is None
