@@ -571,7 +571,7 @@ fi"""
 
     def patch_base_test_logger_init(self, content: str) -> tuple[str, bool]:
         """Patch 11: Fix logger initialization order in BaseSimulatorTest."""
-        # Check if already patched
+        # Check if already fully patched
         if "# Configure logging first" in content and "# Now get python path" in content:
             return content, False
 
@@ -594,7 +594,7 @@ fi"""
         self.test_files = {}
         self.test_dir = None
 
-        # Configure logging first
+        # Configure logging
         log_level = logging.DEBUG if verbose else logging.INFO
         logging.basicConfig(level=log_level, format="%(asctime)s - %(levelname)s - %(message)s")
         self.logger = logging.getLogger(self.__class__.__name__)
@@ -1235,7 +1235,7 @@ def main():
             return 1
 
         # Final validation
-        print("\n🔍 Final validation...")
+        print("\n🔍 Validating patches...")
         errors = patcher.validate_patches(files)
 
         if errors:
