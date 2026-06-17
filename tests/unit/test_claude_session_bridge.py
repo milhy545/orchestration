@@ -167,7 +167,11 @@ def test_find_claude_credentials_keyring_none():
     mock_keyring = MagicMock()
     mock_keyring.get_password.return_value = None
 
-    with patch('os.getenv', return_value=None),          patch.dict('sys.modules', {'keyring': mock_keyring}),          patch('pathlib.Path.exists', return_value=False):
+    with (
+        patch('os.getenv', return_value=None),
+        patch.dict('sys.modules', {'keyring': mock_keyring}),
+        patch('pathlib.Path.exists', return_value=False),
+    ):
         result = find_claude_credentials()
         assert result is None
         mock_keyring.get_password.assert_called_with("anthropic", "api_key")
