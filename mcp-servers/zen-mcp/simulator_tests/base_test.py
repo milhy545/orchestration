@@ -13,7 +13,6 @@ from typing import Optional
 
 from .log_utils import LogUtils
 
-
 class BaseSimulatorTest:
     """Base class for all communication simulator tests"""
 
@@ -29,7 +28,6 @@ class BaseSimulatorTest:
 
         # Now get python path (after logger is configured)
         self.python_path = self._get_python_path()
-
 
     def _get_python_path(self) -> str:
         """Get the Python path for the virtual environment"""
