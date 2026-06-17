@@ -35,7 +35,6 @@ TEST_REGISTRY = {
     "cross_tool_comprehensive": CrossToolComprehensiveTest,
     "line_number_validation": LineNumberValidationTest,
     "logs_validation": LogsValidationTest,
-    # "redis_validation": RedisValidationTest,
     "model_thinking_config": TestModelThinkingConfig,
     "o3_model_selection": O3ModelSelectionTest,
     "ollama_custom_url": OllamaCustomUrlTest,
