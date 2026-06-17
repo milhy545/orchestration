@@ -67,10 +67,12 @@ def test_find_claude_credentials_no_creds():
 def test_run_has_agent_with_auth_success():
     """Test that run_has_agent_with_auth correctly sets API key and initializes agent"""
     mock_creds = {'api_key': 'test-key'}
-    # Use a real dict for environ to test assignment
-    mock_env = {}
 
-    with patch('claude_session_bridge.find_claude_credentials', return_value=mock_creds),          patch('os.environ', mock_env),          patch('haiku_agent.HASClaudeAgent') as mock_agent_class:
+    with (
+        patch('claude_session_bridge.find_claude_credentials', return_value=mock_creds),
+        patch.dict('os.environ', {}, clear=True),
+        patch('haiku_agent.HASClaudeAgent') as mock_agent_class,
+    ):
 
         mock_agent = mock_agent_class.return_value
         mock_agent.check_resource_usage.return_value = {
