@@ -142,7 +142,11 @@ def test_find_claude_credentials_multiple_paths():
     config_data = {"api_key": "second-path-key"}
     config_json = json.dumps(config_data)
 
-    with patch('os.getenv', return_value=None),          patch.dict('sys.modules', {'keyring': None}),          patch('pathlib.Path.exists') as mock_exists:
+    with (
+        patch('os.getenv', return_value=None),
+        patch.dict('sys.modules', {'keyring': None}),
+        patch('pathlib.Path.exists') as mock_exists,
+    ):
 
         # First path exists but has invalid JSON, second path has valid config
         mock_exists.side_effect = [True, True, False, False]
