@@ -191,7 +191,12 @@ def test_find_claude_credentials_keyring_exception():
 
 def test_find_claude_credentials_permission_error():
     """Test that it continues if a config file has permission error"""
-    with patch('os.getenv', return_value=None),          patch.dict('sys.modules', {'keyring': None}),          patch('pathlib.Path.exists', return_value=True),          patch('builtins.open', side_effect=PermissionError("Permission denied")):
+    with (
+        patch('os.getenv', return_value=None),
+        patch.dict('sys.modules', {'keyring': None}),
+        patch('pathlib.Path.exists', return_value=True),
+        patch('builtins.open', side_effect=PermissionError("Permission denied")),
+    ):
 
         result = find_claude_credentials()
         assert result is None
