@@ -13,6 +13,7 @@ Combines:
 """
 
 import asyncio
+import importlib
 import base64
 import hmac
 import json
@@ -20,6 +21,7 @@ import logging
 import os
 import re
 import time
+import signal
 from dataclasses import asdict, dataclass
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Union
@@ -108,6 +110,19 @@ class MegaOrchestrator:
             "file_operations": 0,
         }
 
+    def reload_welcome_service(self):
+        """Reload the welcome_service module."""
+        global welcome_service_module
+        try:
+            welcome_service_module = importlib.reload(welcome_service_module)
+            self.welcome_service_module = welcome_service_module
+            self.welcome_service = welcome_service_module.WelcomeService()
+            logging.info(f"WelcomeService reloaded, id: {id(self.welcome_service)}")
+            return {"success": True, "service_id": id(self.welcome_service)}
+        except Exception as e:
+            logging.error(f"Failed to reload WelcomeService: {e}")
+            return {"success": False, "error": str(e)}
+
     def _init_mcp_services(self) -> Dict[str, MCPServiceConfig]:
         """Initialize MCP services with new port mapping"""
         return {
@@ -169,19 +184,7 @@ class MegaOrchestrator:
                 sage_modes=[SAGEMode.MEMORY, SAGEMode.CHAT],
                 priority=1,
             ),
-            "research": MCPServiceConfig(
-                name="Research MCP",
-                host="mcp-research",
-                port=8000,
-                tools=[
-                    "research_query",
-                    "perplexity_search",
-                    "web_search",
-                    "search_web",
-                ],
-                sage_modes=[SAGEMode.ANALYZE, SAGEMode.DOCS],
-                priority=1,
-            ),
+
             "advanced_memory": MCPServiceConfig(
                 name="Advanced Memory MCP",
                 host="mcp-advanced-memory",
@@ -202,35 +205,13 @@ class MegaOrchestrator:
                 ],
                 priority=2,
             ),
-            "advanced_memory_v2": MCPServiceConfig(
-                name="Advanced Memory v2",
-                host="mcp-gmail",
-                port=8000,
-                tools=[
-                    "conversation_thread",
-                    "file_deduplication",
-                    "context_continuation",
-                ],
-                sage_modes=[SAGEMode.MEMORY, SAGEMode.CHAT],
-                priority=3,
-            ),
-            "transcriber": MCPServiceConfig(
-                name="Transcriber MCP",
-                host="mcp-transcriber",
-                port=8000,
-                tools=["transcribe_webm", "transcribe_url", "audio_convert"],
-                sage_modes=[SAGEMode.ANALYZE],
-                priority=2,
-                timeout=60,  # Longer timeout for transcription
-            ),
-            "video_processing": MCPServiceConfig(
-                name="Video Processing MCP",
+            "forai": MCPServiceConfig(
+                name="FORAI MCP",
                 host="mcp-forai",
                 port=8000,
-                tools=["process_video", "extract_frames", "video_analysis"],
-                sage_modes=[SAGEMode.ANALYZE],
+                tools=["forai_analyze", "forai_process"],
+                sage_modes=[SAGEMode.CODE, SAGEMode.DOCS],
                 priority=2,
-                timeout=120,
             ),
             "marketplace": MCPServiceConfig(
                 name="Marketplace MCP",
@@ -1141,20 +1122,6 @@ class MegaOrchestrator:
             if query is None:
                 query = arguments.get("q", "")
             model = arguments.get("model", "sonar-pro")
-            if tool in {
-                "web_search",
-                "search_web",
-                "research_query",
-                "perplexity_search",
-            }:
-                return {
-                    "method": "POST",
-                    "url": f"{base_url}/research/search",
-                    "params": {
-                        "query": query,
-                        "model": model,
-                    },
-                }
 
         if service.name == "Git MCP":
             repo_path = arguments.get(

@@ -156,6 +156,18 @@ def _handle_request(message: Dict[str, Any]) -> Optional[Dict[str, Any]]:
 
     if method == "tools/call":
         try:
+            tool_name = params.get("name")
+            tool_args = params.get("arguments", {}) or {}
+
+            if tool_name == "agent_welcome" and not tool_args.get("current_hw_data"):
+                try:
+                    from mega_orchestrator.utils.hw_detect import detect_hardware
+                    tool_args = dict(tool_args)
+                    tool_args["current_hw_data"] = detect_hardware()
+                except Exception as hw_err:
+                    sys.stderr.write(f"Local hardware detection failed: {hw_err}\n")
+                    sys.stderr.flush()
+
             result = _post_json(
                 RPC_URL,
                 {
@@ -163,8 +175,8 @@ def _handle_request(message: Dict[str, Any]) -> Optional[Dict[str, Any]]:
                     "id": request_id,
                     "method": "tools/call",
                     "params": {
-                        "name": params.get("name"),
-                        "arguments": params.get("arguments", {}) or {},
+                        "name": tool_name,
+                        "arguments": tool_args,
                         "session_id": params.get("session_id"),
                         "context_id": params.get("context_id"),
                     },
