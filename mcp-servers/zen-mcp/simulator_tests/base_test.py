@@ -13,7 +13,6 @@ from typing import Optional
 
 from .log_utils import LogUtils
 
-
 class BaseSimulatorTest:
     """Base class for all communication simulator tests"""
 
@@ -27,6 +26,7 @@ class BaseSimulatorTest:
         logging.basicConfig(level=log_level, format="%(asctime)s - %(levelname)s - %(message)s")
         self.logger = logging.getLogger(self.__class__.__name__)
 
+        # Now get python path (after logger is configured)
         self.python_path = self._get_python_path()
 
     def _get_python_path(self) -> str:

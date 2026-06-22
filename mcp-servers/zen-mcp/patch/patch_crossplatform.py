@@ -571,11 +571,12 @@ fi"""
 
     def patch_base_test_logger_init(self, content: str) -> tuple[str, bool]:
         """Patch 11: Fix logger initialization order in BaseSimulatorTest."""
-        # Check if already patched
+        # Check if already fully patched
         if "# Configure logging first" in content and "# Now get python path" in content:
             return content, False
 
         # Fix the initialization order in BaseSimulatorTest
+        # Case 1: python_path is before logging (broken state)
         old_init_order = """    def __init__(self, verbose: bool = False):
         self.verbose = verbose
         self.test_files = {}
@@ -586,6 +587,19 @@ fi"""
         log_level = logging.DEBUG if verbose else logging.INFO
         logging.basicConfig(level=log_level, format="%(asctime)s - %(levelname)s - %(message)s")
         self.logger = logging.getLogger(self.__class__.__name__)"""
+
+        # Case 2: python_path is after logging but missing comments (partially patched state)
+        partially_patched = """    def __init__(self, verbose: bool = False):
+        self.verbose = verbose
+        self.test_files = {}
+        self.test_dir = None
+
+        # Configure logging first
+        log_level = logging.DEBUG if verbose else logging.INFO
+        logging.basicConfig(level=log_level, format="%(asctime)s - %(levelname)s - %(message)s")
+        self.logger = logging.getLogger(self.__class__.__name__)
+
+        self.python_path = self._get_python_path()"""
 
         new_init_order = """    def __init__(self, verbose: bool = False):
         self.verbose = verbose
@@ -602,6 +616,10 @@ fi"""
 
         if old_init_order in content:
             content = content.replace(old_init_order, new_init_order)
+            return content, True
+
+        if partially_patched in content:
+            content = content.replace(partially_patched, new_init_order)
             return content, True
 
         return content, False
@@ -1217,7 +1235,7 @@ def main():
             return 1
 
         # Final validation
-        print("\n🔍 Final validation...")
+        print("\n🔍 Validating patches...")
         errors = patcher.validate_patches(files)
 
         if errors:
