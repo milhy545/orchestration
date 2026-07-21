@@ -29,7 +29,7 @@ safety==3.8.1
 
 # Documentation
 mkdocs==1.6.1
-mkdocs-material==9.7.6
+mkdocs-material==9.7.7
 
 # Utilities
 python-dotenv==1.2.2
