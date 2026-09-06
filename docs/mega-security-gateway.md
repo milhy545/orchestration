@@ -21,9 +21,10 @@ backup-check
 funnel-off
 ```
 
-Every mutating action is audited by the gateway and remains subject to its
-authentication and policy checks. IDs are supplied by the gateway; do not guess
-or reuse an ID from another environment.
+The `audit` display is currently a placeholder: the gateway does not yet persist
+audit events, tokens, or command arguments. Authentication and policy checks
+still apply. IDs are supplied by the gateway; do not guess or reuse an ID from
+another environment.
 
 `scripts/mega_funnel` is deliberately narrower:
 

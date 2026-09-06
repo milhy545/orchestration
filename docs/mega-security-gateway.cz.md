@@ -21,7 +21,8 @@ backup-check
 funnel-off
 ```
 
-Každá změna se audituje v gateway a stále podléhá jejímu ověření a pravidlům.
+Výpis `audit` je zatím placeholder: gateway ještě neukládá auditní události,
+tokeny ani argumenty příkazů. Ověření a pravidla gateway se stále uplatňují.
 ID dodává gateway; ID z jiného prostředí nehadejte ani znovu nepoužívejte.
 
 `scripts/mega_funnel` je záměrně omezený:
