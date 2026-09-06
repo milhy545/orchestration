@@ -267,10 +267,27 @@ async def register_chatgpt_client(request: web.Request) -> web.Response:
     client_name = metadata.get("client_name", "ChatGPT")
     if not isinstance(client_name, str) or not client_name.strip() or len(client_name) > 128:
         return _json_error("invalid_client_metadata", "client_name must be a non-empty string up to 128 characters")
+    store = request.app[STORE_KEY]
+    existing_client = store.registered_chatgpt_client(redirect_uris)
+    if existing_client:
+        client_id, issued_at = existing_client
+        return web.json_response(
+            {
+                "client_id": client_id,
+                "client_id_issued_at": issued_at,
+                "client_name": client_name,
+                "redirect_uris": redirect_uris,
+                "token_endpoint_auth_method": "none",
+                "grant_types": ["authorization_code", "refresh_token"],
+                "response_types": ["code"],
+            },
+            status=201,
+            headers={"Cache-Control": "no-store"},
+        )
     if not request.app[DCR_RESERVATION_KEY].reserve():
         return _json_error("temporarily_unavailable", "Dynamic registration rate limit reached", 429)
     try:
-        client_id, issued_at = request.app[STORE_KEY].register_chatgpt_client(redirect_uris)
+        client_id, issued_at = store.register_chatgpt_client(redirect_uris)
     except OAuthError as exc:
         return _json_error("invalid_client_metadata", str(exc), 429)
     return web.json_response(
@@ -301,10 +318,20 @@ async def authorize(request: web.Request) -> web.Response:
 
     pairing_id = params.get("pairing_id")
     if not pairing_id:
+        store = request.app[STORE_KEY]
+        existing_pairing = store.pending_pairing_for(
+            client_id=client_id,
+            redirect_uri=redirect_uri,
+            profile=profile,
+            code_challenge=params["code_challenge"],
+            state=params.get("state"),
+        )
+        if existing_pairing:
+            return _pending_page(existing_pairing["pairing_id"], existing_pairing["expires_at"])
         if not request.app[PAIRING_RESERVATION_KEY].reserve():
             return _json_error("temporarily_unavailable", "Pairing creation rate limit reached", 429)
         try:
-            pairing = request.app[STORE_KEY].create_pairing(
+            pairing = store.create_pairing(
                 client_id=client_id,
                 redirect_uri=redirect_uri,
                 profile=profile,

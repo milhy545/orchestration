@@ -232,6 +232,24 @@ class GatewayStore:
         self.connection.commit()
         return {"pairing_id": pairing_id, "profile": profile, "status": "pending", "expires_at": expires_at}
 
+    def pending_pairing_for(
+        self, *, client_id: str, redirect_uri: str, profile: str, code_challenge: str, state: str | None
+    ) -> dict[str, Any] | None:
+        row = self.connection.execute(
+            "SELECT id, profile, status, expires_at FROM pairings WHERE client_id = ? AND redirect_uri = ? "
+            "AND profile = ? AND code_challenge = ? AND state IS ? AND status = 'pending' "
+            "AND expires_at > ? ORDER BY created_at DESC LIMIT 1",
+            (client_id, redirect_uri, profile, code_challenge, state, _now()),
+        ).fetchone()
+        if not row:
+            return None
+        return {
+            "pairing_id": row["id"],
+            "profile": row["profile"],
+            "status": row["status"],
+            "expires_at": row["expires_at"],
+        }
+
     def cleanup_expired(self, now: int | None = None) -> None:
         now = now if now is not None else _now()
         self.connection.execute(
@@ -431,10 +449,9 @@ class GatewayStore:
         )
         self.connection.commit()
 
-    def register_chatgpt_client(self, redirect_uris: list[str]) -> tuple[str, int]:
-        """Persist one public ChatGPT client with exact redirect URI matching."""
+    def registered_chatgpt_client(self, redirect_uris: list[str]) -> tuple[str, int] | None:
+        """Return the live public client for an exact redirect URI set, if any."""
         now = _now()
-        self.cleanup_expired(now)
         placeholders = ", ".join("?" for _ in redirect_uris)
         existing = self.connection.execute(
             "SELECT client_id, MIN(created_at) AS created_at FROM oauth_clients "
@@ -443,8 +460,17 @@ class GatewayStore:
             (now, len(redirect_uris), *redirect_uris, len(redirect_uris)),
         ).fetchone()
         if existing:
-            self.connection.commit()
             return str(existing["client_id"]), int(existing["created_at"])
+        return None
+
+    def register_chatgpt_client(self, redirect_uris: list[str]) -> tuple[str, int]:
+        """Persist one public ChatGPT client with exact redirect URI matching."""
+        now = _now()
+        self.cleanup_expired(now)
+        existing = self.registered_chatgpt_client(redirect_uris)
+        if existing:
+            self.connection.commit()
+            return existing
         active_count = self.connection.execute(
             "SELECT COUNT(DISTINCT client_id) FROM oauth_clients "
             "WHERE profile = 'chatgpt' AND paired_at IS NULL AND expires_at > ?",

@@ -350,8 +350,40 @@ async def test_dcr_and_pairing_reservations_are_separate_and_bounded(gateway) ->
         "response_type": "code", "client_id": "chatgpt", "redirect_uri": REDIRECT,
         "code_challenge_method": "S256", "code_challenge": pkce_s256(VERIFIER),
     }
-    for _ in range(32):
-        pairing = await client.get("/oauth/authorize", params=authorise_params)
+    for number in range(32):
+        pairing = await client.get("/oauth/authorize", params={**authorise_params, "state": str(number)})
         assert pairing.status == 200
-    blocked_pairing = await client.get("/oauth/authorize", params=authorise_params)
+    blocked_pairing = await client.get("/oauth/authorize", params={**authorise_params, "state": "blocked"})
+    assert blocked_pairing.status == 429
+
+
+@pytest.mark.asyncio
+async def test_idempotent_dcr_and_pending_pairing_retries_do_not_consume_reservations(gateway) -> None:
+    client, _ = gateway
+    repeated_registration = {"redirect_uris": ["https://chatgpt.example.test/retry"]}
+    for _ in range(20):
+        response = await client.post("/oauth/register", json=repeated_registration)
+        assert response.status == 201
+    for number in range(15):
+        response = await client.post("/oauth/register", json={
+            "redirect_uris": [f"https://chatgpt.example.test/new-{number}"],
+        })
+        assert response.status == 201
+    blocked_registration = await client.post("/oauth/register", json={
+        "redirect_uris": ["https://chatgpt.example.test/one-too-many"],
+    })
+    assert blocked_registration.status == 429
+
+    base_params = {
+        "response_type": "code", "client_id": "chatgpt", "redirect_uri": REDIRECT,
+        "code_challenge_method": "S256", "code_challenge": pkce_s256(VERIFIER),
+        "state": "same-request",
+    }
+    for _ in range(40):
+        response = await client.get("/oauth/authorize", params=base_params)
+        assert response.status == 200
+    for number in range(31):
+        response = await client.get("/oauth/authorize", params={**base_params, "state": f"unique-{number}"})
+        assert response.status == 200
+    blocked_pairing = await client.get("/oauth/authorize", params={**base_params, "state": "one-too-many"})
     assert blocked_pairing.status == 429
