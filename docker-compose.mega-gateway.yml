@@ -1,0 +1,26 @@
+services:
+  mega-security-gateway:
+    build:
+      context: .
+      dockerfile: config/mega-gateway.Dockerfile
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:7080:7080"
+    environment:
+      MEGA_GATEWAY_BACKEND_URL: http://mega-orchestrator:7000/mcp
+      MEGA_GATEWAY_DB: /data/mega-gateway.sqlite3
+      MEGA_GATEWAY_ADMIN_SOCKET: /run/mega-gateway/admin.sock
+      MEGA_GATEWAY_CHATGPT_CLIENT_ID: ${MEGA_GATEWAY_CHATGPT_CLIENT_ID:-chatgpt}
+      MEGA_GATEWAY_CHATGPT_REDIRECT_URIS: ${MEGA_GATEWAY_CHATGPT_REDIRECT_URIS:-}
+      MEGA_GATEWAY_GEMINI_SPARK_CLIENT_ID: ${MEGA_GATEWAY_GEMINI_SPARK_CLIENT_ID:-gemini-spark}
+      MEGA_GATEWAY_GEMINI_SPARK_REDIRECT_URIS: ${MEGA_GATEWAY_GEMINI_SPARK_REDIRECT_URIS:-}
+    volumes:
+      - /var/lib/mega-gateway:/data
+      - /run/mega-gateway:/run/mega-gateway
+    networks:
+      - mcp-network
+
+networks:
+  mcp-network:
+    external: true
+    name: orchestration_mcp-network
