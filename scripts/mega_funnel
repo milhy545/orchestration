@@ -1,0 +1,36 @@
+#!/usr/bin/env python3
+"""Safe status/off control for the gateway-owned Funnel configuration."""
+from __future__ import annotations
+
+import argparse
+import importlib.machinery
+import importlib.util
+import pathlib
+import sys
+
+_path = pathlib.Path(__file__).with_name("mega_security")
+_loader = importlib.machinery.SourceFileLoader("mega_security_cli", str(_path))
+_spec = importlib.util.spec_from_file_location("mega_security_cli", _path, loader=_loader)
+assert _spec and _spec.loader
+_module = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(_module)
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("action", choices=("status", "off"), nargs="?", default="status")
+    parser.add_argument("--socket", default=None)
+    parser.add_argument("--timeout", type=float, default=5.0)
+    args = parser.parse_args(argv)
+    client = _module.AdminClient(args.socket, args.timeout)
+    try:
+        result = client.request("funnel.status" if args.action == "status" else "funnel.off")
+        _module._print(result)
+    except _module.GatewayError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 1
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

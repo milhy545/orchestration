@@ -1,0 +1,137 @@
+#!/usr/bin/env python3
+"""Operator CLI for the Mega security gateway admin Unix socket."""
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import socket
+import sys
+from typing import Any
+
+DEFAULT_SOCKET = "/run/mega-gateway/admin.sock"
+
+
+class GatewayError(RuntimeError):
+    """An admin request could not be completed or was rejected."""
+
+
+class AdminClient:
+    """Small JSON-lines client; the gateway remains the policy enforcement point."""
+
+    def __init__(self, path: str | None = None, timeout: float = 5.0,
+                 socket_factory: Any = socket.socket) -> None:
+        self.path = path or os.environ.get("MEGA_GATEWAY_ADMIN_SOCKET", DEFAULT_SOCKET)
+        self.timeout = timeout
+        self.socket_factory = socket_factory
+
+    def request(self, action: str, **payload: Any) -> Any:
+        message = json.dumps({"action": action, "payload": payload},
+                             separators=(",", ":")) + "\n"
+        try:
+            sock = self.socket_factory(socket.AF_UNIX, socket.SOCK_STREAM)
+            sock.settimeout(self.timeout)
+            sock.connect(self.path)
+            with sock:
+                sock.sendall(message.encode("utf-8"))
+                data = b""
+                while b"\n" not in data:
+                    chunk = sock.recv(65536)
+                    if not chunk:
+                        break
+                    data += chunk
+        except OSError as exc:
+            raise GatewayError(f"cannot reach gateway admin socket {self.path}: {exc}") from exc
+        if not data:
+            raise GatewayError("gateway returned an empty response")
+        try:
+            response = json.loads(data.split(b"\n", 1)[0].decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+            raise GatewayError("gateway returned invalid JSON") from exc
+        if isinstance(response, dict) and response.get("ok") is False:
+            raise GatewayError(str(response.get("error", "request rejected")))
+        return response.get("data", response) if isinstance(response, dict) else response
+
+
+def _print(value: Any) -> None:
+    print(json.dumps(value, indent=2, sort_keys=True, ensure_ascii=False))
+
+
+def _parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--socket", default=None, help="admin Unix socket path")
+    parser.add_argument("--timeout", type=float, default=5.0)
+    sub = parser.add_subparsers(dest="command")
+    sub.add_parser("status")
+    pair = sub.add_parser("pairing", help="list or decide pending pairings")
+    pair.add_argument("decision", choices=("pending", "approve", "reject"))
+    pair.add_argument("pairing_id", nargs="?")
+    profile = sub.add_parser("profile", help="manage profile tool access")
+    profile.add_argument("operation", choices=("list", "grant", "revoke"))
+    profile.add_argument("profile_id", nargs="?")
+    profile.add_argument("tool", nargs="?")
+    conn = sub.add_parser("connections")
+    conn.add_argument("operation", choices=("list", "revoke"))
+    conn.add_argument("connection_id", nargs="?")
+    sub.add_parser("audit", help="recent audit events")
+    sub.add_parser("backup-check", help="check backup and configuration state")
+    sub.add_parser("funnel-off", help="emergency: disable gateway-owned Funnel")
+    sub.add_parser("menu", help="interactive operator menu")
+    return parser
+
+
+def run(client: AdminClient, args: argparse.Namespace) -> Any:
+    command = args.command
+    if command == "status":
+        return client.request("status")
+    if command == "pairing":
+        if args.decision == "pending":
+            return client.request("pairing.pending")
+        if not args.pairing_id:
+            raise GatewayError("pairing approve/reject requires pairing_id")
+        return client.request(f"pairing.{args.decision}", pairing_id=args.pairing_id)
+    if command == "profile":
+        if args.operation == "list":
+            return client.request("profile.tools", profile_id=args.profile_id)
+        if not args.profile_id or not args.tool:
+            raise GatewayError("profile grant/revoke requires profile_id and tool")
+        return client.request(f"profile.tool.{args.operation}",
+                              profile_id=args.profile_id, tool=args.tool)
+    if command == "connections":
+        if args.operation == "list":
+            return client.request("connections.list")
+        if not args.connection_id:
+            raise GatewayError("connection revoke requires connection_id")
+        return client.request("connections.revoke", connection_id=args.connection_id)
+    if command == "audit":
+        return client.request("audit.recent")
+    if command == "backup-check":
+        return client.request("backup.config.check")
+    if command == "funnel-off":
+        return client.request("funnel.off")
+    raise GatewayError("choose an action (run with --help for commands)")
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = _parser().parse_args(argv)
+    if args.command == "menu":
+        print("Mega security gateway admin\n1 status  2 pairing  3 profile  4 connections\n"
+              "5 audit  6 backup/config check  7 emergency Funnel off  q quit")
+        choice = input("action> ").strip().lower()
+        choices = {"1": "status", "5": "audit", "6": "backup-check", "7": "funnel-off"}
+        if choice == "q":
+            return 0
+        if choice not in choices:
+            print("interactive pairing/profile/connections use explicit subcommands", file=sys.stderr)
+            return 2
+        args.command = choices[choice]
+    try:
+        _print(run(AdminClient(args.socket, args.timeout), args))
+    except GatewayError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 1
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
