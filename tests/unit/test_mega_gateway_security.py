@@ -3,8 +3,13 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import json
+import os
 import re
+import sqlite3
+import subprocess
+import sys
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
@@ -13,7 +18,7 @@ import pytest_asyncio
 from aiohttp import web
 from aiohttp.test_utils import TestClient, TestServer
 
-from mega_gateway.app import GatewayConfig, create_app
+from mega_gateway.app import GatewayConfig, STORE_KEY, create_app
 from mega_gateway.security import pkce_s256
 
 
@@ -49,6 +54,8 @@ async def gateway(tmp_path: Path):
         admin_socket=tmp_path / "admin.sock",
         backend_url=str(backend_server.make_url("/mcp")),
         chatgpt_redirect_uris=frozenset({REDIRECT}),
+        chatgpt_registration_redirect_hosts=frozenset({"chatgpt.example.test"}),
+        public_base_url="https://gateway.example.test",
     )
     client = TestClient(TestServer(create_app(config)))
     await client.start_server()
@@ -57,11 +64,13 @@ async def gateway(tmp_path: Path):
     await backend_server.close()
 
 
-async def _authorise(client: TestClient, config: GatewayConfig) -> str:
+async def _authorise(
+    client: TestClient, config: GatewayConfig, client_id: str = "chatgpt", redirect_uri: str = REDIRECT
+) -> str:
     params = {
         "response_type": "code",
-        "client_id": "chatgpt",
-        "redirect_uri": REDIRECT,
+        "client_id": client_id,
+        "redirect_uri": redirect_uri,
         "code_challenge_method": "S256",
         "code_challenge": pkce_s256(VERIFIER),
         "state": "opaque-state",
@@ -157,6 +166,152 @@ async def test_profile_permissions_and_oauth_discovery_are_enforced(gateway) -> 
     assert "get_context" in restored["data"]["tools"]
 
     resource = await client.get("/.well-known/oauth-protected-resource")
-    assert (await resource.json())["authorization_servers"] == [str(client.make_url("/")).rstrip("/")]
+    assert (await resource.json())["authorization_servers"] == ["https://gateway.example.test"]
     server = await client.get("/.well-known/oauth-authorization-server")
     assert (await server.json())["code_challenge_methods_supported"] == ["S256"]
+
+
+@pytest.mark.asyncio
+async def test_refresh_replay_and_connection_revoke_revoke_the_entire_grant(gateway) -> None:
+    client, config = gateway
+    code = await _authorise(client, config)
+    initial_response = await client.post("/oauth/token", data={
+        "grant_type": "authorization_code", "code": code, "client_id": "chatgpt",
+        "redirect_uri": REDIRECT, "code_verifier": VERIFIER,
+    })
+    initial = await initial_response.json()
+    refreshed_response = await client.post("/oauth/token", data={
+        "grant_type": "refresh_token", "refresh_token": initial["refresh_token"], "client_id": "chatgpt",
+    })
+    refreshed = await refreshed_response.json()
+    assert refreshed_response.status == 200
+    replay = await client.post("/oauth/token", data={
+        "grant_type": "refresh_token", "refresh_token": initial["refresh_token"], "client_id": "chatgpt",
+    })
+    assert replay.status == 400
+    blocked = await client.post("/mcp", headers={"Authorization": f"Bearer {refreshed['access_token']}"}, json={
+        "jsonrpc": "2.0", "id": 1, "method": "ping",
+    })
+    assert blocked.status == 401
+
+    code = await _authorise(client, config)
+    issued_response = await client.post("/oauth/token", data={
+        "grant_type": "authorization_code", "code": code, "client_id": "chatgpt",
+        "redirect_uri": REDIRECT, "code_verifier": VERIFIER,
+    })
+    issued = await issued_response.json()
+    connections = await _admin(config.admin_socket, "connections.list")
+    assert len(connections["data"]) == 1
+    revoked = await _admin(
+        config.admin_socket, "connections.revoke", connection_id=connections["data"][0]["connection_id"]
+    )
+    assert revoked["ok"] is True
+    blocked = await client.post("/mcp", headers={"Authorization": f"Bearer {issued['access_token']}"}, json={
+        "jsonrpc": "2.0", "id": 2, "method": "ping",
+    })
+    assert blocked.status == 401
+
+
+@pytest.mark.asyncio
+async def test_chatgpt_dynamic_registration_is_host_bound_and_automatic(gateway) -> None:
+    client, config = gateway
+    redirect_uri = "https://chatgpt.example.test/oauth/callback"
+    registration = await client.post("/oauth/register", json={
+        "client_name": "ChatGPT connector",
+        "redirect_uris": [redirect_uri],
+        "grant_types": ["authorization_code"],
+        "response_types": ["code"],
+    })
+    metadata = await registration.json()
+    assert registration.status == 201
+    assert metadata["client_id"].startswith("chatgpt_")
+    assert "client_secret" not in metadata
+    repeated = await client.post("/oauth/register", json={"redirect_uris": [redirect_uri]})
+    assert (await repeated.json())["client_id"] == metadata["client_id"]
+
+    code = await _authorise(client, config, metadata["client_id"], redirect_uri)
+    exchange = await client.post("/oauth/token", data={
+        "grant_type": "authorization_code", "code": code, "client_id": metadata["client_id"],
+        "redirect_uri": redirect_uri, "code_verifier": VERIFIER,
+    })
+    assert exchange.status == 200
+    after_approval = await client.post("/oauth/register", json={"redirect_uris": [redirect_uri]})
+    assert (await after_approval.json())["client_id"] == metadata["client_id"]
+    rejected = await client.post("/oauth/register", json={"redirect_uris": ["https://other.example.test/callback"]})
+    assert rejected.status == 400
+    malformed = await client.post("/oauth/register", json={"redirect_uris": [{}]})
+    assert malformed.status == 400
+    malformed_uri = await client.post("/oauth/register", json={"redirect_uris": ["https://[broken"]})
+    assert malformed_uri.status == 400
+
+
+@pytest.mark.asyncio
+async def test_invalid_pkce_challenge_is_rejected_before_persistent_pairing(gateway) -> None:
+    client, config = gateway
+    response = await client.get("/oauth/authorize", params={
+        "response_type": "code", "client_id": "chatgpt", "redirect_uri": REDIRECT,
+        "code_challenge_method": "S256", "code_challenge": "A" * 6000,
+    })
+    assert response.status == 400
+    assert config.database_path.read_bytes().count(b"pair_") == 0
+
+
+@pytest.mark.asyncio
+async def test_expired_pairings_and_codes_are_cleaned_before_new_pairing(gateway) -> None:
+    client, _ = gateway
+    store = client.server.app[STORE_KEY]
+    pairing = store.create_pairing(
+        client_id="chatgpt", redirect_uri=REDIRECT, profile="chatgpt", code_challenge=pkce_s256(VERIFIER), state=None
+    )
+    store.connection.execute("UPDATE pairings SET expires_at = 0 WHERE id = ?", (pairing["pairing_id"],))
+    store.connection.commit()
+    store.create_pairing(
+        client_id="chatgpt", redirect_uri=REDIRECT, profile="chatgpt", code_challenge=pkce_s256(VERIFIER), state=None
+    )
+    assert store.pairing(pairing["pairing_id"]) is None
+
+
+def test_create_app_does_not_require_a_running_event_loop(tmp_path: Path) -> None:
+    environment = {
+        **os.environ,
+        "PYTHONPATH": str(Path(__file__).parents[2]),
+        "MEGA_GATEWAY_DB": str(tmp_path / "state.sqlite3"),
+        "MEGA_GATEWAY_ADMIN_SOCKET": str(tmp_path / "admin.sock"),
+        "MEGA_GATEWAY_PUBLIC_BASE_URL": "https://gateway.example.test",
+        "MEGA_GATEWAY_CHATGPT_REGISTRATION_REDIRECT_HOSTS": "chatgpt.example.test",
+    }
+    result = subprocess.run(
+        [sys.executable, "-c", "from mega_gateway.app import create_app; create_app()"],
+        env=environment,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
+
+
+def test_interrupted_family_migration_revokes_nullable_legacy_tokens(tmp_path: Path) -> None:
+    database = tmp_path / "legacy.sqlite3"
+    connection = sqlite3.connect(database)
+    connection.execute(
+        "CREATE TABLE tokens (token_hash TEXT PRIMARY KEY, kind TEXT, client_id TEXT, profile TEXT, "
+        "expires_at INTEGER, revoked_at INTEGER, replaced_by_hash TEXT, family_id TEXT)"
+    )
+    connection.execute(
+        "INSERT INTO tokens VALUES (?, 'access', 'chatgpt', 'chatgpt', 9999999999, NULL, NULL, NULL)",
+        (hashlib.sha256(b'legacy-access').hexdigest(),),
+    )
+    connection.commit()
+    connection.close()
+
+    config = GatewayConfig(
+        database_path=database,
+        admin_socket=tmp_path / "admin.sock",
+        public_base_url="https://gateway.example.test",
+    )
+    app = create_app(config)
+    assert app[STORE_KEY].validate_access("legacy-access") is None
+    row = app[STORE_KEY].connection.execute("SELECT family_id, revoked_at FROM tokens").fetchone()
+    assert row["family_id"]
+    assert row["revoked_at"] is not None
+    app[STORE_KEY].close()

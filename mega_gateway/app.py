@@ -32,9 +32,17 @@ class GatewayConfig:
     gemini_spark_client_id: str = "gemini-spark"
     chatgpt_redirect_uris: frozenset[str] = field(default_factory=frozenset)
     gemini_spark_redirect_uris: frozenset[str] = field(default_factory=frozenset)
+    chatgpt_registration_redirect_hosts: frozenset[str] = field(default_factory=frozenset)
+    public_base_url: str = ""
 
     @classmethod
     def from_environment(cls) -> "GatewayConfig":
+        public_base_url = os.getenv("MEGA_GATEWAY_PUBLIC_BASE_URL", "")
+        if not _valid_public_base_url(public_base_url):
+            raise RuntimeError("MEGA_GATEWAY_PUBLIC_BASE_URL must be an absolute HTTPS URL without a path")
+        redirect_hosts = _csv(os.getenv("MEGA_GATEWAY_CHATGPT_REGISTRATION_REDIRECT_HOSTS"))
+        if not redirect_hosts:
+            raise RuntimeError("MEGA_GATEWAY_CHATGPT_REGISTRATION_REDIRECT_HOSTS must list approved HTTPS hosts")
         return cls(
             database_path=Path(os.getenv("MEGA_GATEWAY_DB", "/data/mega-gateway.sqlite3")),
             admin_socket=Path(os.getenv("MEGA_GATEWAY_ADMIN_SOCKET", "/run/mega-gateway/admin.sock")),
@@ -43,6 +51,8 @@ class GatewayConfig:
             gemini_spark_client_id=os.getenv("MEGA_GATEWAY_GEMINI_SPARK_CLIENT_ID", "gemini-spark"),
             chatgpt_redirect_uris=_csv(os.getenv("MEGA_GATEWAY_CHATGPT_REDIRECT_URIS")),
             gemini_spark_redirect_uris=_csv(os.getenv("MEGA_GATEWAY_GEMINI_SPARK_REDIRECT_URIS")),
+            chatgpt_registration_redirect_hosts=frozenset(host.lower() for host in redirect_hosts),
+            public_base_url=public_base_url.rstrip("/"),
         )
 
     def profile_for(self, client_id: str, redirect_uri: str) -> str | None:
@@ -56,9 +66,35 @@ class GatewayConfig:
         return None
 
 
+def _valid_public_base_url(value: str) -> bool:
+    parsed = urlparse(value)
+    return (
+        parsed.scheme == "https"
+        and bool(parsed.netloc)
+        and parsed.path in ("", "/")
+        and not parsed.params
+        and not parsed.query
+        and not parsed.fragment
+        and not parsed.username
+        and not parsed.password
+    )
+
+
+def _valid_s256_challenge(value: str | None) -> bool:
+    return bool(value) and len(value) == 43 and value.isascii() and all(
+        character.isalnum() or character in "-_" for character in value
+    )
+
+
+def _profile_for(app: web.Application, client_id: str, redirect_uri: str) -> str | None:
+    return app[CONFIG_KEY].profile_for(client_id, redirect_uri) or app[STORE_KEY].registered_profile_for(
+        client_id, redirect_uri
+    )
+
+
 CONFIG_KEY: web.AppKey[GatewayConfig] = web.AppKey("config", GatewayConfig)
 STORE_KEY: web.AppKey[GatewayStore] = web.AppKey("store", GatewayStore)
-HTTP_KEY: web.AppKey[ClientSession] = web.AppKey("http", ClientSession)
+HTTP_KEY: web.AppKey[ClientSession | None] = web.AppKey("http", ClientSession | None)
 ADMIN_SERVER_KEY: web.AppKey[asyncio.AbstractServer] = web.AppKey("admin_server", asyncio.AbstractServer)
 
 
@@ -96,7 +132,8 @@ async def _require_access(request: web.Request) -> dict[str, str] | web.Response
 
 
 def _base_url(request: web.Request) -> str:
-    return f"{request.scheme}://{request.host}"
+    """Return the deployment-configured public origin; never trust proxy headers."""
+    return request.app[CONFIG_KEY].public_base_url.rstrip("/")
 
 
 def _bearer_challenge(request: web.Request, error: str) -> str:
@@ -127,6 +164,7 @@ async def authorisation_server_metadata(request: web.Request) -> web.Response:
             "authorization_endpoint": f"{base}/oauth/authorize",
             "token_endpoint": f"{base}/oauth/token",
             "revocation_endpoint": f"{base}/oauth/revoke",
+            "registration_endpoint": f"{base}/oauth/register",
             "response_types_supported": ["code"],
             "grant_types_supported": ["authorization_code", "refresh_token"],
             "code_challenge_methods_supported": ["S256"],
@@ -163,26 +201,104 @@ async def pairing_status(request: web.Request) -> web.Response:
     return web.json_response({"pairing_id": pairing["id"], "status": pairing["status"], "expires_at": pairing["expires_at"]}, headers={"Cache-Control": "no-store"})
 
 
+def _valid_registration_redirect_uri(value: Any, allowed_hosts: frozenset[str]) -> bool:
+    if not isinstance(value, str) or len(value) > 2048:
+        return False
+    try:
+        parsed = urlparse(value)
+        port = parsed.port
+    except ValueError:
+        return False
+    return (
+        parsed.scheme == "https"
+        and parsed.hostname in allowed_hosts
+        and port in (None, 443)
+        and not parsed.username
+        and not parsed.password
+        and not parsed.fragment
+    )
+
+
+async def register_chatgpt_client(request: web.Request) -> web.Response:
+    """Register a short-lived public ChatGPT client on a controlled redirect host."""
+    try:
+        metadata = await request.json()
+    except (json.JSONDecodeError, ValueError):
+        return _json_error("invalid_client_metadata", "JSON metadata is required")
+    if not isinstance(metadata, dict):
+        return _json_error("invalid_client_metadata", "Metadata must be an object")
+    redirect_uris = metadata.get("redirect_uris")
+    if (
+        not isinstance(redirect_uris, list)
+        or not redirect_uris
+        or len(redirect_uris) > 8
+        or not all(isinstance(uri, str) for uri in redirect_uris)
+        or len(set(redirect_uris)) != len(redirect_uris)
+        or not all(_valid_registration_redirect_uri(uri, request.app[CONFIG_KEY].chatgpt_registration_redirect_hosts) for uri in redirect_uris)
+    ):
+        return _json_error("invalid_redirect_uri", "Use one to eight unique HTTPS redirect URIs")
+    if metadata.get("token_endpoint_auth_method", "none") != "none":
+        return _json_error("invalid_client_metadata", "Only public PKCE clients are supported")
+    grant_types = metadata.get("grant_types")
+    if grant_types is not None and (
+        not isinstance(grant_types, list)
+        or not all(isinstance(grant, str) for grant in grant_types)
+        or "authorization_code" not in grant_types
+        or not set(grant_types).issubset({"authorization_code", "refresh_token"})
+    ):
+        return _json_error("invalid_client_metadata", "Only authorization_code and refresh_token grants are supported")
+    response_types = metadata.get("response_types")
+    if response_types is not None and (
+        not isinstance(response_types, list)
+        or not all(isinstance(response_type, str) for response_type in response_types)
+        or set(response_types) != {"code"}
+    ):
+        return _json_error("invalid_client_metadata", "Only the code response type is supported")
+    client_name = metadata.get("client_name", "ChatGPT")
+    if not isinstance(client_name, str) or not client_name.strip() or len(client_name) > 128:
+        return _json_error("invalid_client_metadata", "client_name must be a non-empty string up to 128 characters")
+    try:
+        client_id, issued_at = request.app[STORE_KEY].register_chatgpt_client(redirect_uris)
+    except OAuthError as exc:
+        return _json_error("invalid_client_metadata", str(exc), 429)
+    return web.json_response(
+        {
+            "client_id": client_id,
+            "client_id_issued_at": issued_at,
+            "client_name": client_name,
+            "redirect_uris": redirect_uris,
+            "token_endpoint_auth_method": "none",
+            "grant_types": ["authorization_code", "refresh_token"],
+            "response_types": ["code"],
+        },
+        status=201,
+        headers={"Cache-Control": "no-store"},
+    )
+
+
 async def authorize(request: web.Request) -> web.Response:
     params = _auth_params(request)
     if params.get("response_type") != "code":
         return _json_error("unsupported_response_type", "Only response_type=code is supported")
     client_id, redirect_uri = params.get("client_id", ""), params.get("redirect_uri", "")
-    profile = request.app[CONFIG_KEY].profile_for(client_id, redirect_uri)
+    profile = _profile_for(request.app, client_id, redirect_uri)
     if not profile:
         return _json_error("invalid_request", "Unknown client_id or redirect_uri")
-    if params.get("code_challenge_method") != "S256" or not params.get("code_challenge"):
+    if params.get("code_challenge_method") != "S256" or not _valid_s256_challenge(params.get("code_challenge")):
         return _json_error("invalid_request", "PKCE S256 code_challenge is required")
 
     pairing_id = params.get("pairing_id")
     if not pairing_id:
-        pairing = request.app[STORE_KEY].create_pairing(
-            client_id=client_id,
-            redirect_uri=redirect_uri,
-            profile=profile,
-            code_challenge=params["code_challenge"],
-            state=params.get("state"),
-        )
+        try:
+            pairing = request.app[STORE_KEY].create_pairing(
+                client_id=client_id,
+                redirect_uri=redirect_uri,
+                profile=profile,
+                code_challenge=params["code_challenge"],
+                state=params.get("state"),
+            )
+        except OAuthError as exc:
+            return _json_error("temporarily_unavailable", str(exc), 429)
         return _pending_page(pairing["pairing_id"], pairing["expires_at"])
 
     pairing = request.app[STORE_KEY].pairing(pairing_id)
@@ -266,7 +382,10 @@ async def mcp(request: web.Request) -> web.Response:
             return _mcp_error(request_id, -32601, "Tool not exposed by this gateway")
     headers = {"Content-Type": "application/json", "X-Mega-Gateway-Profile": principal["profile"]}
     try:
-        async with request.app[HTTP_KEY].post(request.app[CONFIG_KEY].backend_url, json=data, headers=headers) as upstream:
+        session = request.app[HTTP_KEY]
+        if session is None:
+            return web.Response(status=503, text="MCP gateway is starting")
+        async with session.post(request.app[CONFIG_KEY].backend_url, json=data, headers=headers) as upstream:
             body = await upstream.read()
             if upstream.status >= 400:
                 return web.Response(status=502, text="MCP backend request failed")
@@ -329,7 +448,7 @@ async def _admin_connection(reader: asyncio.StreamReader, writer: asyncio.Stream
             token = payload.get("connection_id")
             if not isinstance(token, str):
                 raise ValueError("connection_id is required")
-            store.revoke_hash(token)
+            store.revoke_connection(token)
             result = {"revoked": True}
         else:
             raise ValueError("action is not exposed by this gateway")
@@ -343,6 +462,7 @@ async def _admin_connection(reader: asyncio.StreamReader, writer: asyncio.Stream
 
 
 async def on_startup(app: web.Application) -> None:
+    app[HTTP_KEY] = ClientSession(timeout=ClientTimeout(total=10))
     socket_path: Path = app[CONFIG_KEY].admin_socket
     socket_path.parent.mkdir(parents=True, exist_ok=True)
     if socket_path.exists() or socket_path.is_socket():
@@ -354,7 +474,9 @@ async def on_startup(app: web.Application) -> None:
 
 
 async def on_cleanup(app: web.Application) -> None:
-    await app[HTTP_KEY].close()
+    session = app[HTTP_KEY]
+    if session is not None:
+        await session.close()
     server = app.get(ADMIN_SERVER_KEY)
     if server:
         server.close()
@@ -367,14 +489,17 @@ async def on_cleanup(app: web.Application) -> None:
 
 def create_app(config: GatewayConfig | None = None) -> web.Application:
     config = config or GatewayConfig.from_environment()
+    if not _valid_public_base_url(config.public_base_url):
+        raise ValueError("GatewayConfig.public_base_url must be an absolute HTTPS URL without a path")
     app = web.Application(client_max_size=128 * 1024)
     app[CONFIG_KEY] = config
     app[STORE_KEY] = GatewayStore(config.database_path)
-    app[HTTP_KEY] = ClientSession(timeout=ClientTimeout(total=10))
+    app[HTTP_KEY] = None
     app.router.add_get("/health", health)
     app.router.add_get("/.well-known/oauth-protected-resource", protected_resource_metadata)
     app.router.add_get("/.well-known/oauth-authorization-server", authorisation_server_metadata)
     app.router.add_get("/oauth/authorize", authorize)
+    app.router.add_post("/oauth/register", register_chatgpt_client)
     app.router.add_get("/oauth/pairings/{pairing_id}", pairing_status)
     app.router.add_post("/oauth/token", token)
     app.router.add_post("/oauth/revoke", revoke)

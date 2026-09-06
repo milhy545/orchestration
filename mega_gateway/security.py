@@ -9,7 +9,6 @@ from __future__ import annotations
 import base64
 import hashlib
 import hmac
-import os
 import secrets
 import sqlite3
 import time
@@ -22,6 +21,10 @@ PAIR_TTL_SECONDS = 10 * 60
 AUTH_CODE_TTL_SECONDS = 60
 ACCESS_TTL_SECONDS = 15 * 60
 REFRESH_TTL_SECONDS = 30 * 24 * 60 * 60
+PROVISIONAL_CLIENT_TTL_SECONDS = 10 * 60
+APPROVED_CLIENT_TTL_SECONDS = 31 * 24 * 60 * 60
+MAX_PENDING_DYNAMIC_CLIENTS = 32
+MAX_PENDING_PAIRINGS = 64
 DEFAULT_TOOL_NAMES = frozenset(
     {
         "get_context",
@@ -125,7 +128,8 @@ class GatewayStore:
               profile TEXT NOT NULL,
               expires_at INTEGER NOT NULL,
               revoked_at INTEGER,
-              replaced_by_hash TEXT
+              replaced_by_hash TEXT,
+              family_id TEXT NOT NULL
             );
             CREATE INDEX IF NOT EXISTS tokens_lookup ON tokens(token_hash, kind, expires_at);
             CREATE TABLE IF NOT EXISTS profile_tools (
@@ -134,18 +138,58 @@ class GatewayStore:
               enabled INTEGER NOT NULL CHECK(enabled IN (0, 1)),
               PRIMARY KEY(profile, tool_name)
             );
+            CREATE TABLE IF NOT EXISTS oauth_clients (
+              client_id TEXT NOT NULL,
+              profile TEXT NOT NULL,
+              redirect_uri TEXT NOT NULL,
+              created_at INTEGER NOT NULL,
+              expires_at INTEGER NOT NULL,
+              paired_at INTEGER,
+              PRIMARY KEY(client_id, redirect_uri)
+            );
             """
         )
+        columns = {row["name"] for row in self.connection.execute("PRAGMA table_info(tokens)")}
+        if "family_id" not in columns:
+            # Existing pre-family credentials cannot be safely correlated, so
+            # migration revokes them rather than retaining partial grants.
+            self.connection.execute("ALTER TABLE tokens ADD COLUMN family_id TEXT")
+        # This repair is deliberately unconditional.  ALTER TABLE can have
+        # committed before a process crash, leaving a nullable family_id.
+        self.connection.execute(
+            "UPDATE tokens SET revoked_at = COALESCE(revoked_at, ?), family_id = token_hash "
+            "WHERE family_id IS NULL",
+            (_now(),),
+        )
+        self.connection.execute("CREATE INDEX IF NOT EXISTS tokens_family ON tokens(family_id, revoked_at)")
+        client_columns = {row["name"] for row in self.connection.execute("PRAGMA table_info(oauth_clients)")}
+        if "expires_at" not in client_columns:
+            self.connection.execute("ALTER TABLE oauth_clients ADD COLUMN expires_at INTEGER")
+            self.connection.execute(
+                "UPDATE oauth_clients SET expires_at = ? WHERE expires_at IS NULL", (_now(),)
+            )
+        if "paired_at" not in client_columns:
+            self.connection.execute("ALTER TABLE oauth_clients ADD COLUMN paired_at INTEGER")
+            # Legacy dynamic registrations have no proof of local approval.
+            self.connection.execute("UPDATE oauth_clients SET expires_at = ? WHERE paired_at IS NULL", (_now(),))
         self.connection.executemany(
             "INSERT OR IGNORE INTO profile_tools(profile, tool_name, enabled) VALUES (?, ?, 1)",
             [(profile, tool) for profile in VALID_PROFILES for tool in DEFAULT_TOOL_NAMES],
         )
+        self.cleanup_expired()
         self.connection.commit()
 
     def create_pairing(
         self, *, client_id: str, redirect_uri: str, profile: str, code_challenge: str, state: str | None
     ) -> dict[str, Any]:
         now = _now()
+        self.cleanup_expired(now)
+        pending = self.connection.execute(
+            "SELECT COUNT(*) FROM pairings WHERE status = 'pending' AND expires_at > ?", (now,)
+        ).fetchone()[0]
+        if pending >= MAX_PENDING_PAIRINGS:
+            self.connection.commit()
+            raise OAuthError("too many pending pairing requests")
         pairing_id = _token("pair_")
         expires_at = now + PAIR_TTL_SECONDS
         self.connection.execute(
@@ -154,6 +198,16 @@ class GatewayStore:
         )
         self.connection.commit()
         return {"pairing_id": pairing_id, "profile": profile, "status": "pending", "expires_at": expires_at}
+
+    def cleanup_expired(self, now: int | None = None) -> None:
+        now = now if now is not None else _now()
+        self.connection.execute(
+            "DELETE FROM auth_codes WHERE expires_at <= ? OR pairing_id IN "
+            "(SELECT id FROM pairings WHERE expires_at <= ?)",
+            (now, now),
+        )
+        self.connection.execute("DELETE FROM pairings WHERE expires_at <= ?", (now,))
+        self.connection.execute("DELETE FROM oauth_clients WHERE expires_at <= ?", (now,))
 
     def pairing(self, pairing_id: str) -> dict[str, Any] | None:
         row = self.connection.execute("SELECT * FROM pairings WHERE id = ?", (pairing_id,)).fetchone()
@@ -182,6 +236,13 @@ class GatewayStore:
             return pairing
         status = "approved" if approved else "denied"
         self.connection.execute("UPDATE pairings SET status = ? WHERE id = ?", (status, pairing_id))
+        if approved:
+            approved_at = _now()
+            self.connection.execute(
+                "UPDATE oauth_clients SET paired_at = ?, expires_at = ? "
+                "WHERE client_id = ? AND paired_at IS NULL",
+                (approved_at, approved_at + APPROVED_CLIENT_TTL_SECONDS, pairing["client_id"]),
+            )
         self.connection.commit()
         return self.pairing(pairing_id)
 
@@ -227,14 +288,15 @@ class GatewayStore:
         self.connection.commit()
         return tokens
 
-    def _issue_tokens(self, client_id: str, profile: str) -> TokenPair:
+    def _issue_tokens(self, client_id: str, profile: str, family_id: str | None = None) -> TokenPair:
         access, refresh = _token("mg_at_"), _token("mg_rt_")
+        family_id = family_id or _token("grant_")
         now = _now()
         self.connection.executemany(
-            "INSERT INTO tokens VALUES (?, ?, ?, ?, ?, NULL, NULL)",
+            "INSERT INTO tokens VALUES (?, ?, ?, ?, ?, NULL, NULL, ?)",
             [
-                (_digest(access), "access", client_id, profile, now + ACCESS_TTL_SECONDS),
-                (_digest(refresh), "refresh", client_id, profile, now + REFRESH_TTL_SECONDS),
+                (_digest(access), "access", client_id, profile, now + ACCESS_TTL_SECONDS, family_id),
+                (_digest(refresh), "refresh", client_id, profile, now + REFRESH_TTL_SECONDS, family_id),
             ],
         )
         return TokenPair(access, refresh)
@@ -244,9 +306,21 @@ class GatewayStore:
         row = self.connection.execute(
             "SELECT * FROM tokens WHERE token_hash = ? AND kind = 'refresh'", (token_hash,)
         ).fetchone()
-        if not row or row["client_id"] != client_id or row["revoked_at"] is not None or row["expires_at"] <= _now():
+        if not row or row["client_id"] != client_id:
             raise OAuthError("invalid or expired refresh token")
-        tokens = self._issue_tokens(row["client_id"], row["profile"])
+        if not row["family_id"]:
+            self.connection.execute(
+                "UPDATE tokens SET revoked_at = COALESCE(revoked_at, ?) WHERE token_hash = ?",
+                (_now(), token_hash),
+            )
+            self.connection.commit()
+            raise OAuthError("invalid or expired refresh token")
+        if row["revoked_at"] is not None or row["expires_at"] <= _now():
+            # A revoked refresh token was replayed.  Treat the whole grant as
+            # compromised, including any access/refresh descendants.
+            self.revoke_family(row["family_id"])
+            raise OAuthError("invalid or expired refresh token")
+        tokens = self._issue_tokens(row["client_id"], row["profile"], row["family_id"])
         new_hash = _digest(tokens.refresh_token)
         self.connection.execute(
             "UPDATE tokens SET revoked_at = ?, replaced_by_hash = ? WHERE token_hash = ? AND revoked_at IS NULL",
@@ -258,7 +332,7 @@ class GatewayStore:
     def validate_access(self, token: str) -> dict[str, str] | None:
         row = self.connection.execute(
             "SELECT client_id, profile FROM tokens WHERE token_hash = ? AND kind = 'access' "
-            "AND revoked_at IS NULL AND expires_at > ?",
+            "AND family_id IS NOT NULL AND revoked_at IS NULL AND expires_at > ?",
             (_digest(token), _now()),
         ).fetchone()
         return dict(row) if row else None
@@ -267,27 +341,42 @@ class GatewayStore:
         self.revoke_hash(_digest(token))
 
     def revoke_hash(self, token_hash: str) -> None:
+        row = self.connection.execute("SELECT family_id FROM tokens WHERE token_hash = ?", (token_hash,)).fetchone()
+        if row:
+            if row["family_id"]:
+                self.revoke_family(row["family_id"])
+            else:
+                self.connection.execute(
+                    "UPDATE tokens SET revoked_at = COALESCE(revoked_at, ?) WHERE token_hash = ?",
+                    (_now(), token_hash),
+                )
+                self.connection.commit()
+
+    def revoke_family(self, family_id: str) -> None:
         self.connection.execute(
-            "UPDATE tokens SET revoked_at = COALESCE(revoked_at, ?) WHERE token_hash = ?",
-            (_now(), token_hash),
+            "UPDATE tokens SET revoked_at = COALESCE(revoked_at, ?) WHERE family_id = ?",
+            (_now(), family_id),
         )
         self.connection.commit()
 
     def active_connections(self) -> list[dict[str, Any]]:
         rows = self.connection.execute(
-            "SELECT token_hash, kind, client_id, profile, expires_at FROM tokens "
-            "WHERE revoked_at IS NULL AND expires_at > ? ORDER BY expires_at DESC", (_now(),)
+            "SELECT family_id, client_id, profile, MAX(expires_at) AS expires_at FROM tokens "
+            "WHERE revoked_at IS NULL AND expires_at > ? "
+            "GROUP BY family_id, client_id, profile ORDER BY expires_at DESC", (_now(),)
         ).fetchall()
         return [
             {
-                "connection_id": row["token_hash"],
-                "kind": row["kind"],
+                "connection_id": row["family_id"],
                 "client_id": row["client_id"],
                 "profile": row["profile"],
                 "expires_at": row["expires_at"],
             }
             for row in rows
         ]
+
+    def revoke_connection(self, connection_id: str) -> None:
+        self.revoke_family(connection_id)
 
     def tools_for_profile(self, profile: str) -> frozenset[str]:
         if profile not in VALID_PROFILES:
@@ -308,3 +397,43 @@ class GatewayStore:
             (profile, tool_name, int(enabled)),
         )
         self.connection.commit()
+
+    def register_chatgpt_client(self, redirect_uris: list[str]) -> tuple[str, int]:
+        """Persist one public ChatGPT client with exact redirect URI matching."""
+        now = _now()
+        self.cleanup_expired(now)
+        placeholders = ", ".join("?" for _ in redirect_uris)
+        existing = self.connection.execute(
+            "SELECT client_id, MIN(created_at) AS created_at FROM oauth_clients "
+            "WHERE profile = 'chatgpt' AND expires_at > ? GROUP BY client_id "
+            f"HAVING COUNT(*) = ? AND SUM(CASE WHEN redirect_uri IN ({placeholders}) THEN 1 ELSE 0 END) = ?",
+            (now, len(redirect_uris), *redirect_uris, len(redirect_uris)),
+        ).fetchone()
+        if existing:
+            self.connection.commit()
+            return str(existing["client_id"]), int(existing["created_at"])
+        active_count = self.connection.execute(
+            "SELECT COUNT(DISTINCT client_id) FROM oauth_clients "
+            "WHERE profile = 'chatgpt' AND paired_at IS NULL AND expires_at > ?",
+            (now,),
+        ).fetchone()[0]
+        if active_count >= MAX_PENDING_DYNAMIC_CLIENTS:
+            self.connection.commit()
+            raise OAuthError("dynamic client registration limit reached")
+        client_id = _token("chatgpt_")
+        issued_at = now
+        expires_at = now + PROVISIONAL_CLIENT_TTL_SECONDS
+        self.connection.executemany(
+            "INSERT INTO oauth_clients(client_id, profile, redirect_uri, created_at, expires_at, paired_at) "
+            "VALUES (?, 'chatgpt', ?, ?, ?, NULL)",
+            [(client_id, redirect_uri, issued_at, expires_at) for redirect_uri in redirect_uris],
+        )
+        self.connection.commit()
+        return client_id, issued_at
+
+    def registered_profile_for(self, client_id: str, redirect_uri: str) -> str | None:
+        row = self.connection.execute(
+            "SELECT profile FROM oauth_clients WHERE client_id = ? AND redirect_uri = ? AND expires_at > ?",
+            (client_id, redirect_uri, _now()),
+        ).fetchone()
+        return str(row["profile"]) if row else None
