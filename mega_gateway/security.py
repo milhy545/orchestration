@@ -12,9 +12,10 @@ import hmac
 import secrets
 import sqlite3
 import time
+from collections import deque
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 
 PAIR_TTL_SECONDS = 10 * 60
@@ -25,6 +26,9 @@ PROVISIONAL_CLIENT_TTL_SECONDS = 10 * 60
 APPROVED_CLIENT_TTL_SECONDS = 31 * 24 * 60 * 60
 MAX_PENDING_DYNAMIC_CLIENTS = 32
 MAX_PENDING_PAIRINGS = 64
+RESERVATION_WINDOW_SECONDS = 10 * 60
+DCR_RESERVATION_LIMIT = 16
+PAIRING_RESERVATION_LIMIT = 32
 DEFAULT_TOOL_NAMES = frozenset(
     {
         "get_context",
@@ -41,6 +45,35 @@ VALID_PROFILES = frozenset({"chatgpt", "gemini-spark"})
 
 class OAuthError(ValueError):
     """An OAuth request failed validation."""
+
+
+class ReservationLimiter:
+    """Bound short-lived, global reservations without trusting client identity.
+
+    This is intentionally in-process: it prevents one process from filling the
+    durable pending tables during a ten-minute window, while SQLite limits
+    remain the restart-safe backstop.  A clock can be injected for tests.
+    """
+
+    def __init__(
+        self,
+        limit: int,
+        window_seconds: float = RESERVATION_WINDOW_SECONDS,
+        clock: Callable[[], float] = time.monotonic,
+    ) -> None:
+        self.limit = limit
+        self.window_seconds = window_seconds
+        self.clock = clock
+        self.reservations: deque[float] = deque()
+
+    def reserve(self) -> bool:
+        now = self.clock()
+        while self.reservations and now - self.reservations[0] >= self.window_seconds:
+            self.reservations.popleft()
+        if len(self.reservations) >= self.limit:
+            return False
+        self.reservations.append(now)
+        return True
 
 
 def _now() -> int:

@@ -5,14 +5,22 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+import time
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 
 from aiohttp import ClientSession, ClientTimeout, web
 
-from .security import DEFAULT_TOOL_NAMES, GatewayStore, OAuthError
+from .security import (
+    DCR_RESERVATION_LIMIT,
+    PAIRING_RESERVATION_LIMIT,
+    DEFAULT_TOOL_NAMES,
+    GatewayStore,
+    OAuthError,
+    ReservationLimiter,
+)
 
 
 ALLOWED_TOOLS = DEFAULT_TOOL_NAMES
@@ -96,6 +104,8 @@ CONFIG_KEY: web.AppKey[GatewayConfig] = web.AppKey("config", GatewayConfig)
 STORE_KEY: web.AppKey[GatewayStore] = web.AppKey("store", GatewayStore)
 HTTP_KEY: web.AppKey[ClientSession | None] = web.AppKey("http", ClientSession | None)
 ADMIN_SERVER_KEY: web.AppKey[asyncio.AbstractServer] = web.AppKey("admin_server", asyncio.AbstractServer)
+DCR_RESERVATION_KEY: web.AppKey[ReservationLimiter] = web.AppKey("dcr_reservation", ReservationLimiter)
+PAIRING_RESERVATION_KEY: web.AppKey[ReservationLimiter] = web.AppKey("pairing_reservation", ReservationLimiter)
 
 
 def _json_error(error: str, description: str, status: int = 400) -> web.Response:
@@ -257,6 +267,8 @@ async def register_chatgpt_client(request: web.Request) -> web.Response:
     client_name = metadata.get("client_name", "ChatGPT")
     if not isinstance(client_name, str) or not client_name.strip() or len(client_name) > 128:
         return _json_error("invalid_client_metadata", "client_name must be a non-empty string up to 128 characters")
+    if not request.app[DCR_RESERVATION_KEY].reserve():
+        return _json_error("temporarily_unavailable", "Dynamic registration rate limit reached", 429)
     try:
         client_id, issued_at = request.app[STORE_KEY].register_chatgpt_client(redirect_uris)
     except OAuthError as exc:
@@ -289,6 +301,8 @@ async def authorize(request: web.Request) -> web.Response:
 
     pairing_id = params.get("pairing_id")
     if not pairing_id:
+        if not request.app[PAIRING_RESERVATION_KEY].reserve():
+            return _json_error("temporarily_unavailable", "Pairing creation rate limit reached", 429)
         try:
             pairing = request.app[STORE_KEY].create_pairing(
                 client_id=client_id,
@@ -487,7 +501,10 @@ async def on_cleanup(app: web.Application) -> None:
     app[STORE_KEY].close()
 
 
-def create_app(config: GatewayConfig | None = None) -> web.Application:
+def create_app(
+    config: GatewayConfig | None = None,
+    monotonic_clock: Callable[[], float] = time.monotonic,
+) -> web.Application:
     config = config or GatewayConfig.from_environment()
     if not _valid_public_base_url(config.public_base_url):
         raise ValueError("GatewayConfig.public_base_url must be an absolute HTTPS URL without a path")
@@ -495,6 +512,8 @@ def create_app(config: GatewayConfig | None = None) -> web.Application:
     app[CONFIG_KEY] = config
     app[STORE_KEY] = GatewayStore(config.database_path)
     app[HTTP_KEY] = None
+    app[DCR_RESERVATION_KEY] = ReservationLimiter(DCR_RESERVATION_LIMIT, clock=monotonic_clock)
+    app[PAIRING_RESERVATION_KEY] = ReservationLimiter(PAIRING_RESERVATION_LIMIT, clock=monotonic_clock)
     app.router.add_get("/health", health)
     app.router.add_get("/.well-known/oauth-protected-resource", protected_resource_metadata)
     app.router.add_get("/.well-known/oauth-authorization-server", authorisation_server_metadata)

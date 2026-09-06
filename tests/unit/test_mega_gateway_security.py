@@ -18,8 +18,12 @@ import pytest_asyncio
 from aiohttp import web
 from aiohttp.test_utils import TestClient, TestServer
 
-from mega_gateway.app import GatewayConfig, STORE_KEY, create_app
-from mega_gateway.security import pkce_s256
+from mega_gateway.app import (
+    GatewayConfig,
+    STORE_KEY,
+    create_app,
+)
+from mega_gateway.security import ReservationLimiter, pkce_s256
 
 
 VERIFIER = "A" * 43
@@ -315,3 +319,39 @@ def test_interrupted_family_migration_revokes_nullable_legacy_tokens(tmp_path: P
     assert row["family_id"]
     assert row["revoked_at"] is not None
     app[STORE_KEY].close()
+
+
+def test_reservation_limiter_uses_an_injectable_monotonic_clock() -> None:
+    now = [100.0]
+    limiter = ReservationLimiter(2, window_seconds=10, clock=lambda: now[0])
+    assert limiter.reserve() is True
+    assert limiter.reserve() is True
+    assert limiter.reserve() is False
+    now[0] += 9.999
+    assert limiter.reserve() is False
+    now[0] += 0.001
+    assert limiter.reserve() is True
+
+
+@pytest.mark.asyncio
+async def test_dcr_and_pairing_reservations_are_separate_and_bounded(gateway) -> None:
+    client, _ = gateway
+    for number in range(16):
+        registration = await client.post("/oauth/register", json={
+            "redirect_uris": [f"https://chatgpt.example.test/{number}"],
+        })
+        assert registration.status == 201
+    blocked_registration = await client.post("/oauth/register", json={
+        "redirect_uris": ["https://chatgpt.example.test/blocked"],
+    })
+    assert blocked_registration.status == 429
+
+    authorise_params = {
+        "response_type": "code", "client_id": "chatgpt", "redirect_uri": REDIRECT,
+        "code_challenge_method": "S256", "code_challenge": pkce_s256(VERIFIER),
+    }
+    for _ in range(32):
+        pairing = await client.get("/oauth/authorize", params=authorise_params)
+        assert pairing.status == 200
+    blocked_pairing = await client.get("/oauth/authorize", params=authorise_params)
+    assert blocked_pairing.status == 429
