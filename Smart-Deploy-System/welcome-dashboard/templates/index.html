@@ -1,0 +1,44 @@
+
+<!DOCTYPE html>
+<html lang='cs'>
+<head>
+    <meta charset='UTF-8'>
+    <title>J.A.R.V.I.S. Smart Deploy v3.0</title>
+    <script src='https://cdn.tailwindcss.com'></script>
+    <link href='https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css' rel='stylesheet'>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap');
+        body { background-color: #0a0e14; color: #e2e8f0; font-family: sans-serif; }
+        .orbitron { font-family: 'Orbitron', sans-serif; }
+        .jarvis-card { background: rgba(17, 24, 39, 0.8); border: 1px solid #1f2937; }
+        .status-synced { color: #10b981; }
+    </style>
+</head>
+<body class='p-8'>
+    <div class='max-w-7xl mx-auto'>
+        <h1 class='orbitron text-3xl font-bold text-blue-400 mb-8'>SMART DEPLOY v3.0</h1>
+        <div id='app' class='grid grid-cols-1 md:grid-cols-2 gap-8'>
+            <div class='jarvis-card p-6 rounded-xl'>
+                <h2 class='orbitron text-xl mb-4'>Sync Status</h2>
+                <div id='status-list' class='space-y-2'></div>
+            </div>
+            <div id='diff-view' class='jarvis-card p-6 rounded-xl hidden'>
+                <h2 class='orbitron text-xl mb-4'>Diff View</h2>
+                <pre id='diff-pre' class='text-xs overflow-auto'></pre>
+            </div>
+        </div>
+    </div>
+    <script>
+        async function load() {
+            const r = await fetch('/api/status');
+            const d = await r.json();
+            const list = document.getElementById('status-list');
+            list.innerHTML = '';
+            for (const [f, s] of Object.entries(d.status)) {
+                list.innerHTML += "<div class='flex justify-between border-b border-gray-800 py-2'><span>" + f + "</span><span class='font-bold'>" + s + "</span></div>";
+            }
+        }
+        window.onload = load;
+    </script>
+</body>
+</html>

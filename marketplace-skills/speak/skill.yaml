@@ -1,0 +1,59 @@
+{
+  "name": "speak",
+  "version": "1.0.0",
+  "description": "Generate spoken audio for a reply through mega-orchestrator using ElevenLabs MCP on HAS.",
+  "kind": "skill",
+  "package_type": "multi-agent-skill",
+  "source": "internal",
+  "tags": ["speech", "tts", "elevenlabs", "multi-agent"],
+  "manifest_path": "skill.yaml",
+  "runtime": {
+    "provider": "elevenlabs-mcp",
+    "gateway": "mega-orchestrator",
+    "output_mode": "file-first"
+  },
+  "targets": [
+    {
+      "agent_family": "codex",
+      "adapter_status": "complete",
+      "install_layout": "adapter-materialized",
+      "entrypoint": "SKILL.md",
+      "capabilities": ["reply-tts", "file-first", "gateway-tool"]
+    },
+    {
+      "agent_family": "gemini",
+      "adapter_status": "complete",
+      "install_layout": "adapter-materialized",
+      "entrypoint": "SKILL.md",
+      "capabilities": ["reply-tts", "file-first", "gateway-tool"]
+    },
+    {
+      "agent_family": "claude",
+      "adapter_status": "complete",
+      "install_layout": "adapter-materialized",
+      "entrypoint": "SKILL.md",
+      "capabilities": ["reply-tts", "file-first", "gateway-tool"]
+    },
+    {
+      "agent_family": "jules",
+      "adapter_status": "scaffold",
+      "install_layout": "adapter-materialized",
+      "entrypoint": "SKILL.md",
+      "capabilities": ["adapter-contract"]
+    },
+    {
+      "agent_family": "kilocode",
+      "adapter_status": "scaffold",
+      "install_layout": "adapter-materialized",
+      "entrypoint": "SKILL.md",
+      "capabilities": ["adapter-contract"]
+    },
+    {
+      "agent_family": "opencode",
+      "adapter_status": "scaffold",
+      "install_layout": "adapter-materialized",
+      "entrypoint": "SKILL.md",
+      "capabilities": ["adapter-contract"]
+    }
+  ]
+}

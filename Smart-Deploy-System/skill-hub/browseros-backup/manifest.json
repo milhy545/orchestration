@@ -1,0 +1,31 @@
+{
+  "name": "browseros-backup",
+  "version": "1.1.0",
+  "description": "Backup and restore BrowserOS extension settings and browser profiles.",
+  "author": "Milhy",
+  "entry_points": {
+    "backup": "scripts/backup.sh",
+    "restore": "scripts/restore.sh"
+  },
+  "agent_mapping": {
+    "codex": {
+      "type": "skill",
+      "config_path": "SKILL.md",
+      "registration": "config.toml"
+    },
+    "gemini": {
+      "type": "extension",
+      "config_path": "manifest.json"
+    },
+    "claude": {
+      "type": "mcp-tool",
+      "config_path": "mcp-config.json"
+    }
+  },
+  "files": [
+    "scripts/backup.sh",
+    "scripts/restore.sh",
+    "README.md",
+    "README.cz.md"
+  ]
+}

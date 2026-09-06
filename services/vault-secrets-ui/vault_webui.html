@@ -263,34 +263,46 @@
                 </div>
             </header>
 
-            <main class="flex-grow flex flex-col relative z-10">
-                <div class="border-l-4 pl-4 py-4 mb-6" style="border-color: var(--primary);">
-                    <h2 class="text-2xl md:text-3xl pip-text mb-1 accent-text" data-translate="title">SECRET INJECTION</h2>
-                    <div class="text-xs md:text-sm opacity-60 tracking-widest">SECURE UPLINK // V2</div>
-                </div>
+            <main class="flex-grow flex flex-col relative z-10 overflow-hidden">
+                <!-- SCROLLABLE CONTENT AREA -->
+                <div class="flex-grow overflow-y-auto pr-2 space-y-6">
+                    <div class="border-l-4 pl-4 py-2" style="border-color: var(--primary);">
+                        <h2 class="text-2xl md:text-3xl pip-text mb-1 accent-text" data-translate="title">SECRET INJECTION</h2>
+                        <div class="text-xs md:text-sm opacity-60 tracking-widest">SECURE UPLINK // V2</div>
+                    </div>
 
-                <div class="grid grid-cols-1 gap-6 mb-4">
-                    <div class="relative group">
-                        <label class="block text-lg mb-1 opacity-80 group-hover:opacity-100 transition-opacity" data-translate="target">TARGET SERVICE</label>
-                        <select id="target-service" class="pip-input cursor-pointer">
+                    <div class="grid grid-cols-1 gap-4">
+                        <div class="relative group">
+                            <label class="block text-lg mb-1 opacity-80 group-hover:opacity-100 transition-opacity" data-translate="target">TARGET SERVICE</label>
+                            <select id="target-service" class="pip-input cursor-pointer">
 {{SERVICE_OPTIONS}}
-                        </select>
-                    </div>
+                            </select>
+                        </div>
 
-                    <div class="border p-3 text-sm md:text-base" style="border-color: var(--primary); background: rgba(0, 0, 0, 0.25);">
-                        <div class="font-bold mb-1 accent-text">RUNTIME APPLY MODEL</div>
-                        <div id="service-meta-line" class="opacity-90">Changes apply after restarting the target service.</div>
-                        <div id="service-restart-line" class="opacity-70 mt-1">Restart target: -</div>
-                        <div id="service-command-line" class="opacity-60 mt-1 break-all">Command: -</div>
-                    </div>
+                        <div class="border p-3 text-sm md:text-base" style="border-color: var(--primary); background: rgba(0, 0, 0, 0.25);">
+                            <div class="font-bold mb-1 accent-text">RUNTIME APPLY MODEL</div>
+                            <div id="service-meta-line" class="opacity-90">Changes apply after restarting the target service.</div>
+                            <div id="service-restart-line" class="opacity-70 mt-1">Restart target: -</div>
+                            <div id="service-command-line" class="opacity-60 mt-1 break-all">Command: -</div>
+                        </div>
 
-                    <div class="relative group">
-                        <label class="block text-lg mb-1 opacity-80 group-hover:opacity-100 transition-opacity" data-translate="editor">SECRET PAYLOAD (JSON)</label>
-                        <textarea id="secret-json" class="pip-textarea font-mono" spellcheck="false">{}</textarea>
+                        <div class="flex justify-between items-center border-b pb-1" style="border-color: var(--primary-dim);">
+                            <label class="block text-lg opacity-80" data-translate="editor">SECRET PAYLOAD</label>
+                            <button onclick="toggleEditorMode()" class="text-xs hover:underline opacity-80 hover:opacity-100 cursor-pointer" id="toggle-editor-btn">[ SHOW RAW JSON ]</button>
+                        </div>
+
+                        <div id="fields-editor" class="space-y-4">
+                            <!-- Dynamic input fields will be rendered here -->
+                        </div>
+
+                        <div id="json-editor-container" class="relative group hidden">
+                            <textarea id="secret-json" class="pip-textarea font-mono" spellcheck="false">{}</textarea>
+                        </div>
                     </div>
                 </div>
 
-                <div class="flex flex-wrap justify-end gap-4 mt-2">
+                <!-- FIXED BUTTONS AREA -->
+                <div class="flex flex-wrap justify-end gap-4 mt-4 pt-2 border-t shrink-0" style="border-color: var(--primary-dim);">
                     <button onclick="loadSecrets()" class="pip-btn" data-translate="reload">SYNC FROM VAULT</button>
                     <button onclick="formatJson()" class="pip-btn border-dashed opacity-80" data-translate="format">ALIGN BUFFER</button>
                     <button onclick="saveSecrets()" class="pip-btn font-bold px-8" data-translate="inject">UPLOAD</button>
@@ -360,7 +372,7 @@
             const input = document.getElementById('auth-key-input').value;
             const errorDiv = document.getElementById('login-error');
             
-            // Hardcoded client-side check matching the default Vault dev token
+            // Hardcoded client-side check matching the Vault root token
             if (input === 'dev-root-token') {
                 isAuthenticated = true;
                 sessionStorage.setItem('vaultAuth', 'true');
@@ -455,6 +467,29 @@
             }
         }
 
+        function toggleEditorMode() {
+            const fieldsEl = document.getElementById("fields-editor");
+            const jsonEl = document.getElementById("json-editor-container");
+            const btn = document.getElementById("toggle-editor-btn");
+            if (fieldsEl.classList.contains("hidden")) {
+                fieldsEl.classList.remove("hidden");
+                jsonEl.classList.add("hidden");
+                btn.textContent = "[ SHOW RAW JSON ]";
+            } else {
+                fieldsEl.classList.add("hidden");
+                jsonEl.classList.remove("hidden");
+                btn.textContent = "[ SHOW FORM FIELDS ]";
+            }
+        }
+
+        function syncInputsToJSON() {
+            const data = {};
+            document.querySelectorAll(".dynamic-secret-input").forEach(input => {
+                data[input.dataset.key] = input.value;
+            });
+            document.getElementById("secret-json").value = JSON.stringify(data, null, 2);
+        }
+
         async function loadSecrets() {
             const service = currentService();
             try {
@@ -463,7 +498,45 @@
                     throw new Error(await response.text());
                 }
                 const payload = await response.json();
+                
+                // Update raw JSON
                 document.getElementById("secret-json").value = JSON.stringify(payload.data || {}, null, 2);
+                
+                // Render dynamic fields
+                const fieldsEditor = document.getElementById("fields-editor");
+                fieldsEditor.innerHTML = "";
+                
+                if (payload.metadata && payload.metadata.runtime_keys) {
+                    const keys = Object.keys(payload.metadata.runtime_keys);
+                    if (keys.length > 0) {
+                        keys.forEach(key => {
+                            const val = (payload.data && payload.data[key]) !== undefined ? payload.data[key] : "";
+                            const fieldWrapper = document.createElement("div");
+                            fieldWrapper.className = "flex flex-col gap-1 mb-3";
+                            
+                            const label = document.createElement("label");
+                            label.className = "text-sm font-bold tracking-wider accent-text opacity-90";
+                            label.textContent = key;
+                            
+                            const input = document.createElement("input");
+                            input.type = "text";
+                            input.className = "pip-input dynamic-secret-input";
+                            input.dataset.key = key;
+                            input.value = val;
+                            input.placeholder = `Enter ${key}`;
+                            input.addEventListener("input", syncInputsToJSON);
+                            
+                            fieldWrapper.appendChild(label);
+                            fieldWrapper.appendChild(input);
+                            fieldsEditor.appendChild(fieldWrapper);
+                        });
+                    } else {
+                        fieldsEditor.innerHTML = '<div class="opacity-60 text-center py-4">No runtime keys defined for this service.</div>';
+                    }
+                } else {
+                    fieldsEditor.innerHTML = '<div class="opacity-60 text-center py-4">No metadata available.</div>';
+                }
+                
                 logLine("Synced " + service + " from Vault.", false);
                 if (payload.metadata && payload.metadata.restart_target) {
                     logLine("Restart target: " + payload.metadata.restart_target, false);

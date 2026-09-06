@@ -1,0 +1,22 @@
+name: chat-sync
+version: 1.0.0
+description: "Automatically synchronizes AI agent chat transcripts and context to HAS memory."
+kind: skill
+package_type: multi-agent-skill
+source: internal
+tags: ["chat", "memory", "synchronization", "has"]
+manifest_path: skill.yaml
+runtime:
+  provider: python
+  gateway: mega-orchestrator
+targets:
+  - agent_family: gemini
+    adapter_status: complete
+    install_layout: adapter-materialized
+    entrypoint: SKILL.md
+    capabilities: ["chat-capture", "memory-export"]
+  - agent_family: claude
+    adapter_status: complete
+    install_layout: adapter-materialized
+    entrypoint: SKILL.md
+    capabilities: ["chat-capture", "memory-export"]

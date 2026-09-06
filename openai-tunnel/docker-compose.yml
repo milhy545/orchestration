@@ -1,0 +1,12 @@
+version: '3.8'
+
+services:
+  openai-tunnel:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: openai-tunnel-client
+    restart: unless-stopped
+    env_file:
+      - .env
+    network_mode: "host"

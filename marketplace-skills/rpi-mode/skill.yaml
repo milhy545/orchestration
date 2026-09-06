@@ -1,0 +1,27 @@
+name: rpi-mode
+version: 1.0.0
+description: "Secure RPi development wrapper. Tunnels all bash commands to Raspberry Pi via SSH and Tmux session 'pi'."
+kind: skill
+package_type: multi-agent-skill
+source: internal
+tags: ["rpi", "ssh", "tmux", "development"]
+manifest_path: skill.yaml
+runtime:
+  provider: shell
+  gateway: mega-orchestrator
+targets:
+  - agent_family: gemini
+    adapter_status: complete
+    install_layout: adapter-materialized
+    entrypoint: SKILL.md
+    capabilities: ["bash-hook", "remote-exec"]
+  - agent_family: claude
+    adapter_status: complete
+    install_layout: adapter-materialized
+    entrypoint: SKILL.md
+    capabilities: ["bash-hook", "remote-exec"]
+  - agent_family: codex
+    adapter_status: complete
+    install_layout: adapter-materialized
+    entrypoint: SKILL.md
+    capabilities: ["bash-hook", "remote-exec"]
