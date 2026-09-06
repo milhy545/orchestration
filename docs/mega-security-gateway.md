@@ -26,16 +26,17 @@ audit events, tokens, or command arguments. Authentication and policy checks
 still apply. IDs are supplied by the gateway; do not guess or reuse an ID from
 another environment.
 
-`scripts/mega_funnel` is deliberately narrower:
+`scripts/mega_funnel` reads or disables the Tailscale Funnel setting on host HAS:
 
 ```text
 scripts/mega_funnel status   # default, read-only
 scripts/mega_funnel off      # emergency disable
 ```
 
-It manages only the gateway-owned Funnel configuration. It has no `on` action,
-does not expose port 7000, and never invokes Docker Compose. Funnel is not
-enabled or deployed by these scripts.
+It has no `on` action, does not expose port 7000, and never invokes Docker
+Compose. Funnel is not enabled or deployed by these scripts. The runner is
+`ssh HAS tailscale funnel` by default and can be replaced for tests with
+`MEGA_FUNNEL_RUNNER` or `--runner`.
 
 The current transport contract is `{"action": "...", "payload": {...}}` as a
 newline terminated JSON object. A successful response may be either a JSON

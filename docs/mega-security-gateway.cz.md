@@ -25,16 +25,17 @@ Výpis `audit` je zatím placeholder: gateway ještě neukládá auditní událo
 tokeny ani argumenty příkazů. Ověření a pravidla gateway se stále uplatňují.
 ID dodává gateway; ID z jiného prostředí nehadejte ani znovu nepoužívejte.
 
-`scripts/mega_funnel` je záměrně omezený:
+`scripts/mega_funnel` čte nebo vypíná nastavení Tailscale Funnel na hostu HAS:
 
 ```text
 scripts/mega_funnel status   # výchozí, pouze čtení
 scripts/mega_funnel off      # nouzové vypnutí
 ```
 
-Spravuje pouze Funnel konfiguraci patřící této gateway. Nemá akci `on`,
-nezpřístupňuje port 7000 a nikdy nespouští Docker Compose. Tyto skripty Funnel
-neaktivují ani nenasazují.
+Nemá akci `on`, nezpřístupňuje port 7000 a nikdy nespouští Docker Compose.
+Tyto skripty Funnel neaktivují ani nenasazují. Výchozí runner je
+`ssh HAS tailscale funnel`; pro testy jej lze změnit přes `MEGA_FUNNEL_RUNNER`
+nebo `--runner`.
 
 Transportní kontrakt je `{"action": "...", "payload": {...}}` jako JSON objekt
 ukončený novým řádkem. Úspěšná odpověď může být JSON objekt nebo

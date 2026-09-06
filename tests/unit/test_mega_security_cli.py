@@ -80,18 +80,26 @@ def test_read_and_emergency_actions(command, expected):
     assert json.loads(fake.sent)["action"] == expected
 
 
-def test_funnel_defaults_to_read_only_status(monkeypatch, capsys):
-    class Client:
-        def __init__(self, *_args):
-            pass
+def test_funnel_defaults_to_read_only_status():
+    calls = []
 
-        def request(self, action):
-            assert action == "funnel.status"
-            return {"enabled": False}
+    def execute(command, **_kwargs):
+        calls.append(command)
+        return type("Result", (), {"returncode": 0, "stdout": '{"enabled": false}', "stderr": ""})()
 
-    monkeypatch.setattr(funnel._module, "AdminClient", Client)
-    assert funnel.main([]) == 0
-    assert '"enabled": false' in capsys.readouterr().out
+    assert funnel.run_funnel("status", runner=("fake",), execute=execute) == '{"enabled": false}'
+    assert calls == [["fake", "status", "--json"]]
+
+
+def test_funnel_off_only_disables():
+    calls = []
+
+    def execute(command, **_kwargs):
+        calls.append(command)
+        return type("Result", (), {"returncode": 0, "stdout": "disabled", "stderr": ""})()
+
+    funnel.run_funnel("off", runner=("fake",), execute=execute)
+    assert calls == [["fake", "off"]]
 
 
 def test_funnel_rejects_enable_action(capsys):
