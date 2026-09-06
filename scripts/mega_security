@@ -75,7 +75,6 @@ def _parser() -> argparse.ArgumentParser:
     conn.add_argument("connection_id", nargs="?")
     sub.add_parser("audit", help="recent audit events")
     sub.add_parser("backup-check", help="check backup and configuration state")
-    sub.add_parser("funnel-off", help="emergency: disable gateway-owned Funnel")
     sub.add_parser("menu", help="interactive operator menu")
     return parser
 
@@ -107,8 +106,6 @@ def run(client: AdminClient, args: argparse.Namespace) -> Any:
         return client.request("audit.recent")
     if command == "backup-check":
         return client.request("backup.config.check")
-    if command == "funnel-off":
-        return client.request("funnel.off")
     raise GatewayError("choose an action (run with --help for commands)")
 
 
@@ -116,9 +113,9 @@ def main(argv: list[str] | None = None) -> int:
     args = _parser().parse_args(argv)
     if args.command == "menu":
         print("Mega security gateway admin\n1 status  2 pairing  3 profile  4 connections\n"
-              "5 audit  6 backup/config check  7 emergency Funnel off  q quit")
+              "5 audit  6 backup/config check  q quit\nFunnel emergency control: scripts/mega_funnel off")
         choice = input("action> ").strip().lower()
-        choices = {"1": "status", "5": "audit", "6": "backup-check", "7": "funnel-off"}
+        choices = {"1": "status", "5": "audit", "6": "backup-check"}
         if choice == "q":
             return 0
         if choice not in choices:

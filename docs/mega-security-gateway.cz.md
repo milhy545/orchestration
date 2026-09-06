@@ -18,7 +18,6 @@ connections list
 connections revoke <connection-id>
 audit
 backup-check
-funnel-off
 ```
 
 Výpis `audit` je zatím placeholder: gateway ještě neukládá auditní události,

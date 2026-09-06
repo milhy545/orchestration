@@ -18,7 +18,6 @@ connections list
 connections revoke <connection-id>
 audit
 backup-check
-funnel-off
 ```
 
 The `audit` display is currently a placeholder: the gateway does not yet persist

@@ -70,7 +70,7 @@ def test_client_sends_action_and_payload():
 @pytest.mark.parametrize(
     ("command", "expected"),
     [("status", "status"), ("audit", "audit.recent"),
-     ("backup-check", "backup.config.check"), ("funnel-off", "funnel.off")],
+     ("backup-check", "backup.config.check")],
 )
 def test_read_and_emergency_actions(command, expected):
     fake = FakeSocket({"ok": True, "data": []})
@@ -112,4 +112,4 @@ def test_funnel_rejects_enable_action(capsys):
 def test_rejected_response_becomes_operator_error():
     fake = FakeSocket({"ok": False, "error": "policy denied"})
     with pytest.raises(cli.GatewayError, match="policy denied"):
-        cli.AdminClient(socket_factory=factory_for(fake)).request("funnel.off")
+        cli.AdminClient(socket_factory=factory_for(fake)).request("pairing.approve", pairing_id="pair-7")
