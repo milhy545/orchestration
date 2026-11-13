@@ -193,7 +193,14 @@ class MegaOrchestrator:
                 name="Security MCP",
                 host="mcp-security",
                 port=8000,
-                tools=["jwt_token", "password_hash", "encrypt_data", "decrypt_data", "ssl_check", "security_audit"],
+                tools=[
+                    "jwt_token",
+                    "password_hash",
+                    "password_verify",
+                    "encrypt",
+                    "decrypt",
+                    "ssl_check",
+                ],
                 sage_modes=[SAGEMode.DEBUG, SAGEMode.ANALYZE],
                 priority=1
             ),
@@ -209,7 +216,7 @@ class MegaOrchestrator:
                 name="Log MCP",
                 host="mcp-log",
                 port=8000,
-                tools=["log_analysis", "log_monitor", "log_aggregate", "log_search"],
+                tools=["log_analysis", "log_search"],
                 sage_modes=[SAGEMode.DEBUG, SAGEMode.ANALYZE],
                 priority=1
             ),

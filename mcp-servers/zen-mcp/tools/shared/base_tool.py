@@ -269,7 +269,7 @@ class BaseTool(ABC):
                 logging.debug(f"Failed to add OpenRouter models to enum: {e}")
 
         # Add custom models if custom API is configured
-        custom_url = os.getenv("CUSTOM_API_URL")
+        custom_url = load_env("CUSTOM_API_URL")
         if custom_url:
             try:
                 registry = self._get_openrouter_registry()
@@ -359,7 +359,7 @@ class BaseTool(ABC):
                             continue
 
             # Add custom models if custom API is configured
-            custom_url = os.getenv("CUSTOM_API_URL")
+            custom_url = load_env("CUSTOM_API_URL")
             if custom_url:
                 # Load custom models from registry
                 try:

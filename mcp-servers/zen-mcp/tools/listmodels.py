@@ -7,7 +7,6 @@ It shows which providers are configured and what models can be used.
 """
 
 import logging
-import os
 from typing import Any, Optional
 
 from mcp.types import TextContent
@@ -237,7 +236,7 @@ class ListModelsTool(BaseTool):
         output_lines.append("")
 
         # Check Custom API
-        custom_url = os.getenv("CUSTOM_API_URL")
+        custom_url = load_env("CUSTOM_API_URL")
 
         output_lines.append(f"## Custom/Local API {'✅' if custom_url else '❌'}")
 

@@ -10,6 +10,8 @@ Configuration values can be overridden by environment variables where appropriat
 
 import os
 
+from utils.secrets import load_env
+
 # Version and metadata
 # These values are used in server responses and for tracking releases
 # IMPORTANT: This is the single source of truth for version and author info
@@ -25,7 +27,7 @@ __author__ = "Fahad Gilani, David Strejc"
 # This should be a stable, high-performance model suitable for code analysis
 # Can be overridden by setting DEFAULT_MODEL environment variable
 # Special value "auto" means Claude should pick the best model for each task
-DEFAULT_MODEL = os.getenv("DEFAULT_MODEL", "auto")
+DEFAULT_MODEL = load_env("DEFAULT_MODEL", "auto") or "auto"
 
 # Auto mode detection - when DEFAULT_MODEL is "auto", Claude picks the model
 IS_AUTO_MODE = DEFAULT_MODEL.lower() == "auto"
@@ -117,7 +119,7 @@ def _calculate_mcp_prompt_limit() -> int:
         Maximum character count for user input prompts
     """
     # Check for Claude's MAX_MCP_OUTPUT_TOKENS environment variable
-    max_tokens_str = os.getenv("MAX_MCP_OUTPUT_TOKENS")
+    max_tokens_str = load_env("MAX_MCP_OUTPUT_TOKENS")
 
     if max_tokens_str:
         try:
